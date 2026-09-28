@@ -1,0 +1,476 @@
+---
+// Minden projekthez egy kis, kódból rajzolt illusztráció (nem képernyőkép).
+interface Props {
+  visual: 'flights' | 'network' | 'mail' | 'rack' | 'cards';
+  dark: boolean;
+  lang: 'hu' | 'en';
+}
+const { visual, dark, lang } = Astro.props;
+const hu = lang === 'hu';
+
+const flights = hu
+  ? [
+      { city: 'Velence', meta: 'okt. 9-13 · 48 óra', price: '19 893 Ft', score: 75 },
+      { city: 'Krakkó', meta: 'okt. 30 - nov. 2 · 36 óra', price: '12 718 Ft', score: 71 },
+      { city: 'Bergamo', meta: 'okt. 15-19 · 60 óra', price: '12 318 Ft', score: 67 },
+    ]
+  : [
+      { city: 'Venice', meta: 'Oct 9-13 · 48 hours', price: '19,893 HUF', score: 75 },
+      { city: 'Kraków', meta: 'Oct 30 - Nov 2 · 36 hours', price: '12,718 HUF', score: 71 },
+      { city: 'Bergamo', meta: 'Oct 15-19 · 60 hours', price: '12,318 HUF', score: 67 },
+    ];
+const site = hu ? 'Telephely' : 'Site';
+
+const rack = [
+  { u: 1, label: 'Patch panel', kind: 'patch' },
+  { u: 1, label: 'Core switch', kind: 'switch' },
+  { u: 1, label: 'Access switch', kind: 'switch' },
+  { u: 1, label: '', kind: 'empty' },
+  { u: 2, label: 'Hypervisor 01', kind: 'server' },
+  { u: 2, label: 'Hypervisor 02', kind: 'server' },
+  { u: 1, label: '', kind: 'empty' },
+  { u: 2, label: 'Storage', kind: 'storage' },
+  { u: 2, label: 'UPS', kind: 'ups' },
+];
+
+const records = [
+  { type: 'MX', name: 'paduch.hu', val: 'route1.mx.cloudflare.net' },
+  { type: 'SPF', name: 'paduch.hu', val: 'include:_spf.mx.cloudflare.net' },
+  { type: 'DKIM', name: 'resend._domainkey', val: 'p=MIGfMA0GCSq…' },
+  { type: 'DMARC', name: '_dmarc', val: 'v=DMARC1; p=none' },
+];
+---
+
+<div class:list={['visual', visual, { dark }]}>
+  {
+    visual === 'flights' && (
+      <div class="device">
+        <div class="bar">
+          <b>Weekender</b>
+          <span>BUD · 116</span>
+        </div>
+        {flights.map((f) => (
+          <div class="flight">
+            <div>
+              <strong>{f.city}</strong>
+              <small>{f.meta}</small>
+              <i style={`--w:${f.score}%`} />
+            </div>
+            <div class="price">
+              <strong>{f.price}</strong>
+              <small>{f.score}/100</small>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    visual === 'network' && (
+      <svg class="net" viewBox="0 0 440 360" role="img" aria-label="Network topology">
+        <defs>
+          <linearGradient id="lnk" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="440" y2="0">
+            <stop offset="0" stop-color="#2997ff" />
+            <stop offset="1" stop-color="#bf5af2" />
+          </linearGradient>
+        </defs>
+        <g class="links" stroke="url(#lnk)" stroke-width="2" fill="none">
+          <path d="M220 58 150 106M220 58l70 48" />
+          <path d="M210 126h20" stroke-dasharray="3 3" />
+          <path d="M150 146 80 246M290 146l70 100M150 146l210 100M290 146 80 246" />
+          <path d="M80 280v30M360 280v30" />
+        </g>
+        <g class="nodes">
+          <rect x="176" y="22" width="88" height="36" rx="10" class="fw" />
+          <text x="220" y="45">ASA · DMZ</text>
+          <rect x="90" y="106" width="120" height="40" rx="10" />
+          <text x="150" y="131">HQ core 1</text>
+          <rect x="230" y="106" width="120" height="40" rx="10" />
+          <text x="290" y="131">HQ core 2</text>
+          <rect x="20" y="246" width="120" height="36" rx="10" />
+          <text x="80" y="269">{site} A</text>
+          <rect x="300" y="246" width="120" height="36" rx="10" />
+          <text x="360" y="269">{site} B</text>
+          <circle cx="80" cy="322" r="11" class="host" />
+          <circle cx="360" cy="322" r="11" class="host" />
+        </g>
+        <g class="labels">
+          <text x="220" y="160">HSRP</text>
+          <text x="220" y="210">OSPF</text>
+        </g>
+      </svg>
+    )
+  }
+
+  {
+    visual === 'mail' && (
+      <div class="device mail">
+        <div class="bar">
+          <b>paduch.hu</b>
+          <span>DNS</span>
+        </div>
+        {records.map((r) => (
+          <div class="rec">
+            <span class="type">{r.type}</span>
+            <span class="val">
+              <small>{r.name}</small>
+              <code>{r.val}</code>
+            </span>
+          </div>
+        ))}
+        <div class="auth">
+          <span>spf=pass</span>
+          <span>dkim=pass</span>
+          <span>dmarc=pass</span>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    visual === 'rack' && (
+      <div class="rack">
+        <div class="rail" />
+        <div class="units">
+          {rack.map((d) => (
+            <div class={`unit ${d.kind}`} style={`--u:${d.u}`}>
+              {d.label && <span>{d.label}</span>}
+              {d.kind !== 'empty' && <i />}
+            </div>
+          ))}
+        </div>
+        <div class="rail" />
+      </div>
+    )
+  }
+
+  {
+    visual === 'cards' && (
+      <div class="cards">
+        <div class="card back2" />
+        <div class="card back1" />
+        <div class="card front">
+          <small>serendipity</small>
+          <strong>{hu ? 'szerencsés véletlen' : 'happy accident'}</strong>
+          <p>"Meeting her was pure serendipity."</p>
+        </div>
+        <div class="boxes">
+          {[1, 2, 3, 4, 5].map((n, i) => (
+            <span style={`--h:${[90, 65, 45, 30, 18][i]}%`}>
+              <i />
+              <b>{n}</b>
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .visual {
+    --panel: #fff;
+    --panel-ink: var(--ink);
+    --panel-ink-2: var(--ink-2);
+    --panel-line: #ececf0;
+    width: 100%;
+    display: grid;
+    place-items: center;
+  }
+  .visual.dark {
+    --panel: #1c1c1e;
+    --panel-ink: var(--dark-ink);
+    --panel-ink-2: var(--dark-ink-2);
+    --panel-line: #2c2c2e;
+  }
+
+  /* ---- közös "eszköz" keret ---- */
+  .device {
+    width: min(420px, 100%);
+    background: var(--panel);
+    color: var(--panel-ink);
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow:
+      0 40px 80px -30px rgba(0, 0, 0, 0.35),
+      0 0 0 1px var(--panel-line);
+  }
+  .bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 6px 14px;
+    font-size: 15px;
+  }
+  .bar span {
+    font-size: 12px;
+    color: var(--panel-ink-2);
+  }
+
+  /* ---- Weekender ---- */
+  .flight {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-line);
+    margin-top: 10px;
+  }
+  .flight strong {
+    display: block;
+    font-size: 16px;
+  }
+  .flight small {
+    display: block;
+    font-size: 12px;
+    color: var(--panel-ink-2);
+    margin-top: 2px;
+  }
+  .flight i {
+    display: block;
+    height: 4px;
+    width: 150px;
+    margin-top: 10px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #b5603a var(--w), var(--panel-line) var(--w));
+  }
+  .price {
+    text-align: right;
+  }
+
+  /* ---- hálózat ---- */
+  .net {
+    width: min(460px, 100%);
+    overflow: visible;
+  }
+  .net rect {
+    fill: var(--panel);
+    stroke: var(--panel-line);
+    stroke-width: 1.5;
+  }
+  .net rect.fw {
+    stroke: #ff5f8a;
+  }
+  .net text {
+    fill: var(--panel-ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-anchor: middle;
+  }
+  .net .labels text {
+    fill: var(--panel-ink-2);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+  }
+  .net .host {
+    fill: #30d158;
+    opacity: 0.85;
+  }
+  .net .links path {
+    stroke-dashoffset: 0;
+    animation: flow 3s linear infinite;
+  }
+  .net .links path:not([stroke-dasharray]) {
+    stroke-dasharray: 6 6;
+  }
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+
+  /* ---- e-mail / DNS ---- */
+  .rec {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-top: 1px solid var(--panel-line);
+  }
+  .type {
+    flex: 0 0 64px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #2997ff;
+  }
+  .val small {
+    display: block;
+    font-size: 12px;
+    color: var(--panel-ink-2);
+  }
+  .val code {
+    font-size: 13px;
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+  .auth {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 14px 6px 4px;
+  }
+  .auth span {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 980px;
+    color: #30d158;
+    background: rgba(48, 209, 88, 0.12);
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+
+  /* ---- rack ---- */
+  .rack {
+    display: flex;
+    gap: 6px;
+    padding: 14px;
+    border-radius: 20px;
+    background: #1c1c1e;
+    box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.45);
+    width: min(360px, 100%);
+  }
+  .rail {
+    width: 8px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(#3a3a3c 0 3px, #2c2c2e 3px 10px);
+  }
+  .units {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .unit {
+    height: calc(var(--u) * 30px + (var(--u) - 1) * 4px);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #f5f5f7;
+    background: #2c2c2e;
+  }
+  .unit i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #30d158;
+    box-shadow: 0 0 8px #30d158;
+    animation: blink 2.4s ease-in-out infinite;
+  }
+  .unit.empty {
+    background: transparent;
+    border: 1px dashed #3a3a3c;
+  }
+  .unit.switch {
+    background: linear-gradient(90deg, #0a3d7a, #1d5fb0);
+  }
+  .unit.patch {
+    background: repeating-linear-gradient(90deg, #3a3a3c 0 10px, #48484a 10px 12px);
+  }
+  .unit.server {
+    background: linear-gradient(90deg, #3a2a6b, #5b43a8);
+  }
+  .unit.storage {
+    background: linear-gradient(90deg, #6b2a45, #a8436f);
+  }
+  .unit.ups {
+    background: linear-gradient(90deg, #6b4a12, #a87319);
+  }
+  .unit:nth-child(3n) i {
+    animation-delay: -0.8s;
+  }
+  .unit:nth-child(3n + 1) i {
+    animation-delay: -1.6s;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  /* ---- szókártyák ---- */
+  .cards {
+    position: relative;
+    width: min(400px, 100%);
+    height: 360px;
+  }
+  .card {
+    position: absolute;
+    inset: 20px 30px 120px;
+    border-radius: 24px;
+    background: var(--panel);
+    box-shadow:
+      0 30px 60px -30px rgba(0, 0, 0, 0.35),
+      0 0 0 1px var(--panel-line);
+  }
+  .back2 {
+    transform: rotate(-8deg) translate(-14px, 10px);
+    opacity: 0.5;
+  }
+  .back1 {
+    transform: rotate(4deg) translate(12px, 4px);
+    opacity: 0.75;
+  }
+  .front {
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: var(--panel-ink);
+    animation: bob 5s ease-in-out infinite;
+  }
+  .front small {
+    font-size: 14px;
+    color: var(--panel-ink-2);
+  }
+  .front strong {
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    margin: 6px 0 12px;
+  }
+  .front p {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--panel-ink-2);
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(-8px) rotate(-1deg);
+    }
+  }
+  .boxes {
+    position: absolute;
+    left: 30px;
+    right: 30px;
+    bottom: 0;
+    height: 90px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .boxes span {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+  }
+  .boxes i {
+    width: 100%;
+    height: var(--h);
+    border-radius: 8px;
+    background: linear-gradient(#bf5af2, #7c5cff);
+  }
+  .boxes b {
+    font-size: 12px;
+    color: var(--panel-ink-2);
+  }
+</style>

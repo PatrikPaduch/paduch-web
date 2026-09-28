@@ -1,0 +1,146 @@
+---
+import { getCollection, render } from 'astro:content';
+import ProjectVisual from './ProjectVisual.astro';
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+
+// csak az adott nyelv mappájából, sorrend szerint
+const projects = (await getCollection('projects', (p) => p.id.startsWith(`${lang}/`))).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const rendered = await Promise.all(projects.map(async (p) => ({ p, Content: (await render(p)).Content })));
+---
+
+<section id="projects">
+  <header class="intro section-dark">
+    <div class="wrap">
+      <p class="eyebrow reveal">{tr('projects.eyebrow')}</p>
+      <h2 class="headline reveal gradient-text" style="--d:.08s">{tr('projects.title')}</h2>
+    </div>
+  </header>
+
+  {
+    rendered.map(({ p, Content }, i) => {
+      const dark = i % 2 === 0;
+      return (
+        <article class:list={['project', { 'section-dark': dark, flip: i % 2 === 1 }]}>
+          <div class="wrap row">
+            <div class="copy">
+              <p class="eyebrow reveal">{p.data.eyebrow}</p>
+              <h3 class="title reveal" style="--d:.06s">
+                {p.data.title}
+              </h3>
+              <p class="tagline reveal" style="--d:.12s">
+                {p.data.tagline}
+              </p>
+              <div class="body reveal" style="--d:.18s">
+                <Content />
+              </div>
+              <ul class="tags reveal" style="--d:.24s">
+                {p.data.tags.map((tag) => (
+                  <li>{tag}</li>
+                ))}
+              </ul>
+            </div>
+            <div class="art reveal" style="--d:.1s">
+              <ProjectVisual visual={p.data.visual} dark={dark} lang={lang} />
+            </div>
+          </div>
+        </article>
+      );
+    })
+  }
+</section>
+
+<style>
+  .intro {
+    padding: clamp(120px, 16vw, 200px) 0 40px;
+    text-align: center;
+  }
+  .intro .headline {
+    font-size: clamp(48px, 8vw, 104px);
+    margin-top: 10px;
+    padding-bottom: 0.08em;
+  }
+
+  .project {
+    padding: clamp(80px, 12vw, 160px) 0;
+    background: var(--bg-alt);
+  }
+  .project.section-dark {
+    background: var(--dark);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(40px, 6vw, 96px);
+    align-items: center;
+  }
+  .flip .copy {
+    order: 2;
+  }
+
+  .copy .title {
+    margin: 10px 0 14px;
+  }
+  .tagline {
+    font-size: clamp(22px, 2.2vw, 30px);
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink-2);
+  }
+  .section-dark .tagline {
+    color: var(--dark-ink-2);
+  }
+  .body {
+    margin-top: 24px;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .section-dark .body {
+    color: var(--dark-ink-2);
+  }
+  .body :global(p + p) {
+    margin-top: 14px;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tags li {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 980px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+  .section-dark .tags li {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .art {
+    transition-duration: 1.4s;
+  }
+
+  @media (max-width: 860px) {
+    .row {
+      grid-template-columns: 1fr;
+    }
+    .flip .copy {
+      order: 0;
+    }
+  }
+</style>

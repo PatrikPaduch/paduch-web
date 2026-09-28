@@ -1,0 +1,25 @@
+---
+// A teljes főoldal; a két nyelvi oldal (/ és /en/) ezt tölti be.
+import Layout from '../layouts/Layout.astro';
+import Hero from './Hero.astro';
+import Statement from './Statement.astro';
+import Work from './Work.astro';
+import Projects from './Projects.astro';
+import Stack from './Stack.astro';
+import Contact from './Contact.astro';
+import type { Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+---
+
+<Layout lang={lang}>
+  <Hero lang={lang} />
+  <Statement lang={lang} />
+  <Work lang={lang} />
+  <Projects lang={lang} />
+  <Stack lang={lang} />
+  <Contact lang={lang} />
+</Layout>

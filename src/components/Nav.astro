@@ -1,0 +1,322 @@
+---
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+const other = lang === 'hu' ? '/en/' : '/';
+const home = lang === 'hu' ? '/' : '/en/';
+---
+
+<header class="nav">
+  <nav class="nav-inner" aria-label="Main">
+    <a class="brand" href={home}>Paduch</a>
+    <ul>
+      <li><a href="#work" data-spy="work">{tr('nav.work')}</a></li>
+      <li><a href="#projects" data-spy="projects">{tr('nav.projects')}</a></li>
+      <li><a href="#contact" data-spy="contact">{tr('nav.contact')}</a></li>
+    </ul>
+    <a class="lang" href={other} hreflang={lang === 'hu' ? 'en' : 'hu'} aria-label={tr('nav.switchLabel')}>
+      {tr('nav.switch')}
+    </a>
+  </nav>
+  <div class="progress" aria-hidden="true"><span></span></div>
+</header>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 52px;
+    background: rgba(251, 251, 253, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .nav-inner {
+    width: var(--wrap);
+    height: 100%;
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .brand {
+    font-weight: 700;
+    font-size: 19px;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+  }
+
+  ul {
+    display: flex;
+    gap: 28px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  ul a {
+    position: relative;
+    display: block;
+    padding: 6px 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.72);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  /* aktív szakasz: színátmenetes aláhúzás, középről nyílik */
+  ul a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--grad);
+    transform: scaleX(0);
+    transition: transform 0.5s var(--ease);
+  }
+  ul a:hover,
+  ul a.active {
+    color: #000;
+  }
+  ul a.active::after {
+    transform: scaleX(1);
+  }
+
+  .lang {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 980px;
+    border: 1px solid var(--line);
+    transition:
+      background 0.2s,
+      border-color 0.2s;
+  }
+
+  .lang:hover {
+    background: #fff;
+    border-color: #b0b0b5;
+  }
+
+  /* sötét szakasz fölött a menü is sötétre vált */
+  .nav {
+    transition:
+      background 0.5s var(--ease),
+      border-color 0.5s var(--ease),
+      color 0.5s var(--ease);
+  }
+  .nav.on-dark {
+    background: rgba(22, 22, 23, 0.72);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    color: var(--dark-ink);
+  }
+  .nav.on-dark ul a {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .nav.on-dark ul a:hover,
+  .nav.on-dark ul a.active {
+    color: #fff;
+  }
+  .nav.on-dark .lang {
+    border-color: #48484a;
+  }
+  .nav.on-dark .lang:hover {
+    background: #2c2c2e;
+    border-color: #636366;
+  }
+
+  /* haladásjelző: az oldal görgetésével együtt töltődik (JS állítja a --p értéket) */
+  .progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    pointer-events: none;
+  }
+  .progress span {
+    display: block;
+    height: 100%;
+    background: var(--grad);
+    transform-origin: left;
+    transform: scaleX(var(--p, 0));
+    box-shadow: 0 0 12px rgba(124, 92, 255, 0.6);
+    opacity: 0.85;
+  }
+  .nav.flying .progress span {
+    height: 3px;
+    opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    ul {
+      gap: 16px;
+    }
+    ul li:first-child {
+      display: none;
+    }
+    .nav-inner {
+      gap: 12px;
+    }
+  }
+</style>
+
+<script>
+  const nav = document.querySelector<HTMLElement>('.nav')!;
+  const bar = nav.querySelector<HTMLElement>('.progress span')!;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- haladásjelző ----
+  let queued = false;
+  const paint = () => {
+    queued = false;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.setProperty('--p', String(max > 0 ? scrollY / max : 0));
+  };
+  addEventListener(
+    'scroll',
+    () => {
+      if (!queued) {
+        queued = true;
+        requestAnimationFrame(paint);
+      }
+    },
+    { passive: true },
+  );
+  paint();
+
+  // ---- sima, gyorsuló-lassuló görgetés a #horgonyokhoz ----
+  // easeInOutCubic: lágy indulás és fékezés, de középen nem száguld el annyira,
+  // mint a meredekebb görbék, így képkockánként kisebbet lép a kép
+  const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+  const root = document.documentElement;
+  let flight = 0;
+
+  function flyTo(target: HTMLElement) {
+    const navH = nav.offsetHeight;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const to = Math.min(max, target.getBoundingClientRect().top + scrollY - navH + 1);
+    const from = scrollY;
+    const dist = Math.abs(to - from);
+    if (dist < 4) {
+      arrive(target);
+      return;
+    }
+    // A kattintással indított repülés csökkentett mozgás módban is megy, csak rövidebb
+    // (a háttérben magától futó animációk ott ki vannak kapcsolva, lásd global.css).
+    const duration = reduce
+      ? Math.min(900, Math.max(450, 300 + dist * 0.08))
+      : Math.min(2400, Math.max(800, 600 + dist * 0.2));
+    const id = ++flight;
+    startFlight(Math.min(from, to), Math.max(from, to) + innerHeight);
+    let start = 0;
+    const step = (now: number) => {
+      if (id !== flight) return; // újabb kattintás vagy görgetés megszakította
+      if (!start) start = now; // az első képkockától mérünk, így nincs kezdő ugrás
+      const t = Math.min(1, (now - start) / duration);
+      scrollTo(0, Math.round(from + (to - from) * ease(t)));
+      if (t < 1) requestAnimationFrame(step);
+      else {
+        endFlight();
+        arrive(target);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Repülés közben a drága rajzolást kikapcsoljuk (üveghatás, háttéranimációk,
+  // beúszások), hogy minden képkockára jusson idő. Lásd global.css: html.is-flying
+  function startFlight(top: number, bottom: number) {
+    nav.classList.add('flying');
+    root.classList.add('is-flying');
+    // az útba eső, még be nem úszott elemek most egyszerre kerülnek kész állapotba,
+    // nem menet közben egyenként (az akasztaná meg a görgetést)
+    document.querySelectorAll<HTMLElement>('.reveal:not(.in)').forEach((el) => {
+      const y = el.getBoundingClientRect().top + scrollY;
+      if (y >= top && y <= bottom) el.classList.add('in');
+    });
+  }
+  function endFlight() {
+    nav.classList.remove('flying');
+    root.classList.remove('is-flying');
+    // a menet közben elsuhant elemek beúszás nélkül, azonnal láthatók legyenek
+    document.querySelectorAll('.reveal:not(.in)').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < 0) el.classList.add('in');
+    });
+  }
+
+  function arrive(target: HTMLElement) {
+    target.classList.remove('arrived');
+    void target.offsetWidth; // újraindítja az animációt
+    target.classList.add('arrived');
+    setTimeout(() => target.classList.remove('arrived'), 2400);
+  }
+
+  // felhasználói görgetés (kerék, érintés, billentyű) megszakítja a repülést
+  for (const ev of ['wheel', 'touchstart', 'keydown']) {
+    addEventListener(
+      ev,
+      () => {
+        if (nav.classList.contains('flying')) {
+          flight++;
+          endFlight();
+        }
+      },
+      { passive: true },
+    );
+  }
+
+  document.addEventListener('click', (e) => {
+    const a = (e.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const target = document.getElementById(a.hash.slice(1));
+    if (!target) return;
+    e.preventDefault();
+    history.pushState(null, '', a.hash);
+    flyTo(target);
+  });
+
+  // ---- menü színe: sötét-e a szakasz közvetlenül a menü alatt ----
+  const darkSections = [...document.querySelectorAll<HTMLElement>('.section-dark')];
+  const under = new Set<Element>();
+  const tone = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) e.isIntersecting ? under.add(e.target) : under.delete(e.target);
+      nav.classList.toggle('on-dark', under.size > 0);
+    },
+    // csak a menü alatti vékony sáv számít
+    { rootMargin: `-${nav.offsetHeight}px 0px -${innerHeight - nav.offsetHeight - 2}px 0px` },
+  );
+  darkSections.forEach((s) => tone.observe(s));
+
+  // ---- aktív menüpont: melyik szakasz van a képernyő közepén ----
+  const links = [...nav.querySelectorAll<HTMLAnchorElement>('[data-spy]')];
+  const spy = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          links.forEach((l) => l.classList.toggle('active', l.dataset.spy === e.target.id));
+        } else {
+          links.find((l) => l.dataset.spy === e.target.id)?.classList.remove('active');
+        }
+      }
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  links.forEach((l) => {
+    const s = document.getElementById(l.dataset.spy!);
+    if (s) spy.observe(s);
+  });
+</script>

@@ -1,0 +1,122 @@
+---
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+const email = 'patrik@paduch.hu';
+---
+
+<section id="contact" class="contact section-dark">
+  <div class="wrap">
+    <p class="eyebrow reveal">{tr('contact.eyebrow')}</p>
+    <h2 class="big reveal" style="--d:.08s">{tr('contact.title')}</h2>
+    <p class="lead reveal" style="--d:.16s">{tr('contact.lead')}</p>
+    <a class="mail gradient-text reveal" style="--d:.24s" href={`mailto:${email}`}>{email}</a>
+  </div>
+  <footer class="wrap foot">
+    <span>© {new Date().getFullYear()} Paduch Patrik</span>
+    <span>{tr('footer.built')}</span>
+  </footer>
+</section>
+
+<style>
+  .contact {
+    padding: clamp(140px, 18vw, 240px) 0 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .contact::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    width: 900px;
+    height: 500px;
+    translate: -50% -50%;
+    background: radial-gradient(closest-side, rgba(124, 92, 255, 0.35), transparent);
+    pointer-events: none;
+  }
+  .wrap {
+    position: relative;
+  }
+  .big {
+    font-size: clamp(56px, 11vw, 150px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    margin: 14px 0 28px;
+  }
+  .lead {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .mail {
+    display: inline-block;
+    margin-top: 48px;
+    font-size: clamp(28px, 4.4vw, 56px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    padding-bottom: 0.08em;
+    transition: filter 0.4s var(--ease);
+  }
+  .mail:hover {
+    filter: brightness(1.25) saturate(1.2);
+  }
+
+  /* megérkezés a menüből: lüktető háttérfény + végigfutó fénycsík a címen */
+  .contact.arrived::before {
+    animation: pulse 1.8s var(--ease);
+  }
+  @keyframes pulse {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    35% {
+      transform: scale(1.25);
+      opacity: 1;
+    }
+  }
+  .mail {
+    background-image:
+      linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%),
+      var(--grad);
+    background-size:
+      250% 100%,
+      100% 100%;
+    background-position:
+      150% 0,
+      0 0;
+    background-repeat: no-repeat;
+  }
+  .contact.arrived .mail {
+    animation: shimmer 1.6s var(--ease) 0.45s;
+  }
+  @keyframes shimmer {
+    from {
+      background-position:
+        150% 0,
+        0 0;
+    }
+    to {
+      background-position:
+        -60% 0,
+        0 0;
+    }
+  }
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: clamp(120px, 16vw, 200px);
+    padding-top: 20px;
+    border-top: 1px solid #2c2c2e;
+    font-size: 12px;
+    color: #86868b;
+  }
+</style>

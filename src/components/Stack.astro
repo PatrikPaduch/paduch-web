@@ -1,0 +1,78 @@
+---
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+
+const rows = [
+  ['Linux', 'Docker', 'Cisco IOS', 'OSPF', 'VLAN', 'ASA', 'Tailscale', 'Cloudflare', 'WireGuard', 'DNS'],
+  ['Icinga', 'Graylog', 'Grafana', 'Prometheus', 'PostgreSQL', 'SQLite', 'Microsoft 365', 'Intune', 'Entra ID'],
+  ['PowerShell', 'Python', 'Bash', 'Microsoft Graph', 'Node.js', 'Astro', 'Git', 'SNMP', 'Power BI'],
+];
+---
+
+<section class="stack">
+  <h2 class="eyebrow wrap reveal">{tr('stack.title')}</h2>
+  <div class="marquees" aria-label={tr('stack.title')}>
+    {
+      rows.map((row, i) => (
+        <div class:list={['marquee', { reverse: i % 2 === 1 }]} style={`--dur:${46 + i * 8}s`}>
+          <ul>
+            {[...row, ...row].map((item, j) => (
+              <li aria-hidden={j >= row.length ? 'true' : undefined}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .stack {
+    padding: clamp(96px, 12vw, 160px) 0;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .stack h2 {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .marquees {
+    display: grid;
+    gap: 14px;
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee ul {
+    display: flex;
+    gap: 14px;
+    width: max-content;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    animation: slide var(--dur) linear infinite;
+  }
+  .marquee.reverse ul {
+    animation-direction: reverse;
+  }
+  .marquees:hover ul {
+    animation-play-state: paused;
+  }
+  li {
+    font-size: clamp(18px, 2vw, 24px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    padding: 14px 26px;
+    border-radius: 980px;
+    background: var(--bg-alt);
+    white-space: nowrap;
+  }
+  @keyframes slide {
+    to {
+      transform: translateX(calc(-50% - 7px));
+    }
+  }
+</style>

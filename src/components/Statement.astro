@@ -1,0 +1,86 @@
+---
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const words = t(lang)('statement').split(' ');
+---
+
+<!-- Sötét szakasz: a szavak görgetés közben egyenként kivilágosodnak -->
+<section class="statement section-dark" data-statement>
+  <div class="sticky">
+    <p class="wrap text">
+      {words.map((w) => <span class="w">{w} </span>)}
+    </p>
+  </div>
+</section>
+
+<style>
+  .statement {
+    height: 220vh;
+    position: relative;
+  }
+  .sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: grid;
+    place-items: center;
+  }
+  .text {
+    font-size: clamp(34px, 5.4vw, 72px);
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    max-width: 1000px;
+  }
+  .w {
+    color: #3a3a3c;
+    transition: color 0.4s var(--ease);
+  }
+  .w.lit {
+    color: var(--dark-ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .statement {
+      height: auto;
+      padding: 160px 0;
+    }
+    .sticky {
+      position: static;
+      height: auto;
+    }
+    .w {
+      color: var(--dark-ink);
+    }
+  }
+</style>
+
+<script>
+  const section = document.querySelector<HTMLElement>('[data-statement]');
+  if (section && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const words = [...section.querySelectorAll<HTMLElement>('.w')];
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const r = section.getBoundingClientRect();
+      const span = r.height - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / (span * 0.85)));
+      const lit = Math.round(p * words.length);
+      words.forEach((w, i) => w.classList.toggle('lit', i < lit));
+    };
+    addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+    update();
+  }
+</script>
