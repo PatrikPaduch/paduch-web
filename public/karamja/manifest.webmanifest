@@ -1,0 +1,16 @@
+{
+  "name": "Karamja",
+  "short_name": "Karamja",
+  "description": "OSRS-hangulatú böngészős kalandjáték hét szigettel.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#3b2a14",
+  "lang": "hu",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
