@@ -50,7 +50,15 @@
   #run.on{background:#2a5a1a}
   #saveRow{display:flex;gap:4px;margin:0 8px 8px}
   #saveRow div{flex:1;text-align:center;padding:3px;background:#3b2a14;border:2px solid #8a6a3a;color:#ffe87a;font-size:11px;cursor:pointer;text-shadow:1px 1px 0 #000}
-  #saveRow #saveSt{cursor:default;color:#9ad08a}
+  #saveRow #saveSt{color:#9ad08a}
+  #cloud{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92%);background:#d8c8a0;border:4px solid #3a2a14;box-shadow:0 0 0 2px #8a6a3a,0 8px 30px #000;padding:14px 16px;font-size:14px;color:#000;display:none;z-index:7;box-sizing:border-box}
+  #cloud b.t{display:block;color:#7a1a1a;margin-bottom:8px;font-size:16px;text-align:center;letter-spacing:1px}
+  #cloud .code{font-family:Consolas,monospace;font-size:20px;letter-spacing:2px;text-align:center;background:#f0e4c4;border:2px solid #8a6a3a;padding:6px;margin:6px 0;user-select:text}
+  #cloud .row{display:flex;gap:6px;margin-top:8px}
+  #cloud input{flex:1;font-family:Consolas,monospace;font-size:14px;letter-spacing:1px;padding:5px;border:2px solid #8a6a3a;background:#fff;text-transform:uppercase}
+  #cloud button{background:#3b2a14;color:#ffe87a;border:2px solid #8a6a3a;padding:5px 10px;cursor:pointer;font-size:12px}
+  #cloud .st{font-size:12px;color:#333;margin-top:8px;line-height:16px}
+  #cloud .cls{position:absolute;right:8px;top:4px;color:#7a1a1a;cursor:pointer;font-size:16px;font-weight:bold}
   #minimap{cursor:pointer}
   #wmap{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:7}
   #wmap .box{background:linear-gradient(#5b4426,#3b2a14);border:4px solid #1a1206;box-shadow:inset 0 0 0 2px #8a6a3a,0 8px 30px #000;padding:8px;position:relative}
@@ -92,10 +100,17 @@
   <div class="page on" id="p-inv"><div id="inv"></div><div id="invHint">Klikk: használ/eszik. Jobb klikk: eldob. Rönk: tüzet rak. Nyers halat a tűzre kattintva sütsz.</div></div>
   <div class="page" id="p-sk"><div id="skgrid"></div><div id="sktot">Összes szint: <b id="lv-tot">16</b></div></div>
   <div id="run">Futás: KI</div>
-  <div id="saveRow"><div id="saveSt">Mentve</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
+  <div id="saveRow"><div id="saveSt" title="Felhőmentés beállításai">Felhő</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
 <div id="chat"><div class="inner" id="chatInner"></div></div>
 <div id="dialog"></div>
+<div id="cloud"><span class="cls" id="cloudClose">✕</span><b class="t">FELHŐMENTÉS</b>
+  <div>A mentéskódod (ez a jelszavad, írd fel):</div><div class="code" id="cloudCode">----</div>
+  <div class="row"><button id="cloudCopy">Másolás</button><button id="cloudNow">Mentés most</button></div>
+  <div style="margin-top:12px">Folytatás másik eszközről: írd be az ottani kódot.</div>
+  <div class="row"><input id="cloudInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19"><button id="cloudLoad">Betöltés</button></div>
+  <div class="st" id="cloudSt"></div>
+</div>
 <div id="wmap"><div class="box"><div class="ttl">KARAMJA TÉRKÉPE</div><span class="cls" id="wmapClose">✕</span><canvas id="wmapC" width="512" height="512"></canvas><div class="leg">Kattints a térképre, és odasétálsz. M vagy Esc: bezár.</div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -916,22 +931,71 @@ function animate(now){
 document.getElementById('load').remove();
 chat('Üdvözöllek Karamján!');chat('Kattints a terepre a sétához, a fákra, sziklákra, horgászhelyekre, szörnyekre a használathoz.');
 chat('Nyers halat a falusi tűznél süthetsz. Rönkből bárhol tüzet rakhatsz. Éjjel a dzsungel veszélyesebb.');
-// ---- mentés localStorage-ba ----
-const SAVE_KEY='karamja_save_v1';
-function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({xp,hp,inv,px,pz,dayT,run,facing,t:Date.now()}));const e=document.getElementById('saveSt');e.textContent='Mentve ✓';setTimeout(()=>e.textContent='Mentve',1500)}catch(err){}}
-function loadGame(){
-  let d=null;try{d=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(err){}
+// ---- mentés: localStorage + felhő (Worker + D1, mentéskód alapján) ----
+const SAVE_KEY='karamja_save_v1',CODE_KEY='karamja_code';
+const API=/paduch\.hu$/.test(location.hostname)?'/karamja/api':'http://127.0.0.1:8787/karamja/api';
+function snapshot(){return {xp,hp,inv,px,pz,dayT,run,facing,t:Date.now()}}
+function applySave(d){
   if(!d||!d.xp)return false;
-  for(const k in xp)if(typeof d.xp[k]==='number')xp[k]=d.xp[k];
+  for(const k in xp)xp[k]=typeof d.xp[k]==='number'?d.xp[k]:(k==='hp'?xpFor(10):0);
   hp=clamp(d.hp||maxHp(),1,maxHp());
   if(Array.isArray(d.inv))for(let i=0;i<28;i++)inv[i]=ITEMS[d.inv[i]]?d.inv[i]:null;
   if(typeof d.px==='number'&&typeof d.pz==='number'&&!isWater(d.px,d.pz)){px=d.px;pz=d.pz}
-  if(typeof d.dayT==='number')dayT=d.dayT;if(d.run){run=false;toggleRun()}if(typeof d.facing==='number')facing=d.facing;
-  renderInv();updateSkillsUI();updateHp();return true;
+  if(typeof d.dayT==='number')dayT=d.dayT;if(d.run!==run)toggleRun();if(typeof d.facing==='number')facing=d.facing;
+  target=null;route=[];pendingAction=null;busy=null;fight=null;marker.visible=false;
+  renderInv();updateSkillsUI();updateHp();placeAt(player,px,pz);return true;
 }
-if(loadGame()){chat('Mentett állás betöltve. Üdv újra Karamján!','xp');placeAt(player,px,pz)}
-setInterval(saveGame,5000);addEventListener('beforeunload',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
-document.getElementById('resetBtn').onclick=()=>{if(confirm('Biztos törlöd a mentést és újrakezded?')){localStorage.removeItem(SAVE_KEY);removeEventListener('beforeunload',saveGame);location.reload()}};
+function saveLocal(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot()))}catch(err){}}
+function loadLocal(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))}catch(err){return null}}
+// mentéskód
+const ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function newCode(){const a=new Uint8Array(16);crypto.getRandomValues(a);const c=[...a].map(b=>ABC[b%32]).join('');return c.match(/.{4}/g).join('-')}
+let saveCode=null;try{saveCode=localStorage.getItem(CODE_KEY)}catch(err){}
+if(!saveCode||!/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(saveCode)){saveCode=newCode();try{localStorage.setItem(CODE_KEY,saveCode)}catch(err){}}
+const cloud={ok:null,last:0,lastJson:'',busy:false};
+const stEl=document.getElementById('saveSt');
+function cloudStatus(){stEl.textContent=cloud.ok===null?'Felhő …':(cloud.ok?'Felhő ✓':'Felhő ✗');stEl.style.color=cloud.ok===false?'#ff8a8a':'#9ad08a';
+  document.getElementById('cloudSt').textContent=cloud.ok===null?'Felhő: még nem kapcsolódott.':(cloud.ok?`Felhő: rendben, utolsó mentés ${new Date(cloud.last).toLocaleTimeString('hu')}.`:'Felhő: nem elérhető, csak helyben mentünk.')}
+async function cloudSave(force,keep){
+  const d=snapshot();const js=JSON.stringify({data:d});if(!force&&js===cloud.lastJson)return;if(cloud.busy&&!keep)return;cloud.busy=true;
+  try{const r=await fetch(API+'/save',{method:'PUT',headers:{'Content-Type':'application/json','X-Save-Code':saveCode},body:js,keepalive:!!keep});
+    if(r.ok){cloud.ok=true;cloud.last=Date.now();cloud.lastJson=js}else cloud.ok=false}catch(err){cloud.ok=false}
+  cloud.busy=false;cloudStatus();
+}
+async function cloudLoad(code){
+  try{const r=await fetch(API+'/save',{headers:{'X-Save-Code':code}});if(r.status===404)return {none:true};if(!r.ok)return null;return await r.json()}catch(err){return null}
+}
+function saveGame(){saveLocal();stEl.classList.add('on');setTimeout(()=>stEl.classList.remove('on'),300)}
+// indulás: helyi mentés, aztán a felhő (ha ott frissebb, az nyer)
+const localD=loadLocal();
+if(localD&&applySave(localD))chat('Mentett állás betöltve. Üdv újra Karamján!','xp');
+(async()=>{
+  const c=await cloudLoad(saveCode);
+  if(c===null){cloud.ok=false;cloudStatus();chat('A felhőmentés most nem elérhető, helyben mentünk.');return}
+  if(c.none){cloud.ok=true;cloudStatus();if(localD)cloudSave(true);return}
+  const lt=localD&&localD.t||0;
+  if(c.data&&c.data.t>lt+2000){applySave(c.data);saveLocal();chat('Frissebb állás jött a felhőből, onnan folytatod.','xp')}
+  cloud.ok=true;cloud.last=c.updated_at||Date.now();cloud.lastJson=JSON.stringify({data:c.data});cloudStatus();if(lt>(c.data&&c.data.t||0))cloudSave(true);
+})();
+setInterval(saveGame,5000);setInterval(()=>cloudSave(false),30000);
+let resetting=false;addEventListener('beforeunload',()=>{if(resetting)return;saveLocal();cloudSave(false,true)});document.addEventListener('visibilitychange',()=>{if(document.hidden){saveLocal();cloudSave(false,true)}});
+// felhő-panel
+const cloudEl=document.getElementById('cloud');
+function toggleCloud(on){cloudEl.style.display=on?'block':'none';if(on){document.getElementById('cloudCode').textContent=saveCode;cloudStatus()}}
+stEl.onclick=()=>toggleCloud(true);document.getElementById('cloudClose').onclick=()=>toggleCloud(false);
+document.getElementById('cloudCopy').onclick=async()=>{try{await navigator.clipboard.writeText(saveCode);chat('Mentéskód a vágólapon.')}catch(err){chat('Nem sikerült másolni, írd le kézzel.')}};
+document.getElementById('cloudNow').onclick=()=>{saveLocal();cloudSave(true)};
+document.getElementById('cloudLoad').onclick=async()=>{
+  const code=document.getElementById('cloudInput').value.toUpperCase().trim();
+  if(!/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(code)){chat('Hibás kód, a formátum: XXXX-XXXX-XXXX-XXXX.');return}
+  const c=await cloudLoad(code);
+  if(c===null){chat('A felhő most nem elérhető.');return}
+  if(c.none){chat('Ehhez a kódhoz nincs mentés.');return}
+  saveCode=code;try{localStorage.setItem(CODE_KEY,saveCode)}catch(err){}
+  applySave(c.data);saveLocal();cloud.ok=true;cloud.last=c.updated_at;cloud.lastJson=JSON.stringify({data:c.data});cloudStatus();
+  document.getElementById('cloudCode').textContent=saveCode;document.getElementById('cloudInput').value='';toggleCloud(false);chat('Állás betöltve a felhőből. Üdv újra Karamján!','xp');
+};
+document.getElementById('resetBtn').onclick=()=>{if(confirm('Biztos törlöd a helyi mentést és újrakezded? (A felhőben lévő állás a mentéskóddal továbbra is visszatölthető.)')){resetting=true;localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CODE_KEY);location.replace(location.href)}};
 requestAnimationFrame(animate);
 </script>
 </body>
