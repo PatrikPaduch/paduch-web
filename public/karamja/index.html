@@ -234,7 +234,8 @@ function frostHeight(x,z){
   if(z>60){const t=(z-60)/40;h-=t*t*12}
   return h;
 }
-function isWater(x,z){return height(x,z)<0.3}
+const DOCKS=[];function onDock(x,z){for(const d of DOCKS)if(Math.abs(x-d.x)<=2.2&&z>=d.z1&&z<=d.z2)return true;return false}
+function isWater(x,z){return height(x,z)<0.3&&!onDock(x,z)}
 // ösvények
 const PATHS=[[[-30,70],[0,55],[40,45],[72,30]],[[-30,66],[-22,30],[-6,-24]]];
 const PATHS2=[[[0,80],[0,30],[-24,26]],[[0,30],[26,28]],[[0,30],[0,-10],[55,-28]],[[0,-10],[-4,-60]]];
@@ -436,7 +437,7 @@ function hut(x,z,ry=0){
 }
 const huts=[];
 function dock(x,z,len,ry){
-  const g=new THREE.Group();
+  DOCKS.push({x,z1:z-len/2-1,z2:z+len/2});const g=new THREE.Group();
   const deck=new THREE.Mesh(new THREE.BoxGeometry(3,0.3,len),mats.wood);deck.position.y=1.2;g.add(deck);
   for(let i=0;i<len;i+=4){for(const s of[-1.3,1.3]){const p=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,3,5),mats.trunk);p.position.set(s,0,-len/2+i+1);g.add(p)}}
   g.position.set(x,0,z);g.rotation.y=ry;shadowed(g);scene.add(g);
@@ -872,9 +873,9 @@ addEventListener('mousemove',e=>{
 canvas.addEventListener('click',e=>click(e.clientX,e.clientY));
 // ---- útkeresés (A* 4 egységes rácson, csak szárazföldön) ----
 const GC=4,GN=Math.floor(SIZE/GC);const gLands=[new Uint8Array(GN*GN),new Uint8Array(GN*GN),new Uint8Array(GN*GN),new Uint8Array(GN*GN)];
-for(let zn=0;zn<4;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;gLands[zn][j*GN+i]=height(x,z)>0.5&&(zn!==3||height(x,z)<6)?1:0}
+for(let zn=0;zn<4;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;gLands[zn][j*GN+i]=(height(x,z)>0.5&&(zn!==3||height(x,z)<6))||onDock(x,z)?1:0}
 const gIdx=(x,z)=>[clamp(Math.floor((x-zoneOf(x)*ZX+HALF)/GC),0,GN-1),clamp(Math.floor((z+HALF)/GC),0,GN-1)];
-function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;if(height(ax+(bx-ax)*t,az+(bz-az)*t)<0.3)return false}return true}
+function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;const x=ax+(bx-ax)*t,z=az+(bz-az)*t;if(height(x,z)<0.3&&!onDock(x,z))return false}return true}
 function astar(ax,az,bx,bz){
   const zn=zoneOf(ax);if(zoneOf(bx)!==zn)return null;const gLand=gLands[zn];const zx=zn*ZX;
   const [si,sj]=gIdx(ax,az),[ti,tj]=gIdx(bx,bz);if(!gLand[tj*GN+ti])return null;
@@ -903,6 +904,7 @@ function useObj(o){
   let tx=p.x+dx/d*off,tz=p.z+dz/d*off;
   if(o.type==='monster'&&isBow()&&(isWater(tx,tz)||!lineClear(px,pz,tx,tz))){tx=p.x+dx/d*1.5;tz=p.z+dz/d*1.5}
   if(o.type==='fish'){let k=off;while(isWater(tx,tz)&&k<8){k+=0.5;tx=p.x+dx/d*k;tz=p.z+dz/d*k}}
+  if(o.type==='boat'){let best=null,bd=1e9;for(const dk of DOCKS){const dd=Math.hypot(dk.x-p.x,clamp(p.z,dk.z1,dk.z2)-p.z);if(dd<bd){bd=dd;best=dk}}if(best){tx=best.x;tz=clamp(p.z,best.z1,best.z2-1)}}
   walkTo(tx,tz,o);
 }
 // ---- jobb klikk menü (OSRS-stílus) ----
@@ -1769,9 +1771,9 @@ function animate(now){
     const dx=target.x-px,dz=target.z-pz,d=Math.hypot(dx,dz);const sp=(run?9:4.5)*dt;
     if(d<0.15){if(route.length){target=route.shift()}else{target=null;marker.visible=false;if(pendingAction){const a=pendingAction;pendingAction=null;startAction(a)}}}
     else{const s=Math.min(sp,d);const nx=px+dx/d*s,nz=pz+dz/d*s;
-      const hh=height(nx,nz);const wall=zoneOf(nx)===3&&hh>6;if((hh>0.0&&!wall)||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true}else{target=null;route=[];marker.visible=false;chat(wall?'Sziklafal. Erre nem jutsz tovább.':'Ott víz van, nem gázolsz bele.')}}
+      const hh=height(nx,nz);const wall=zoneOf(nx)===3&&hh>6;if((hh>0.0&&!wall)||onDock(nx,nz)||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true}else{target=null;route=[];marker.visible=false;chat(wall?'Sziklafal. Erre nem jutsz tovább.':'Ott víz van, nem gázolsz bele.')}}
   }
-  player.position.set(px,Math.max(height(px,pz),0.3),pz);
+  player.position.set(px,Math.max(height(px,pz),0.3)+(onDock(px,pz)&&height(px,pz)<0.3?1.05:0),pz);
   player.rotation.y=facing;player.visible=!dead;
   const sw=moving?Math.sin(t*(run?16:10))*0.7:0;
   u.legL.rotation.x=sw;u.legR.rotation.x=-sw;u.armL.rotation.x=-sw;u.armR.rotation.x=sw;
