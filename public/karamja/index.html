@@ -1427,7 +1427,7 @@ function useItem(i){
   if(it.buff){const now=Date.now();if(it.buff==='str'){buffs.str=now+60000;chat('Erő száll a karodba: egy percig +3 a max találatod.','xp')}else{buffs.regen=now+90000;chat('Melegség árad szét benned: másfél percig gyorsan gyógyulsz.','xp')}takeOne(i);SFX.play('eat');return}
   if(id==='vizestomlo'){takeOne(i);hp=Math.min(maxHp(),hp+2);updateHp();heatT=0;SFX.play('eat');chat('Kortyolsz a tömlőből. Felfrissültél.');if(giveItem('urestomlo')){}return}
   if(id==='urestomlo'){chat('Üres tömlő. Az oázisnál kattints a vízre, és megtöltöd.');return}
-  if(id==='lant'){if(SFX.isMuted()||!MUSIC.isOn()){chat('A lant néma: kapcsold be a hangot és a zenét.');return}MUSIC.setZone(6);SFX.play('levelup');chat('Megpendíted a lantot, és felcsendül az erdő dala.');return}
+  if(id==='lant'){if(SFX.isMuted()||!MUSIC.isOn()){chat('A lant néma: kapcsold be a hangot és a zenét.');return}MUSIC.next();SFX.play('levelup');chat('Megpendíted a lantot, és új dal csendül fel.');return}
   if(id==='runa'){chat(qs.tanitvany.st===2?'Rúna. Varázsbottal a kézben automatikusan használod.':'Rúna. Zara tudná, mire jó.');return}
   if(it.quest){chat({timikutya:'Timi kiskutyája. Vidd vissza neki a faluba.',bortonkulcs:'A börtön kulcsa. Gábor keresi.',varazskonyv:'Zara varázskönyve. Vidd vissza neki.',agyagtabla:'Agyagtábla. Régész Nóra gyűjti.',tekercs:'Ősi tekercs. Régész Nóra a piramisnál gyűjti.',rumoshordo:'Rumos hordó. Egyszemű Jack keresi Csontvárosban.',rozsdaskard:'A kapitány rozsdás kardja. Vidd vissza neki.',aranykulcs:'Egy aranykulcs. Valami ládát nyithat.',terkepdarab:'Szakadt térképdarab, goblinmancsnyomokkal. Barnabás biztos érti.'}[id]);return}
   if(id==='vasrud'||id==='aranyrud'){chat('Rúd. Az üllőn kovácsolhatsz belőle.');return}
@@ -1512,46 +1512,79 @@ const MUSIC=(()=>{
   function bass(c,g,f,t0,len,vol){const o=c.createOscillator(),e=c.createGain();o.type='triangle';o.frequency.value=f;e.gain.setValueAtTime(vol,t0);e.gain.exponentialRampToValueAtTime(0.001,t0+Math.min(len,0.6));o.connect(e);e.connect(g);o.start(t0);o.stop(t0+Math.min(len,0.6)+0.05)}
   function flute(c,g,f,t0,len,vol){const o=c.createOscillator(),e=c.createGain();o.type='sine';o.frequency.value=f;const o2=c.createOscillator();o2.type='triangle';o2.frequency.value=f*2;const e2=c.createGain();e2.gain.value=0.15;e.gain.setValueAtTime(0.0001,t0);e.gain.linearRampToValueAtTime(vol,t0+0.05);e.gain.setValueAtTime(vol,t0+len-0.08);e.gain.linearRampToValueAtTime(0.0001,t0+len);o.connect(e);o2.connect(e2);e2.connect(e);e.connect(g);o.start(t0);o2.start(t0);o.stop(t0+len+0.02);o2.stop(t0+len+0.02)}
   // dalok: lépés = nyolcad
+  // dob: mély hang = lábdob, magas = pergő (zajjal)
+  function drum(c,g,f,t0,len,vol){if(f<150){const o=c.createOscillator(),e=c.createGain();o.type='sine';o.frequency.setValueAtTime(140,t0);o.frequency.exponentialRampToValueAtTime(45,t0+0.12);e.gain.setValueAtTime(vol*2,t0);e.gain.exponentialRampToValueAtTime(0.001,t0+0.25);o.connect(e);e.connect(g);o.start(t0);o.stop(t0+0.3)}
+    else{const n=c.sampleRate*0.12;const b=c.createBuffer(1,n,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const src=c.createBufferSource();src.buffer=b;const fl=c.createBiquadFilter();fl.type=f>600?'highpass':'bandpass';fl.frequency.value=f>600?4000:1800;const e=c.createGain();e.gain.setValueAtTime(vol*1.4,t0);e.gain.exponentialRampToValueAtTime(0.001,t0+0.12);src.connect(fl);fl.connect(e);e.connect(g);src.start(t0)}}
   const SONGS=[
-    {name:'Karamja',bpm:118,tracks:[
+    {name:'Dzsungeldobok',zone:0,bpm:124,tracks:[
+      {inst:marimba,vol:0.085,seq:parse('G5 - E5 G5 A5 - G5 E5 | D5 - E5 - C5 - - - | G5 - E5 G5 C6 - A5 G5 | E5 - D5 - E5 - - - | A5 - G5 A5 C6 - A5 G5 | E5 - G5 - D5 - - - | C5 D5 E5 G5 A5 G5 E5 D5 | C5 - - - - - . .')},
+      {inst:drum,vol:0.07,seq:parse('C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 . A5 C2 | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 . A5 A5 | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 . A5 C2 | C2 . A5 . C2 C2 A5 . | C2 . A5 A5 C2 . . .')},
+      {inst:bass,vol:0.12,seq:parse('C3 - - C3 - - G2 - | C3 - - C3 - - G2 - | A2 - - A2 - - E2 - | F2 - - F2 - - G2 - | C3 - - C3 - - G2 - | A2 - - A2 - - E2 - | F2 - - G2 - - - - | C3 - - - - - . .')}]},
+    {name:'Kikötői este',zone:1,bpm:78,tracks:[
+      {inst:flute,vol:0.045,seq:parse('A4 - - - C5 - D5 - | E5 - - - - - D5 C5 | A4 - - - G4 - A4 - | C5 - - - - - - - | A4 - - - C5 - E5 - | G5 - - - - - E5 D5 | C5 - - - D5 - C5 - | A4 - - - - - - .')},
+      {inst:pad,vol:0.03,seq:parse('A2 - - - - - - - | F2 - - - - - - - | C3 - - - - - - - | G2 - - - - - - - | A2 - - - - - - - | F2 - - - - - - - | C3 - - - - - - - | A2 - - - - - - .')},
+      {inst:bell,vol:0.03,seq:parse('. . . . . . . . | A4 - - - - - - - | . . . . . . . . | E5 - - - - - - - | . . . . . . . . | C5 - - - - - - - | . . . . . . . . | A4 - - - - - - .')}]},
+    {name:'Törpebánya',zone:2,bpm:100,tracks:[
+      {inst:marimba,vol:0.07,seq:parse('D4 D4 F4 D4 A4 - F4 D4 | C4 C4 E4 C4 G4 - E4 C4 | D4 D4 F4 D4 A4 - C5 A4 | F4 - E4 - D4 - - - | D4 D4 F4 D4 A4 - F4 D4 | A#3 A#3 D4 A#3 F4 - D4 A#3 | C4 C4 E4 C4 G4 - E4 C4 | D4 - - - - - . .')},
+      {inst:drum,vol:0.065,seq:parse('C2 . . C2 A5 . C2 . | C2 . . C2 A5 . . . | C2 . . C2 A5 . C2 . | C2 . A5 . A5 . . . | C2 . . C2 A5 . C2 . | C2 . . C2 A5 . . . | C2 . . C2 A5 . C2 . | C2 . A5 A5 A5 . . .')},
+      {inst:bass,vol:0.12,seq:parse('D2 - - - D2 - - - | C2 - - - C2 - - - | D2 - - - D2 - - - | F2 - - - E2 - - - | D2 - - - D2 - - - | A#1 - - - A#1 - - - | C2 - - - C2 - - - | D2 - - - - - . .')}]},
+    {name:'Hajóroncs keringő',zone:4,bpm:120,tracks:[
+      {inst:accordion,vol:0.045,seq:parse('E4 - - G4 - - | B4 - - - - - | A4 - - G4 - - | E4 - - - - - | D4 - - F#4 - - | A4 - - - - - | G4 - - F#4 - - | E4 - - - - - | E4 - - G4 - - | B4 - - E5 - - | D5 - - B4 - - | G4 - - - - - | A4 - - G4 - - | F#4 - - D4 - - | E4 - - - - - | E4 - - - - .')},
+      {inst:bass,vol:0.12,seq:parse('E2 - - B2 - B2 | E2 - - B2 - B2 | A2 - - E3 - E3 | E2 - - B2 - B2 | D2 - - A2 - A2 | D2 - - A2 - A2 | G2 - - D3 - D3 | E2 - - B2 - B2 | E2 - - B2 - B2 | E2 - - B2 - B2 | G2 - - D3 - D3 | G2 - - D3 - D3 | A2 - - E3 - E3 | D2 - - A2 - A2 | E2 - - B2 - B2 | E2 - - - - .')}]},
+    {name:'Dűnék',zone:5,bpm:96,tracks:[
+      {inst:flute,vol:0.045,seq:parse('E4 F4 - G#4 - A4 - B4 | C5 - - - B4 - A4 - | G#4 - - - F4 - E4 - | D#4 - - - E4 - - - | E4 F4 - G#4 - A4 - C5 | B4 - - - A4 - G#4 - | F4 - E4 - F4 - D#4 - | E4 - - - - - . .')},
+      {inst:drum,vol:0.06,seq:parse('C2 . A5 . . C2 A5 . | C2 . A5 . . C2 A5 . | C2 . A5 . . C2 A5 . | C2 . A5 . C2 . A5 . | C2 . A5 . . C2 A5 . | C2 . A5 . . C2 A5 . | C2 . A5 . . C2 A5 . | C2 . A5 A5 C2 . . .')},
+      {inst:bass,vol:0.12,seq:parse('E2 - - - E2 - - - | A2 - - - A2 - - - | E2 - - - E2 - - - | B1 - - - B1 - - - | E2 - - - E2 - - - | F2 - - - F2 - - - | E2 - - - B1 - - - | E2 - - - - - . .')}]},
+    {name:'Hold az erdő felett',zone:6,bpm:68,tracks:[
+      {inst:bell,vol:0.065,seq:parse('G5 - - - D5 - - - | E5 - - - - - - - | C5 - - - G5 - - - | A5 - - - - - - - | G5 - - - E5 - - - | D5 - - - - - - - | C5 - - - D5 - - - | G4 - - - - - - .')},
+      {inst:pad,vol:0.035,seq:parse('C3 - - - - - - - | A2 - - - - - - - | F2 - - - - - - - | G2 - - - - - - - | C3 - - - - - - - | E3 - - - - - - - | F2 - - - G2 - - - | C3 - - - - - - .')},
+      {inst:flute,vol:0.03,seq:parse('. . . . . . . . | . . . . G4 - A4 - | C5 - - - - - - - | . . . . . . . . | . . . . . . . . | . . . . E5 - D5 - | C5 - - - - - - - | . . . . . . . .')}]},
+    {name:'Mélység',zone:3,bpm:60,tracks:[
+      {inst:pad,vol:0.04,seq:parse('D2 - - - - - - - | D2 - - - - - - - | C2 - - - - - - - | D2 - - - - - - - | G1 - - - - - - - | A1 - - - - - - - | D2 - - - - - - - | D2 - - - - - - .')},
+      {inst:bell,vol:0.045,seq:parse('D4 - - - - - - - | . . . . A3 - - - | . . . . . . . . | F4 - - - - - - - | . . . . . . . . | G3 - - - - - - - | . . . . D4 - - - | . . . . . . . .')},
+      {inst:drum,vol:0.05,seq:parse('C2 . . . . . . . | . . . . C2 . . . | C2 . . . . . . . | . . . . . . C2 . | C2 . . . . . . . | . . . . C2 . . . | C2 . . . . . . . | . . . . . . . .')}]},
+    {name:'Karamja',zone:0,bpm:118,tracks:[
       {inst:marimba,vol:0.09,seq:parse('E5 G5 A5 G5 E5 D5 C5 D5 | E5 G5 A5 C6 A5 G5 E5 - | D5 E5 G5 E5 D5 C5 A4 C5 | D5 E5 D5 C5 A4 - - - | E5 G5 A5 G5 E5 D5 C5 D5 | E5 G5 A5 C6 D6 C6 A5 G5 | A5 G5 E5 D5 C5 D5 E5 G5 | E5 - D5 - C5 - - .')},
       {inst:marimba,vol:0.045,seq:parse('C4 - E4 - G4 - E4 - | C4 - E4 - G4 - E4 - | A3 - C4 - E4 - C4 - | F3 - A3 - C4 - A3 - | C4 - E4 - G4 - E4 - | A3 - C4 - E4 - C4 - | F3 - A3 - G3 - B3 - | C4 - E4 - G4 - - .')},
       {inst:bass,vol:0.12,seq:parse('C3 - - - G2 - - - | C3 - - - G2 - - - | A2 - - - E2 - - - | F2 - - - G2 - - - | C3 - - - G2 - - - | A2 - - - E2 - - - | F2 - - - G2 - - - | C3 - - - - - - .')}]},
-    {name:'Port Sarim',bpm:96,tracks:[
+    {name:'Port Sarim',zone:1,bpm:96,tracks:[
       {inst:accordion,vol:0.05,seq:parse('D4 - E4 F4 - G4 | A4 - - A4 G4 F4 | E4 - D4 E4 - F4 | D4 - - - - . | A4 - G4 A4 - C5 | D5 - - C5 A4 F4 | G4 - F4 E4 - D4 | D4 - - - - . | F4 - G4 A4 - C5 | D5 - - D5 C5 A4 | G4 - A4 G4 - F4 | E4 - - - - . | D4 - E4 F4 - A4 | G4 - F4 E4 - C4 | D4 - - - - - | D4 - - - - .')},
       {inst:bass,vol:0.13,seq:parse('D2 - - A2 - - | D2 - - A2 - - | C2 - - G2 - - | D2 - - A2 - - | F2 - - C3 - - | D2 - - A2 - - | C2 - - G2 - - | D2 - - A2 - - | F2 - - C3 - - | D2 - - A2 - - | C2 - - G2 - - | A2 - - E2 - - | D2 - - A2 - - | C2 - - G2 - - | D2 - - A2 - - | D2 - - - - .')},
       {inst:pad,vol:0.03,seq:parse('D3 - - - - - | D3 - - - - - | C3 - - - - - | D3 - - - - - | F3 - - - - - | D3 - - - - - | C3 - - - - - | D3 - - - - - | F3 - - - - - | D3 - - - - - | C3 - - - - - | A2 - - - - - | D3 - - - - - | C3 - - - - - | D3 - - - - - | D3 - - - - .')}]},
-    {name:'Zúzmara-fok',bpm:66,tracks:[
+    {name:'Zúzmara-fok',zone:2,bpm:66,tracks:[
       {inst:bell,vol:0.07,seq:parse('E5 - - - B4 - - - | G4 - - - - - - - | A4 - - - E5 - - - | D5 - - - - - - - | E5 - - - G5 - - - | B4 - - - - - - - | A4 - - - G4 - - - | E4 - - - - - - - | B4 - - - E5 - - - | G5 - - - - - - - | F#5 - - - D5 - - - | E5 - - - - - - - | G4 - - - A4 - - - | B4 - - - - - - - | E5 - - - D5 - - - | E5 - - - - - - .')},
       {inst:pad,vol:0.035,seq:parse('E3 - - - - - - - | C3 - - - - - - - | A2 - - - - - - - | B2 - - - - - - - | E3 - - - - - - - | G3 - - - - - - - | A2 - - - - - - - | E3 - - - - - - - | E3 - - - - - - - | C3 - - - - - - - | D3 - - - - - - - | E3 - - - - - - - | C3 - - - - - - - | B2 - - - - - - - | E3 - - - - - - - | E3 - - - - - - .')},
       {inst:pad,vol:0.025,seq:parse('B3 - - - - - - - | G3 - - - - - - - | E3 - - - - - - - | F#3 - - - - - - - | B3 - - - - - - - | D4 - - - - - - - | E3 - - - - - - - | B3 - - - - - - - | B3 - - - - - - - | G3 - - - - - - - | A3 - - - - - - - | B3 - - - - - - - | G3 - - - - - - - | F#3 - - - - - - - | B3 - - - - - - - | B3 - - - - - - .')}]},
-    {name:'Koponya-öböl',bpm:112,tracks:[
+    {name:'Koponya-öböl',zone:4,bpm:112,tracks:[
       {inst:accordion,vol:0.05,seq:parse('A4 - C5 A4 E5 - C5 A4 | G4 - B4 G4 D5 - - - | A4 - C5 A4 E5 - G5 E5 | A5 - - - - - . . | E5 - D5 C5 B4 - C5 D5 | E5 - - - C5 - A4 - | G4 - A4 B4 C5 - B4 A4 | A4 - - - - - . .')},
       {inst:marimba,vol:0.04,seq:parse('A3 - E4 - A3 - E4 - | G3 - D4 - G3 - D4 - | A3 - E4 - A3 - E4 - | A3 - E4 - C4 - E4 - | A3 - E4 - A3 - E4 - | F3 - C4 - F3 - C4 - | G3 - D4 - G3 - D4 - | A3 - E4 - A3 - - .')},
       {inst:bass,vol:0.13,seq:parse('A2 - - - A2 - E2 - | G2 - - - G2 - D2 - | A2 - - - A2 - E2 - | A2 - - - A2 - - - | A2 - - - A2 - E2 - | F2 - - - F2 - C2 - | G2 - - - G2 - D2 - | A2 - - - A2 - - .')}]},
-    {name:'Homokfok',bpm:88,tracks:[
+    {name:'Homokfok',zone:5,bpm:88,tracks:[
       {inst:flute,vol:0.05,seq:parse('E4 - F4 - G#4 - A4 - | B4 - - - A4 G#4 F4 E4 | F4 - G#4 - B4 - A4 - | G#4 - - - - - . . | E4 - F4 - G#4 - B4 - | C5 - - - B4 A4 G#4 F4 | E4 - - F4 - E4 - D#4 | E4 - - - - - . .')},
       {inst:bass,vol:0.13,seq:parse('E2 - - - E2 - B2 - | E2 - - - E2 - B2 - | F2 - - - F2 - C3 - | E2 - - - E2 - B2 - | E2 - - - E2 - B2 - | A2 - - - A2 - E2 - | B1 - - - B1 - F#2 - | E2 - - - - - - .')},
       {inst:marimba,vol:0.035,seq:parse('E4 - - - B3 - - - | E4 - - - B3 - - - | F4 - - - C4 - - - | E4 - - - B3 - - - | E4 - - - B3 - - - | A3 - - - E4 - - - | B3 - - - F#4 - - - | E4 - - - - - - .')}]},
-    {name:'Tündeerdő',bpm:74,tracks:[
+    {name:'Tündeerdő',zone:6,bpm:74,tracks:[
       {inst:marimba,vol:0.06,seq:parse('C5 - E5 - G5 - B5 - | A5 - - - G5 - E5 - | F#5 - A5 - C6 - A5 - | G5 - - - - - . . | E5 - G5 - B5 - D6 - | C6 - - - B5 - G5 - | A5 - F#5 - E5 - D5 - | C5 - - - - - . .')},
       {inst:pad,vol:0.035,seq:parse('C3 - - - - - - - | A2 - - - - - - - | D3 - - - - - - - | G2 - - - - - - - | E3 - - - - - - - | C3 - - - - - - - | D3 - - - - - - - | C3 - - - - - - .')},
       {inst:flute,vol:0.035,seq:parse('. . . . G4 - B4 - | C5 - - - - - . . | . . . . A4 - C5 - | D5 - - - - - . . | . . . . B4 - D5 - | E5 - - - - - . . | . . . . A4 - G4 - | E4 - - - - - . .')}]},
-    {name:'Barlang',bpm:80,tracks:[
+    {name:'Barlang',zone:3,bpm:80,tracks:[
       {inst:flute,vol:0.05,seq:parse('D4 - - F4 - - E4 - | D4 - - - . . . . | A3 - - C4 - - D4 - | F4 - - - . . . . | G4 - - F4 - - D4 - | E4 - - - . . . . | F4 - - D4 - - C4 - | D4 - - - - - - .')},
       {inst:bass,vol:0.14,seq:parse('D2 - - - - - - - | D2 - - - A2 - - - | A1 - - - - - - - | D2 - - - - - - - | G1 - - - - - - - | A1 - - - - - - - | A#1 - - - - - - - | D2 - - - - - - .')},
       {inst:pad,vol:0.03,seq:parse('D3 - - - - - - - | D3 - - - - - - - | A2 - - - - - - - | D3 - - - - - - - | G2 - - - - - - - | A2 - - - - - - - | A#2 - - - - - - - | D3 - - - - - - .')}]}
   ];
-  let cur=-1,gain=null,timer=null,startT=0,sched=0;
+  let cur=-1,curZone=-1,gain=null,timer=null,startT=0,sched=0,announce=null;
   function stop(){if(timer){clearInterval(timer);timer=null}if(gain){const c=SFX.ctx();gain.gain.setTargetAtTime(0.0001,c.currentTime,0.4);const g=gain;setTimeout(()=>{try{g.disconnect()}catch(e){}},1500);gain=null}}
   function play(i){stop();cur=i;if(!on||i<0||!SONGS[i])return;const c=SFX.ctx();gain=c.createGain();gain.gain.value=0.0001;gain.connect(SFX.master());gain.gain.setTargetAtTime(1,c.currentTime,0.8);
     const song=SONGS[i];const stepDur=60/song.bpm/2;const len=Math.max(...song.tracks.map(t=>t.seq.len));startT=c.currentTime+0.1;sched=0;
-    timer=setInterval(()=>{const now=c.currentTime;while(startT+sched*stepDur<now+0.35){const st=sched%len;for(const t of song.tracks)for(const n of t.seq.notes)if(n.step===st)t.inst(c,gain,hz(n.n),startT+sched*stepDur,n.len*stepDur,t.vol);sched++}},100)}
-  const ZSONG=[0,1,2,6,3,4,5];function setZone(z){const i=ZSONG[z]!==undefined?ZSONG[z]:0;if(i!==cur)play(i)}
+    if(announce)announce(song.name);const loops=Math.max(2,Math.round(90/(len*stepDur)));
+    timer=setInterval(()=>{const now=c.currentTime;while(startT+sched*stepDur<now+0.35){if(sched>=len*loops){next();return}const st=sched%len;for(const t of song.tracks)for(const n of t.seq.notes)if(n.step===st)t.inst(c,gain,hz(n.n),startT+sched*stepDur,n.len*stepDur,t.vol);sched++}},100)}
+  const zoneList=z=>{const l=[];SONGS.forEach((s,i)=>{if(s.zone===z)l.push(i)});return l.length?l:[0]};
+  function setZone(z){if(z===curZone&&cur>=0)return;curZone=z;const l=zoneList(z);play(l[Math.floor(Math.random()*l.length)])}
+  function next(){const l=zoneList(curZone);if(l.length<2){play(cur);return}const k=l.indexOf(cur);play(l[(k+1)%l.length])}
   function toggle(){on=!on;try{localStorage.setItem('karamja_music',on?'1':'0')}catch(e){}if(!on)stop();else play(cur);return on}
-  return {setZone,toggle,isOn:()=>on,stop,current:()=>cur};
+  return {setZone,toggle,next,isOn:()=>on,stop,current:()=>cur,name:()=>cur>=0?SONGS[cur].name:'',setAnnounce:f=>{announce=f}};
 })();
-(function(){const b=document.getElementById('mus');const r=()=>{b.textContent=MUSIC.isOn()?'🎵':'🔕'};r();b.onclick=()=>{MUSIC.toggle();r();chat(MUSIC.isOn()?'Zene bekapcsolva.':'Zene kikapcsolva.')};
+(function(){const b=document.getElementById('mus');const r=()=>{b.textContent=MUSIC.isOn()?'🎵':'🔕';b.title='Zene be/ki (jobb klikk: következő szám)'};r();b.onclick=()=>{MUSIC.toggle();r();chat(MUSIC.isOn()?'Zene bekapcsolva.':'Zene kikapcsolva.')};b.oncontextmenu=e=>{e.preventDefault();if(MUSIC.isOn()&&!SFX.isMuted())MUSIC.next()};MUSIC.setAnnounce(n=>chat('♪ Most szól: '+n,'xp'));
   let started=false;const start=()=>{if(started)return;started=true;if(!SFX.isMuted()&&MUSIC.isOn())MUSIC.setZone(zoneOf(px))};addEventListener('pointerdown',start,{once:true});addEventListener('keydown',start,{once:true});
   window.musicStarted=()=>started})();
 // ---------- küldetések ----------
