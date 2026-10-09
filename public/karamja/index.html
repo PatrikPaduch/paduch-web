@@ -51,6 +51,18 @@
   .slot img,.eqs img,#shop img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}
   #shop img{width:20px;height:20px;margin-right:4px}
   #snd{cursor:pointer}
+  #ctx{position:absolute;display:none;background:#5d5447;border:1px solid #000;box-shadow:2px 2px 0 #000;z-index:9;min-width:150px;font-size:13px;user-select:none}
+  #ctx .h{background:#000;color:#5d5447;padding:2px 6px;font-size:12px;letter-spacing:.5px}
+  #ctx div.o{padding:3px 8px;color:#fff;cursor:pointer;white-space:nowrap}
+  #ctx div.o:hover{color:#ffff00;background:#4a4238}
+  #ctx .n{color:#00ffff}#ctx .np{color:#ffff00}#ctx .mo{color:#ff6a6a}
+  #mobBtn{display:none;position:absolute;right:10px;bottom:118px;width:46px;height:46px;border-radius:50%;background:#3b2a14;border:3px solid #8a6a3a;color:#fff;font-size:22px;text-align:center;line-height:42px;z-index:6;box-shadow:0 2px 8px #000}
+  @media (max-width:700px){
+    #mobBtn{display:block}
+    #panel{display:none;position:absolute;left:0;right:0;bottom:0;top:auto;width:100%;max-height:60vh;overflow:auto;border-radius:10px 10px 0 0;z-index:7}
+    #panel.open{display:block}
+    .slot{height:44px;font-size:26px}
+  }
   #sail{position:absolute;inset:0;background:#06101e;color:#ffe87a;display:none;align-items:center;justify-content:center;font-size:26px;letter-spacing:2px;z-index:8;opacity:0;transition:opacity .9s;flex-direction:column}
   #sail small{font-size:14px;color:#9ab;margin-top:10px}
   #skgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
@@ -134,6 +146,8 @@
 <div id="chat"><div class="inner" id="chatInner"></div></div>
 <div id="dialog"></div>
 <div id="sail"><div>🚢 Hajózás...</div><small></small></div>
+<div id="ctx"></div>
+<div id="mobBtn">🎒</div>
 <div id="qdone"><b>KÜLDETÉS TELJESÍTVE</b><div id="qdoneT"></div></div>
 <div id="shop"><span class="cls" id="shopClose">✕</span><b class="t">MIRA BOLTJA</b><div id="shopList"></div><div class="sellhint">Eladás: kattints a táskádban egy tárgyra, amíg a bolt nyitva van.</div></div>
 <div id="cloud"><span class="cls" id="cloudClose">✕</span><b class="t">FELHŐMENTÉS</b>
@@ -679,15 +693,17 @@ const keys={};
 addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape')toggleMap(false)});
 addEventListener('keyup',e=>{keys[e.key]=false});
 let dragging=false,lastX=0,lastY=0;
-canvas.addEventListener('mousedown',e=>{if(e.button===1||e.button===2){dragging=true;lastX=e.clientX;lastY=e.clientY;e.preventDefault()}});
-addEventListener('mouseup',()=>dragging=false);
-addEventListener('mousemove',e=>{if(dragging){camYaw-=(e.clientX-lastX)*0.008;camPitch=clamp(camPitch+(e.clientY-lastY)*0.006,0.2,1.35);lastX=e.clientX;lastY=e.clientY}});
+let rb=null;
+canvas.addEventListener('mousedown',e=>{if(e.button===1||e.button===2){dragging=true;lastX=e.clientX;lastY=e.clientY;e.preventDefault();if(e.button===2)rb={x:e.clientX,y:e.clientY,moved:false}}});
+addEventListener('mouseup',e=>{dragging=false;if(e.button===2&&rb&&!rb.moved&&e.target===canvas){openCtx(e.clientX,e.clientY,ctxWorld(e.clientX,e.clientY))}rb=null});
+addEventListener('mousemove',e=>{if(rb&&Math.hypot(e.clientX-rb.x,e.clientY-rb.y)>5)rb.moved=true;if(dragging&&!(rb&&!rb.moved)){camYaw-=(e.clientX-lastX)*0.008;camPitch=clamp(camPitch+(e.clientY-lastY)*0.006,0.2,1.35);lastX=e.clientX;lastY=e.clientY}});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{camDist=clamp(camDist+e.deltaY*0.02,8,60)},{passive:true});
 let touchStart=null,lastPinch=null;
-canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY,t:Date.now()}}else if(e.touches.length===2){lastX=(e.touches[0].clientX+e.touches[1].clientX)/2;lastY=(e.touches[0].clientY+e.touches[1].clientY)/2;lastPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}},{passive:true});
-canvas.addEventListener('touchmove',e=>{if(e.touches.length===2){const mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;camYaw-=(mx-lastX)*0.01;camPitch=clamp(camPitch+(my-lastY)*0.008,0.2,1.35);lastX=mx;lastY=my;const p=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=clamp(camDist-(p-lastPinch)*0.08,8,60);lastPinch=p}e.preventDefault()},{passive:false});
-canvas.addEventListener('touchend',e=>{if(touchStart&&e.changedTouches.length===1&&Date.now()-touchStart.t<400){click(touchStart.x,touchStart.y)}touchStart=null});
+let lpT=null;
+canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY,t:Date.now()};clearTimeout(lpT);const tx=touchStart.x,ty=touchStart.y;lpT=setTimeout(()=>{touchStart=null;openCtx(tx,ty,ctxWorld(tx,ty))},550)}else if(e.touches.length===2){lastX=(e.touches[0].clientX+e.touches[1].clientX)/2;lastY=(e.touches[0].clientY+e.touches[1].clientY)/2;lastPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}},{passive:true});
+canvas.addEventListener('touchmove',e=>{clearTimeout(lpT);if(e.touches.length===2){const mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;camYaw-=(mx-lastX)*0.01;camPitch=clamp(camPitch+(my-lastY)*0.008,0.2,1.35);lastX=mx;lastY=my;const p=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=clamp(camDist-(p-lastPinch)*0.08,8,60);lastPinch=p}e.preventDefault()},{passive:false});
+canvas.addEventListener('touchend',e=>{clearTimeout(lpT);if(touchStart&&e.changedTouches.length===1&&Date.now()-touchStart.t<400){click(touchStart.x,touchStart.y)}touchStart=null});
 
 // ---------- interakció ----------
 const ray=new THREE.Raycaster();const mouse=new THREE.Vector2();
@@ -704,7 +720,7 @@ function pick(cx,cy){
   return null;
 }
 addEventListener('mousemove',e=>{
-  if(e.target!==canvas){hoverEl.innerHTML='';return}
+  if(e.target!==canvas||ctxOpen){hoverEl.innerHTML='';return}
   const r=pick(e.clientX,e.clientY);
   const h=r&&r.obj;
   if(h){const cls=h.type==='npc'||h.type==='monkey'||h.type==='crab'||h.type==='boat'?'npc':(h.type==='monster'?'mon':'obj');hoverEl.innerHTML=`<span class="act">${h.action}</span> <span class="${cls}">${h.name}${h.type==='monster'?' (szint '+h.level+')':''}</span>`}
@@ -739,17 +755,58 @@ function walkTo(x,z,action){
   else{const r=astar(px,pz,x,z);if(!r){chat('Oda nem vezet út.');target=null;pendingAction=null;return false}target=r.shift();route=r}
   marker.position.set(x,height(x,z)+0.1,z);marker.visible=true;marker.scale.setScalar(1);return true;
 }
+function useObj(o){
+  const p=o.mesh.position;
+  const dx=px-p.x,dz=pz-p.z,d=Math.hypot(dx,dz)||1;const off=o.type==='fish'?2.2:(o.type==='tree'?1.8:(o.type==='monster'?1.5:1.6));
+  let tx=p.x+dx/d*off,tz=p.z+dz/d*off;
+  if(o.type==='fish'){let k=off;while(isWater(tx,tz)&&k<8){k+=0.5;tx=p.x+dx/d*k;tz=p.z+dz/d*k}}
+  walkTo(tx,tz,o);
+}
+// ---- jobb klikk menü (OSRS-stílus) ----
+const EXAMINE={
+  tree:'Egy fa. Rönk lesz belőle, ha van fejszéd.',rock:'Szikla, érccel az ereiben.',fish:'Buborékok: itt halak járnak.',banana:'Banánfa, érett fürtökkel.',fire:'Meleg, pattogó tűz. Jó halat sütni rajta.',
+  furnace:'Kemence. Az ércből itt lesz rúd.',anvil:'Üllő. Rúdból kard, kalapáccsal és türelemmel.',shell:'Kagyló a homokban.',chest:'Régi, homokos láda. Zárva.',dig:'Egy X a homokos dombon. Kalózok hagyták?',boat:'Tobias hajója. A tengeren át visz.',
+  monkey:'Vigyorgó majom. Banánszagú.',crab:'Oldalazó rák. Nem bánt, ha nem piszkálod.',
+  'Dzsungelpók':'Nyolc láb, nyolc szem, nulla barátság.','Dzsungelkígyó':'Zöld és sziszeg. Nem a barátod.','Skorpió':'A fullánkja a végén van, ne onnan fogd meg.','Lávaszellem':'A hegy haragja, izzó kőből.','Csirke':'Kot-kot. Tojást tojik, ha nem bántják. És akkor is.','Óriáspatkány':'Mint egy patkány, csak nagyobb és dühösebb.','Goblin':'Zöld, apró, bunkós. Mindent ellop, ami nincs lekötözve.',
+  'Luthas':'A banánültetvény gazdája. Mindig a hajót várja.','Halász Zoli':'Hal szagú, de jó szívű.','Ültetvényes Dodo':'A majmokkal háborúzik, vesztésre áll.','Kapitány Tobias':'Egykori tengerész, ma a vulkán szomszédja.','Kovács Baku':'Izmos kovács, kormos arccal.','Kereskedő Mira':'Mindent megvesz, mindent elad.','Timi':'Kislány a faluból, kagylót gyűjt.','Sámán Oba':'A hegy szavát hallgatja.',
+  'Kocsmáros Zsófi':'A Rusty Anchor lelke.','Kalóz Barnabás':'Nyugalmazott kalóz, de a szeme még csillog.','Betty':'Mágus, bolttal. Füstszagú.','Börtönőr Gábor':'Unatkozó őr, patkányokkal.','Rab Miklós':'Rács mögött, de beszédes.','Gazda Feri':'Csirkék és búza között él.',
+  ronk:'Egy jó darab fa.',nyershal:'Nyers hal. Sütve jobb.',sulthal:'Szépen megsült hal, finom illatú.',egett:'Szénné égett hal. Kár érte.',banan:'Sárga, görbe, édes.',erc:'Vasérc. Nehéz és szürke.',arany:'Aranyérc! Csillog.',selyem:'Ragacsos pókselyem.',tojas:'Pókok tojása. Fehérjedús... állítólag.',kigyobor:'Mintás kígyóbőr.',fullank:'Hegyes skorpiófullánk.',
+  vasrud:'Vasrúd, kovácsolásra kész.',aranyrud:'Aranyrúd. Meleg fénye van.',lavako:'Izzó lávakő. Meleg a kezedben.',bronzkard:'Baku régi gyakorlókardja.',vaskard:'Egyszerű, de éles vas kard.',acelkard:'Fényes acél kard, jó a fogása.',aranykard:'Arany kard. Puha fém, de a goblinok félnek tőle.',
+  kigyomelleny:'Kígyóbőrből varrt mellény.',vulkanipancel:'Lávakőből kovácsolt páncél, még langyos.',amulett:'Az ősök amulettje, a hegy szívéből.',rozsdaskard:'Rozsdás, sós kard. A kapitányé.',aranykulcs:'Kis aranykulcs, egy ládához.',kagylo:'Csinos kagyló.',gyongy:'Fényes gyöngy.',
+  tyuktojas:'Friss tyúktojás.',gyogyital:'Betty gyógyitala. Piros és bugyog.',sor:'Egy korsó sör a Rusty Anchorból.',terkepdarab:'Szakadt térképdarab, X-szel.',kalozkalap:'Fekete kalózkalap, koponyával. Arr!'
+};
+function examine(o){const t=EXAMINE[o.name]||EXAMINE[o.type]||(o.name+'.');chat(t)}
+const ctxEl=document.getElementById('ctx');let ctxOpen=false;
+function openCtx(x,y,opts){
+  if(!opts||!opts.length)return;ctxEl.innerHTML='<div class="h">Választás</div>';
+  for(const o of opts){const d=document.createElement('div');d.className='o';d.innerHTML=o.t;d.onmousedown=e=>e.stopPropagation();d.onclick=e=>{e.stopPropagation();closeCtx();o.f&&o.f()};ctxEl.appendChild(d)}
+  ctxEl.style.display='block';const w=ctxEl.offsetWidth,h=ctxEl.offsetHeight;ctxEl.style.left=Math.min(x-w/2,innerWidth-w-4)+'px';ctxEl.style.top=Math.min(y-8,innerHeight-h-4)+'px';ctxOpen=true;SFX.play('click');
+}
+function closeCtx(){ctxEl.style.display='none';ctxOpen=false}
+addEventListener('mousedown',e=>{if(ctxOpen&&!ctxEl.contains(e.target))closeCtx()});
+addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx()});
+function ctxWorld(cx,cy){
+  const r=pick(cx,cy);const opts=[];if(!r)return opts;
+  if(r.obj){const o=r.obj;const cls=o.type==='npc'||o.type==='monkey'||o.type==='crab'||o.type==='boat'?'np':(o.type==='monster'?'mo':'n');const nm=`<span class="${cls}">${o.name}${o.type==='monster'?' (szint '+o.level+')':''}</span>`;
+    opts.push({t:`${o.action} ${nm}`,f:()=>{hideDialog();useObj(o)}});
+    opts.push({t:`Megvizsgálom ${nm}`,f:()=>examine(o)})}
+  if(!(r.water||isWater(r.point.x,r.point.z)))opts.push({t:'Sétálok ide',f:()=>{hideDialog();walkTo(r.point.x,r.point.z,null)}});
+  opts.push({t:'Mégsem'});return opts;
+}
+function ctxInv(i){
+  const sl=inv[i];if(!sl)return [];const id=sl.id,it=ITEMS[id];const nm=`<span class="n">${it.name}</span>`;const opts=[];
+  const prim=shopOpen&&SELL[id]?`Eladom ${nm} (${SELL[id]} érme)`:(it.gear?`Felveszem ${nm}`:(it.heal?`Megeszem ${nm}`:(id==='ronk'?`Tüzet rakok ${nm}`:`Használom ${nm}`)));
+  opts.push({t:prim,f:()=>useItem(i)});
+  if(shopOpen&&SELL[id]&&sl.n>1)opts.push({t:`Eladom mind ${nm} (${SELL[id]*sl.n} érme)`,f:()=>{const n=sl.n;for(let k=0;k<n;k++)useItem(i)}});
+  opts.push({t:`Megvizsgálom ${nm}`,f:()=>examine({name:id,type:id})});
+  opts.push({t:`Eldobom ${nm}`,f:()=>dropItem(i)});if(sl.n>1)opts.push({t:`Eldobom mind ${nm}`,f:()=>{inv[i]=null;renderInv();chat(`Eldobtad az összes ${it.name.toLowerCase()}t.`)}});
+  opts.push({t:'Mégsem'});return opts;
+}
 function click(cx,cy){
-  if(dead)return;if(shopOpen)closeShop();SFX.play('click');
+  if(dead)return;if(ctxOpen){closeCtx();return}if(shopOpen)closeShop();SFX.play('click');
   const r=pick(cx,cy);if(!r)return;
   hideDialog();
-  if(r.obj){
-    const o=r.obj;const p=o.mesh.position;
-    const dx=px-p.x,dz=pz-p.z,d=Math.hypot(dx,dz)||1;const off=o.type==='fish'?2.2:(o.type==='tree'?1.8:(o.type==='monster'?1.5:1.6));
-    let tx=p.x+dx/d*off,tz=p.z+dz/d*off;
-    if(o.type==='fish'){let k=off;while(isWater(tx,tz)&&k<8){k+=0.5;tx=p.x+dx/d*k;tz=p.z+dz/d*k}}
-    walkTo(tx,tz,o);
-  }else{
+  if(r.obj){useObj(r.obj)}else{
     if(r.water||isWater(r.point.x,r.point.z)){chat('Oda nem tudsz menni, az víz.');return}
     walkTo(r.point.x,r.point.z,null);
   }
@@ -904,32 +961,35 @@ function refreshGear(){
   const b=equip.body;u.shirtMat.color.setHex(b?ITEMS[b].gear.col:u.shirtCol);
   u.tools.hat.visible=equip.head==='kalozkalap';
   const names={weapon:'Fegyver',body:'Test',neck:'Nyak',head:'Fej'};const el=document.getElementById('eqslots');el.innerHTML='';
-  for(const k of['weapon','body','neck','head']){const id=equip[k];const d=document.createElement('div');d.className='eqs';d.innerHTML=`<span class="ic">${id?iconImg(id):'·'}</span><span><div class="sl">${names[k]}</div><div class="nm">${id?ITEMS[id].name:'üres'}</div></span>`;if(id)d.onclick=()=>unequip(k);d.title=id?'Kattints a levételhez':'';el.appendChild(d)}
+  for(const k of['weapon','body','neck','head']){const id=equip[k];const d=document.createElement('div');d.className='eqs';d.innerHTML=`<span class="ic">${id?iconImg(id):'·'}</span><span><div class="sl">${names[k]}</div><div class="nm">${id?ITEMS[id].name:'üres'}</div></span>`;if(id){d.onclick=()=>unequip(k);d.oncontextmenu=e=>{e.preventDefault();openCtx(e.clientX,e.clientY,[{t:`Leveszem <span class="n">${ITEMS[id].name}</span>`,f:()=>unequip(k)},{t:`Megvizsgálom <span class="n">${ITEMS[id].name}</span>`,f:()=>examine({name:id,type:id})},{t:'Mégsem'}])}}d.title=id?'Kattints a levételhez':'';el.appendChild(d)}
   const g=gearBonus();document.getElementById('eqstat').innerHTML=`Max találat bónusz: +${g.hit}<br>Pontosság: +${Math.round(g.acc*100)}%<br>Védelem: ${Math.round(g.def*100)}%<br><span style="color:#9a8a6a">Felvétel: kattints a tárgyra a táskában.</span>`;
 }
-function equipItem(i){const id=inv[i];const g=ITEMS[id].gear;const old=equip[g.slot];inv[i]=old;equip[g.slot]=id;renderInv();refreshGear();SFX.play('equip');chat(`Felvetted: ${ITEMS[id].name}.`)}
-function unequip(k){const id=equip[k];if(!id)return;const i=inv.indexOf(null);if(i<0){chat('Tele a táskád, nem tudod levenni.');return}inv[i]=id;equip[k]=null;renderInv();refreshGear();chat(`Levetted: ${ITEMS[id].name}.`)}
+function equipItem(i){const id=inv[i].id;const g=ITEMS[id].gear;const old=equip[g.slot];takeOne(i);equip[g.slot]=id;if(old)giveItem(old);renderInv();refreshGear();SFX.play('equip');chat(`Felvetted: ${ITEMS[id].name}.`)}
+function unequip(k){const id=equip[k];if(!id)return;if(!giveItem(id))return;equip[k]=null;renderInv();refreshGear();chat(`Levetted: ${ITEMS[id].name}.`)}
 const inv=new Array(28).fill(null);
 const invEl=document.getElementById('inv');
-for(let i=0;i<28;i++){const s=document.createElement('div');s.className='slot';s.dataset.i=i;s.onclick=()=>useItem(i);s.oncontextmenu=e=>{e.preventDefault();dropItem(i)};invEl.appendChild(s)}
-function renderInv(){for(let i=0;i<28;i++){const s=invEl.children[i];const it=inv[i];s.innerHTML=it?iconImg(it):'';s.title=it?ITEMS[it].name+(shopOpen&&SELL[it]!==undefined?` (eladás: ${SELL[it]} érme)`:''):'';s.classList.toggle('sell',!!(shopOpen&&it&&SELL[it]!==undefined))}if(questsReady)renderQuests()}
-function giveItem(id){const i=inv.indexOf(null);if(i<0){chat('Tele a táskád, nem fér el több.');return false}inv[i]=id;renderInv();return true}
-function takeItem(id){const i=inv.indexOf(id);if(i<0)return false;inv[i]=null;renderInv();return true}
-function countItem(id){return inv.filter(x=>x===id).length}
-function dropItem(i){if(!inv[i])return;chat(`Eldobtad: ${ITEMS[inv[i]].name}.`);inv[i]=null;renderInv()}
+// a táska rekeszei: null vagy {id, n}; a nyersanyagok és kaják halmozódnak (OSRS-stílusú számlálóval)
+const STACK=new Set(['ronk','nyershal','sulthal','egett','banan','erc','arany','selyem','tojas','kigyobor','fullank','vasrud','aranyrud','lavako','tyuktojas','gyogyital','sor','kagylo','gyongy']);
+for(let i=0;i<28;i++){const s=document.createElement('div');s.className='slot';s.dataset.i=i;s.onclick=()=>useItem(i);s.oncontextmenu=e=>{e.preventDefault();openCtx(e.clientX,e.clientY,ctxInv(i))};invEl.appendChild(s)}
+function renderInv(){for(let i=0;i<28;i++){const s=invEl.children[i];const it=inv[i];s.innerHTML=it?iconImg(it.id)+(it.n>1?`<span class="q">${it.n}</span>`:''):'';s.title=it?ITEMS[it.id].name+(it.n>1?' ×'+it.n:'')+(shopOpen&&SELL[it.id]!==undefined?` (eladás: ${SELL[it.id]} érme)`:''):'';s.classList.toggle('sell',!!(shopOpen&&it&&SELL[it.id]!==undefined))}if(questsReady)renderQuests()}
+function giveItem(id){if(STACK.has(id)){const st=inv.find(x=>x&&x.id===id);if(st){st.n++;renderInv();return true}}const i=inv.indexOf(null);if(i<0){chat('Tele a táskád, nem fér el több.');return false}inv[i]={id,n:1};renderInv();return true}
+function takeOne(i){const st=inv[i];if(!st)return;st.n--;if(st.n<=0)inv[i]=null;renderInv()}
+function takeItem(id){const i=inv.findIndex(x=>x&&x.id===id);if(i<0)return false;takeOne(i);return true}
+function countItem(id){return inv.reduce((a,x)=>a+(x&&x.id===id?x.n:0),0)}
+function dropItem(i){if(!inv[i])return;chat(`Eldobtad: ${ITEMS[inv[i].id].name}.`);takeOne(i)}
 function useItem(i){
-  const id=inv[i];if(!id||dead)return;const it=ITEMS[id];
-  if(shopOpen){if(SELL[id]===undefined||SELL[id]===0){chat('Mira ezt nem veszi meg.');return}setCoins(coins+SELL[id]);SFX.play('coin');chat(`Eladtad: ${it.name}, ${SELL[id]} érme.`);inv[i]=null;renderInv();return}
+  const st=inv[i];if(!st||dead)return;const id=st.id;const it=ITEMS[id];
+  if(shopOpen){if(SELL[id]===undefined||SELL[id]===0){chat('Mira ezt nem veszi meg.');return}setCoins(coins+SELL[id]);SFX.play('coin');chat(`Eladtad: ${it.name}, ${SELL[id]} érme.`);takeOne(i);return}
   if(it.gear){equipItem(i);return}
   if(it.quest){chat({rozsdaskard:'A kapitány rozsdás kardja. Vidd vissza neki.',aranykulcs:'Egy aranykulcs. Valami ládát nyithat.',terkepdarab:'Szakadt térképdarab, goblinmancsnyomokkal. Barnabás biztos érti.'}[id]);return}
   if(id==='vasrud'||id==='aranyrud'){chat('Rúd. Az üllőn kovácsolhatsz belőle.');return}
   if(id==='lavako'){chat('Forró, lüktető lávakő. A sámán tudná, mit kezdjen vele, vagy az üllőn páncél lehet belőle.');return}
   if(id==='kagylo'||id==='gyongy'){chat(id==='kagylo'?'Szép kagyló. Timi örülne neki.':'Gyönyörű gyöngy. Mira jó pénzt adna érte.');return}
-  if(it.heal){if(hp>=maxHp()){chat('Nem vagy éhes, tele az életerőd.');return}hp=Math.min(maxHp(),hp+it.heal);inv[i]=null;renderInv();updateHp();SFX.play('eat');chat(`Megetted: ${it.name}. Gyógyított ${it.heal} pontot.`);return}
+  if(it.heal){if(hp>=maxHp()){chat('Nem vagy éhes, tele az életerőd.');return}hp=Math.min(maxHp(),hp+it.heal);takeOne(i);updateHp();SFX.play('eat');chat(`Megetted: ${it.name}. Gyógyított ${it.heal} pontot.`);return}
   if(id==='ronk'){
     if(fires.some(f=>Math.hypot(f.mesh.position.x-px,f.mesh.position.z-pz)<3)){chat('Itt már ég egy tűz.');return}
     if(isWater(px,pz)){chat('Vízen nem tudsz tüzet rakni.');return}
-    inv[i]=null;renderInv();const f=campfire(px,pz);chat('Tüzet raktál a rönkből.');addXp('fm',40,f.mesh.position);
+    takeOne(i);const f=campfire(px,pz);chat('Tüzet raktál a rönkből.');addXp('fm',40,f.mesh.position);
     target={x:px+1.6,z:pz};pendingAction=null;return}
   if(id==='nyershal'){chat('Süsd meg egy tűzön: kattints a tűzre, ha van nálad nyers hal.');return}
   if(id==='egett'){chat('Ez bizony odaégett. Dobd el jobb klikkel.');return}
@@ -1082,6 +1142,16 @@ const DIALOG={
     else S('A hegy csendes. Az amulett a tiéd, viseld büszkén. A szellem visszatér, a kövéből Baku páncélt kovácsol.')},
   mira(o){const S=say(o.name);S('Üdv a boltomban! Veszek is, adok is.',[{t:'Mit árulsz?',f:()=>openShop()},{t:'Eladnék valamit.',f:()=>openShop()},{t:'Csak nézelődöm.'}])}
 };
+// küldetésadók jelzése: ! = felvehető, ? = leadható (sárga) vagy folyamatban (szürke)
+const NPCQ={luthas:['banan'],baku:['kovacs'],zoli:['zoli'],dodo:['majom'],timi:['kagylo'],tobias:['kapitany','hajo'],oba:['vulkan'],gabor:['patkany'],betty:['betty'],feri:['farm'],barnabas:['kaloz'],zsofi:['kocsma']};
+const QREQ={kapitany:()=>lvlFor(xp.at)>=5,hajo:()=>qs.kapitany.st===2,vulkan:()=>qs.kapitany.st===2&&lvlFor(xp.at)>=10};
+const QREADY={banan:()=>countItem('banan')>=10,kovacs:()=>countItem('erc')>=3&&countItem('ronk')>=2,zoli:()=>qs.zoli.n>=5&&qs.zoli.m>=3,kapitany:()=>countItem('rozsdaskard')>0,majom:()=>false,kagylo:()=>countItem('kagylo')>=7,
+  hajo:()=>countItem('ronk')>=5&&countItem('vasrud')>=2,patkany:()=>qs.patkany.n>=5,betty:()=>countItem('tojas')>=3&&countItem('kigyobor')>=2&&countItem('gyongy')>=1,farm:()=>countItem('tyuktojas')>=6,kaloz:()=>countItem('terkepdarab')>0&&!qs.kaloz.map,kocsma:()=>countItem('sulthal')>=5,vulkan:()=>countItem('lavako')>0};
+function npcMark(n){const ids=NPCQ[n.dialog];if(!ids)return null;let m=null;for(const id of ids){const st=qs[id].st;if(st===0&&(!QREQ[id]||QREQ[id]()))return '!';if(st===1)m=QREADY[id]&&QREADY[id]()?'?':'…'}return m}
+function markTex(ch,col){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.font='bold 52px Trebuchet MS';x.textAlign='center';x.textBaseline='middle';x.lineWidth=8;x.strokeStyle='#000';x.strokeText(ch,32,34);x.fillStyle=col;x.fillText(ch,32,34);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t}
+const MARKT={'!':markTex('!','#ffe000'),'?':markTex('?','#ffe000'),'…':markTex('?','#b0b0b0')};
+for(const n of npcs){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:MARKT['!'],transparent:true,depthTest:false}));sp.scale.set(1.3,1.3,1);sp.position.set(0,3.6/(n.mesh.scale.x||1),0);sp.visible=false;n.mesh.add(sp);n.mark=sp}
+let markT=0;function updateMarks(dt){markT-=dt;if(markT>0)return;markT=0.5;for(const n of npcs){const m=npcMark(n);n.mark.visible=!!m;if(m)n.mark.material.map=MARKT[m];n.markCh=m}}
 // bolt
 questsReady=true;
 function openShop(){shopOpen=true;const el=document.getElementById('shopList');el.innerHTML='';
@@ -1272,6 +1342,16 @@ function drawMinimap(){
   mctx.fillStyle='#ff9a1a';for(const f of fires){mctx.beginPath();mctx.arc(f.mesh.position.x,f.mesh.position.z,1,0,6.28);mctx.fill()}
   if(target){mctx.fillStyle='#ff0000';mctx.beginPath();mctx.arc(target.x,target.z,1,0,6.28);mctx.fill()}
   mctx.restore();
+  // ikonok a minitérképen (forgatással együtt számolt pozícióval)
+  const mmPos=(x,z)=>{const lx=(x-px)*scale,lz=(z-pz)*scale;const c=Math.cos(camYaw),sn=Math.sin(camYaw);return [w/2+lx*c-lz*sn,w/2+lx*sn+lz*c]};
+  const inR=(a,b)=>Math.hypot(a-w/2,b-w/2)<w/2-7;
+  const ico=(x,z,draw)=>{const [a,b]=mmPos(x,z);if(inR(a,b))draw(a,b)};
+  const sq=(col)=>(a,b)=>{mctx.fillStyle='#000';mctx.fillRect(a-4,b-4,8,8);mctx.fillStyle=col;mctx.fillRect(a-3,b-3,6,6)};
+  const txt=(ch,col)=>(a,b)=>{mctx.font='bold 12px Trebuchet MS';mctx.textAlign='center';mctx.textBaseline='middle';mctx.lineWidth=3;mctx.strokeStyle='#000';mctx.strokeText(ch,a,b);mctx.fillStyle=col;mctx.fillText(ch,a,b)};
+  ico(anvilObj.mesh.position.x,anvilObj.mesh.position.z,sq('#c8c8d0'));ico(furnaceObj.mesh.position.x,furnaceObj.mesh.position.z,sq('#ff8a20'));
+  for(const b of boats)ico(b.mesh.position.x,b.mesh.position.z,(a,c)=>{mctx.fillStyle='#000';mctx.beginPath();mctx.moveTo(a,c-6);mctx.lineTo(a+6,c+4);mctx.lineTo(a-6,c+4);mctx.fill();mctx.fillStyle='#fff';mctx.beginPath();mctx.moveTo(a,c-4);mctx.lineTo(a+4,c+3);mctx.lineTo(a-4,c+3);mctx.fill()});
+  for(const n of npcs){if(n.dialog==='mira')ico(n.mesh.position.x,n.mesh.position.z,txt('$','#ffd040'));else if(n.markCh)ico(n.mesh.position.x,n.mesh.position.z,txt(n.markCh==='…'?'?':n.markCh,n.markCh==='…'?'#c0c0c0':'#ffe000'))}
+  if(chestObj.mesh.visible&&!chestObj.depleted)ico(chestObj.mesh.position.x,chestObj.mesh.position.z,sq('#d8a030'));if(digObj.mesh.visible&&!digObj.depleted)ico(digObj.mesh.position.x,digObj.mesh.position.z,txt('X','#ff4040'));
   mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(w/2,w/2,3,0,6.28);mctx.fill();
   compassEl.style.transform=`rotate(${camYaw*180/Math.PI}deg)`;
 }
@@ -1289,7 +1369,7 @@ let last=performance.now(),t=0;
 function animate(now){
   requestAnimationFrame(animate);const dt=Math.min(0.05,(now-last)/1000);last=now;t+=dt;
   if(keys.ArrowLeft)camYaw+=2*dt;if(keys.ArrowRight)camYaw-=2*dt;if(keys.ArrowUp)camPitch=Math.min(1.35,camPitch+1.2*dt);if(keys.ArrowDown)camPitch=Math.max(0.2,camPitch-1.2*dt);
-  updateDay(dt);
+  updateDay(dt);updateMarks(dt);
   const u=player.userData;let moving=false;
   if(target&&!dead){
     const dx=target.x-px,dz=target.z-pz,d=Math.hypot(dx,dz);const sp=(run?9:4.5)*dt;
@@ -1334,7 +1414,7 @@ function animate(now){
   for(const c of crabs){const mv=wander(c,1.6,dt,8,(x,z)=>{const h=height(x,z);return h>0.4&&h<1.8});c.mesh.position.y=height(c.mesh.position.x,c.mesh.position.z);if(mv)c.mesh.rotation.y+=Math.PI/2}
   for(const g of gulls){g.ph+=dt*g.sp;const x=g.cx+Math.cos(g.ph)*g.r,z=g.cz+Math.sin(g.ph)*g.r;g.mesh.position.set(x,g.h+Math.sin(t*0.7+g.ph)*1.5,z);g.mesh.rotation.y=Math.atan2(-Math.sin(g.ph),Math.cos(g.ph))+Math.PI/2;const f=Math.sin(t*7+g.ph)*0.5;g.pl.rotation.z=f;g.pr.rotation.z=-f}
   for(const f of flies){f.ph+=dt;f.mesh.position.set(f.cx+Math.sin(f.ph*0.7)*2.5,height(f.cx,f.cz)+1+Math.sin(f.ph*1.9)*0.5,f.cz+Math.cos(f.ph*0.5)*2.5);f.mesh.rotation.y=f.ph*0.6;const w=Math.sin(t*22+f.ph)*0.9;f.pl.rotation.z=w;f.pr.rotation.z=-w}
-  for(const n of npcs){const d=Math.hypot(n.mesh.position.x-px,n.mesh.position.z-pz);if(d<6){n.mesh.rotation.y=Math.atan2(px-n.mesh.position.x,pz-n.mesh.position.z)}}
+  for(const n of npcs){const d=Math.hypot(n.mesh.position.x-px,n.mesh.position.z-pz);if(d<6){n.mesh.rotation.y=Math.atan2(px-n.mesh.position.x,pz-n.mesh.position.z)}if(n.mark.visible)n.mark.position.y=(3.6+Math.sin(t*3)*0.15)/(n.mesh.scale.x||1)}
   water.position.y=0.2+Math.sin(t*0.8)*0.06;for(const b of boats){b.mesh.position.y=0.25+Math.sin(t*0.9+b.toZone)*0.12;b.mesh.rotation.z=Math.sin(t*0.7)*0.03}TEX.water.offset.x=t*0.012;TEX.water.offset.y=Math.sin(t*0.3)*0.02;TEX.lava.offset.x=t*0.01;TEX.lava.offset.y=t*0.006;
   for(const o of interactables)if(o.type==='fish')for(const b of o.mesh.children){b.position.y=((t*0.8+b.userData.o)%1.5)*0.6;b.scale.setScalar(0.6+((t+b.userData.o)%1.5)/1.5)}
   furnaceObj.fl.scale.y=0.8+Math.sin(t*12)*0.3;
@@ -1362,7 +1442,8 @@ function applySave(d){
   if(!d||!d.xp)return false;
   for(const k in xp)xp[k]=typeof d.xp[k]==='number'?d.xp[k]:(k==='hp'?xpFor(10):0);
   hp=clamp(d.hp||maxHp(),1,maxHp());
-  if(Array.isArray(d.inv))for(let i=0;i<28;i++)inv[i]=ITEMS[d.inv[i]]?d.inv[i]:null;
+  if(Array.isArray(d.inv)){for(let i=0;i<28;i++){const v=d.inv[i];inv[i]=null;if(typeof v==='string'&&ITEMS[v])inv[i]={id:v,n:1};else if(v&&typeof v==='object'&&ITEMS[v.id])inv[i]={id:v.id,n:Math.max(1,v.n|0)}}
+    for(let i=0;i<28;i++){const a=inv[i];if(!a||!STACK.has(a.id))continue;for(let j=i+1;j<28;j++){const b=inv[j];if(b&&b.id===a.id){a.n+=b.n;inv[j]=null}}}}
   if(typeof d.px==='number'&&typeof d.pz==='number'&&!isWater(d.px,d.pz)){px=d.px;pz=d.pz}
   if(typeof d.dayT==='number')dayT=d.dayT;if(d.run!==run)toggleRun();if(typeof d.facing==='number')facing=d.facing;
   target=null;route=[];pendingAction=null;busy=null;fight=null;marker.visible=false;
@@ -1423,6 +1504,7 @@ document.getElementById('cloudLoad').onclick=async()=>{
   applySave(c.data);saveLocal();cloud.ok=true;cloud.last=c.updated_at;cloud.lastJson=JSON.stringify({data:c.data});cloudStatus();
   document.getElementById('cloudCode').textContent=saveCode;document.getElementById('cloudInput').value='';toggleCloud(false);chat('Állás betöltve a felhőből. Üdv újra Karamján!','xp');
 };
+document.getElementById('mobBtn').onclick=()=>{const p=document.getElementById('panel');p.classList.toggle('open')};
 document.getElementById('resetBtn').onclick=()=>{if(confirm('Biztos törlöd a helyi mentést és újrakezded? (A felhőben lévő állás a mentéskóddal továbbra is visszatölthető.)')){resetting=true;localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CODE_KEY);location.replace(location.href)}};
 requestAnimationFrame(animate);
 </script>
