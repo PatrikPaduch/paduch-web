@@ -48,6 +48,9 @@
   #shop .cls{position:absolute;right:8px;top:4px;color:#7a1a1a;cursor:pointer;font-size:16px;font-weight:bold}
   #shop .sellhint{margin-top:8px;font-size:12px;color:#1a1aa8}
   .slot.sell{outline:2px solid #ffd040}
+  .slot img,.eqs img,#shop img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}
+  #shop img{width:20px;height:20px;margin-right:4px}
+  #snd{cursor:pointer}
   #skgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
   .skc{display:flex;align-items:center;gap:3px;background:linear-gradient(#4a3620,#2e2112);border:1px solid #0008;box-shadow:inset 0 0 0 1px #6a4a26;padding:3px 2px;border-radius:2px;cursor:default;position:relative}
   .skc canvas{width:24px;height:24px;image-rendering:pixelated;flex:none}
@@ -124,7 +127,7 @@
   <div class="page" id="p-eq"><div id="eqslots"></div><div id="eqstat"></div></div>
   <div class="page" id="p-q"><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qlist"></div></div>
   <div id="run">Futás: KI</div>
-  <div id="saveRow"><div id="saveSt" title="Felhőmentés beállításai">Felhő</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
+  <div id="saveRow"><div id="snd" title="Hang be/ki">🔊</div><div id="saveSt" title="Felhőmentés beállításai">Felhő</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
 <div id="chat"><div class="inner" id="chatInner"></div></div>
 <div id="dialog"></div>
@@ -647,7 +650,7 @@ function walkTo(x,z,action){
   marker.position.set(x,height(x,z)+0.1,z);marker.visible=true;marker.scale.setScalar(1);return true;
 }
 function click(cx,cy){
-  if(dead)return;if(shopOpen)closeShop();
+  if(dead)return;if(shopOpen)closeShop();SFX.play('click');
   const r=pick(cx,cy);if(!r)return;
   hideDialog();
   if(r.obj){
@@ -711,7 +714,7 @@ function updateHp(){document.getElementById('hpTxt').textContent=hp+'/'+maxHp();
 function addXp(s,a,where){
   const before=lvlFor(xp[s]);xp[s]+=a;const after=lvlFor(xp[s]);
   floatText('+'+a+' XP',where,'#fff');
-  if(after>before){chat(`Gratulálok! ${skillNames[s]} szinted most ${after}.`,'xp');floatText('Szintlépés!',where,'#ffe87a',-30);if(s==='hp'){hp+=after-before;updateHp()}}
+  if(after>before){SFX.play('levelup');chat(`Gratulálok! ${skillNames[s]} szinted most ${after}.`,'xp');floatText('Szintlépés!',where,'#ffe87a',-30);if(s==='hp'){hp+=after-before;updateHp()}}
   updateSkillsUI();
 }
 updateSkillsUI();updateHp();
@@ -751,6 +754,48 @@ const ITEMS={
   amulett:{name:'Vulkáni amulett',icon:'📿',gear:{slot:'neck',hit:1,def:0.05}},
   rozsdaskard:{name:'Rozsdás kard',icon:'🗡️',quest:true},aranykulcs:{name:'Arany kulcs',icon:'🔑',quest:true},kagylo:{name:'Kagyló',icon:'🐚'},gyongy:{name:'Gyöngy',icon:'⚪'}
 };
+// tárgyak pixel-ikonjai (24x24 canvas -> dataURL)
+function itemIcon(k){
+  const c=document.createElement('canvas');c.width=c.height=24;const x=c.getContext('2d');
+  const L=(x1,y1,x2,y2,col,w)=>{x.strokeStyle=col;x.lineWidth=w;x.lineCap='square';x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke()};
+  const R=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
+  const Cc=(cx,cy,r,col)=>{x.fillStyle=col;x.beginPath();x.arc(cx,cy,r,0,6.283);x.fill()};
+  const El=(cx,cy,rx,ry,col)=>{x.fillStyle=col;x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,6.283);x.fill()};
+  const fish=(col,col2)=>{El(11,12,9,5.5,'#000');x.fillStyle='#000';x.beginPath();x.moveTo(17,12);x.lineTo(23,6);x.lineTo(23,18);x.fill();El(11,12,7,4,col);x.fillStyle=col;x.beginPath();x.moveTo(17,12);x.lineTo(21,8);x.lineTo(21,16);x.fill();R(6,10,2,2,'#000');R(8,13,6,1,col2)};
+  const sword=(col,hilt)=>{L(5,19,19,5,'#000',5);L(5,19,19,5,col,3);L(3,15,9,21,'#000',4);L(3,15,9,21,hilt||'#8a5a2a',2);R(2,20,4,3,'#000');R(3,21,2,1,'#4a3014')};
+  const rock=(col,spot)=>{x.fillStyle='#000';x.beginPath();x.moveTo(3,18);x.lineTo(6,8);x.lineTo(13,4);x.lineTo(20,9);x.lineTo(21,18);x.lineTo(16,22);x.lineTo(7,22);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(5,17);x.lineTo(7,10);x.lineTo(13,6);x.lineTo(18,10);x.lineTo(19,17);x.lineTo(15,20);x.lineTo(8,20);x.fill();if(spot){R(9,10,3,3,spot);R(14,13,3,3,spot);R(10,16,2,2,spot)}};
+  const bar=(col,col2)=>{x.fillStyle='#000';x.beginPath();x.moveTo(2,16);x.lineTo(16,4);x.lineTo(22,8);x.lineTo(8,20);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(4,16);x.lineTo(16,6);x.lineTo(20,8);x.lineTo(8,18);x.fill();L(6,15,16,7,col2,1.5)};
+  switch(k){
+    case 'ronk':R(3,8,18,9,'#000');R(4,9,16,7,'#8a5a2a');L(6,11,18,11,'#6a4018',1);L(6,14,18,14,'#6a4018',1);Cc(5,12.5,4.5,'#000');Cc(5,12.5,3.3,'#d8b080');Cc(5,12.5,1.5,'#a07040');break;
+    case 'nyershal':fish('#5aa0d8','#2a6aa8');break;
+    case 'sulthal':fish('#d88a3a','#a05a1a');break;
+    case 'egett':fish('#2a2a2a','#000');break;
+    case 'banan':x.strokeStyle='#000';x.lineWidth=7;x.lineCap='round';x.beginPath();x.arc(12,6,9,0.5,2.6);x.stroke();x.strokeStyle='#f0d020';x.lineWidth=4;x.beginPath();x.arc(12,6,9,0.5,2.6);x.stroke();R(3,10,3,3,'#5a3a10');R(19,10,3,3,'#5a3a10');break;
+    case 'erc':rock('#8a8a90','#5a5a60');break;
+    case 'arany':rock('#8a8a90','#f0c020');break;
+    case 'vasrud':bar('#a0a0a8','#d8d8e0');break;
+    case 'aranyrud':bar('#e0b020','#f8e070');break;
+    case 'lavako':rock('#2a2420');L(8,9,14,16,'#ff6a10',2);L(14,16,17,11,'#ffd040',2);L(9,17,13,13,'#ff6a10',1.5);break;
+    case 'selyem':x.strokeStyle='#000';x.lineWidth=3;for(let i=0;i<6;i++){x.beginPath();x.moveTo(12,12);x.lineTo(12+Math.cos(i*1.047)*10,12+Math.sin(i*1.047)*10);x.stroke()}x.strokeStyle='#f0f0f0';x.lineWidth=1.5;for(let i=0;i<6;i++){x.beginPath();x.moveTo(12,12);x.lineTo(12+Math.cos(i*1.047)*10,12+Math.sin(i*1.047)*10);x.stroke()}for(const r of[4,7,10]){x.beginPath();x.arc(12,12,r,0,6.283);x.stroke()}break;
+    case 'tojas':El(12,12,7,9,'#000');El(12,12,5.5,7.5,'#f0ead8');R(10,8,2,3,'#fff');break;
+    case 'kigyobor':x.fillStyle='#000';x.beginPath();x.moveTo(3,6);x.lineTo(21,6);x.lineTo(21,18);x.lineTo(3,18);x.fill();R(5,8,14,8,'#3a9a2a');for(let i=0;i<4;i++){x.fillStyle='#1a5a14';x.beginPath();x.moveTo(6+i*4,12);x.lineTo(8+i*4,9);x.lineTo(10+i*4,12);x.lineTo(8+i*4,15);x.fill()}break;
+    case 'fullank':x.strokeStyle='#000';x.lineWidth=6;x.lineCap='round';x.beginPath();x.moveTo(4,20);x.quadraticCurveTo(6,6,16,8);x.stroke();x.strokeStyle='#4a3020';x.lineWidth=3.5;x.beginPath();x.moveTo(4,20);x.quadraticCurveTo(6,6,16,8);x.stroke();x.fillStyle='#000';x.beginPath();x.moveTo(14,5);x.lineTo(22,10);x.lineTo(15,12);x.fill();x.fillStyle='#c02020';x.beginPath();x.moveTo(15,7);x.lineTo(20,10);x.lineTo(16,11);x.fill();break;
+    case 'bronzkard':sword('#b87333');break;
+    case 'vaskard':sword('#c8c8d0');break;
+    case 'acelkard':sword('#eef0ff','#4a4a8a');break;
+    case 'aranykard':sword('#ffd700','#8a2020');break;
+    case 'rozsdaskard':sword('#9a5a30','#5a3a1a');R(10,11,2,2,'#c87030');R(14,8,2,2,'#c87030');break;
+    case 'kigyomelleny':case 'vulkanipancel':{const col=k==='kigyomelleny'?'#3a8a2a':'#5a2418',col2=k==='kigyomelleny'?'#1a5a14':'#c04020';x.fillStyle='#000';x.beginPath();x.moveTo(3,5);x.lineTo(8,3);x.lineTo(10,6);x.lineTo(14,6);x.lineTo(16,3);x.lineTo(21,5);x.lineTo(20,12);x.lineTo(18,12);x.lineTo(18,22);x.lineTo(6,22);x.lineTo(6,12);x.lineTo(4,12);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(5,6);x.lineTo(8,5);x.lineTo(10,8);x.lineTo(14,8);x.lineTo(16,5);x.lineTo(19,6);x.lineTo(18,11);x.lineTo(16,11);x.lineTo(16,20);x.lineTo(8,20);x.lineTo(8,11);x.lineTo(6,11);x.fill();L(12,9,12,20,col2,1.5);if(k==='vulkanipancel'){R(9,13,2,2,col2);R(13,15,2,2,col2)}break}
+    case 'amulett':x.strokeStyle='#000';x.lineWidth=4;x.beginPath();x.arc(12,8,8,0.3,2.84);x.stroke();x.strokeStyle='#c8a040';x.lineWidth=2;x.beginPath();x.arc(12,8,8,0.3,2.84);x.stroke();x.fillStyle='#000';x.beginPath();x.moveTo(12,12);x.lineTo(18,17);x.lineTo(12,23);x.lineTo(6,17);x.fill();x.fillStyle='#e02020';x.beginPath();x.moveTo(12,14);x.lineTo(16,17);x.lineTo(12,21);x.lineTo(8,17);x.fill();R(11,15,2,2,'#ff9090');break;
+    case 'aranykulcs':Cc(7,8,6,'#000');Cc(7,8,4,'#f0c020');Cc(7,8,1.8,'#000');L(10,10,21,21,'#000',5);L(10,10,21,21,'#f0c020',3);L(17,17,20,14,'#000',4);L(17,17,20,14,'#f0c020',2);L(20,20,22,18,'#f0c020',2);break;
+    case 'kagylo':x.fillStyle='#000';x.beginPath();x.moveTo(12,21);x.lineTo(2,9);x.quadraticCurveTo(12,-2,22,9);x.fill();x.fillStyle='#e8d8b8';x.beginPath();x.moveTo(12,19);x.lineTo(4,10);x.quadraticCurveTo(12,1,20,10);x.fill();x.strokeStyle='#b89870';x.lineWidth=1.5;for(const a of[-0.6,-0.2,0.2,0.6]){x.beginPath();x.moveTo(12,19);x.lineTo(12+Math.sin(a)*12,19-Math.cos(a)*12);x.stroke()}break;
+    case 'gyongy':Cc(12,12,9,'#000');Cc(12,12,7,'#e8e8f0');Cc(9,9,2.5,'#fff');Cc(13,14,3,'#c8c8d8');break;
+    default:x.font='18px sans-serif';x.textAlign='center';x.fillText(ITEMS[k]?ITEMS[k].icon:'?',12,19);
+  }
+  return c.toDataURL();
+}
+const ICON={};for(const k in ITEMS)ICON[k]=itemIcon(k);
+const iconImg=(k)=>`<img src="${ICON[k]}" alt="">`;
 const SELL={nyershal:5,sulthal:8,ronk:3,erc:10,arany:40,selyem:15,kigyobor:25,fullank:30,tojas:4,gyongy:150,kagylo:2,vasrud:20,aranyrud:80,banan:2,egett:0,bronzkard:30,vaskard:60,acelkard:120,aranykard:300,kigyomelleny:150};
 const BUY=[['banan',4],['sulthal',12],['kigyomelleny',300]];
 let questsReady=false,shopOpen=false;
@@ -761,28 +806,28 @@ function refreshGear(){
   const u=player.userData;const w=equip.weapon;if(w)u.tools.blade.material.color.setHex(ITEMS[w].gear.col);
   const b=equip.body;u.shirtMat.color.setHex(b?ITEMS[b].gear.col:u.shirtCol);
   const names={weapon:'Fegyver',body:'Test',neck:'Nyak'};const el=document.getElementById('eqslots');el.innerHTML='';
-  for(const k of['weapon','body','neck']){const id=equip[k];const d=document.createElement('div');d.className='eqs';d.innerHTML=`<span class="ic">${id?ITEMS[id].icon:'·'}</span><span><div class="sl">${names[k]}</div><div class="nm">${id?ITEMS[id].name:'üres'}</div></span>`;if(id)d.onclick=()=>unequip(k);d.title=id?'Kattints a levételhez':'';el.appendChild(d)}
+  for(const k of['weapon','body','neck']){const id=equip[k];const d=document.createElement('div');d.className='eqs';d.innerHTML=`<span class="ic">${id?iconImg(id):'·'}</span><span><div class="sl">${names[k]}</div><div class="nm">${id?ITEMS[id].name:'üres'}</div></span>`;if(id)d.onclick=()=>unequip(k);d.title=id?'Kattints a levételhez':'';el.appendChild(d)}
   const g=gearBonus();document.getElementById('eqstat').innerHTML=`Max találat bónusz: +${g.hit}<br>Pontosság: +${Math.round(g.acc*100)}%<br>Védelem: ${Math.round(g.def*100)}%<br><span style="color:#9a8a6a">Felvétel: kattints a tárgyra a táskában.</span>`;
 }
-function equipItem(i){const id=inv[i];const g=ITEMS[id].gear;const old=equip[g.slot];inv[i]=old;equip[g.slot]=id;renderInv();refreshGear();chat(`Felvetted: ${ITEMS[id].name}.`)}
+function equipItem(i){const id=inv[i];const g=ITEMS[id].gear;const old=equip[g.slot];inv[i]=old;equip[g.slot]=id;renderInv();refreshGear();SFX.play('equip');chat(`Felvetted: ${ITEMS[id].name}.`)}
 function unequip(k){const id=equip[k];if(!id)return;const i=inv.indexOf(null);if(i<0){chat('Tele a táskád, nem tudod levenni.');return}inv[i]=id;equip[k]=null;renderInv();refreshGear();chat(`Levetted: ${ITEMS[id].name}.`)}
 const inv=new Array(28).fill(null);
 const invEl=document.getElementById('inv');
 for(let i=0;i<28;i++){const s=document.createElement('div');s.className='slot';s.dataset.i=i;s.onclick=()=>useItem(i);s.oncontextmenu=e=>{e.preventDefault();dropItem(i)};invEl.appendChild(s)}
-function renderInv(){for(let i=0;i<28;i++){const s=invEl.children[i];const it=inv[i];s.innerHTML=it?ITEMS[it].icon:'';s.title=it?ITEMS[it].name+(shopOpen&&SELL[it]!==undefined?` (eladás: ${SELL[it]} érme)`:''):'';s.classList.toggle('sell',!!(shopOpen&&it&&SELL[it]!==undefined))}if(questsReady)renderQuests()}
+function renderInv(){for(let i=0;i<28;i++){const s=invEl.children[i];const it=inv[i];s.innerHTML=it?iconImg(it):'';s.title=it?ITEMS[it].name+(shopOpen&&SELL[it]!==undefined?` (eladás: ${SELL[it]} érme)`:''):'';s.classList.toggle('sell',!!(shopOpen&&it&&SELL[it]!==undefined))}if(questsReady)renderQuests()}
 function giveItem(id){const i=inv.indexOf(null);if(i<0){chat('Tele a táskád, nem fér el több.');return false}inv[i]=id;renderInv();return true}
 function takeItem(id){const i=inv.indexOf(id);if(i<0)return false;inv[i]=null;renderInv();return true}
 function countItem(id){return inv.filter(x=>x===id).length}
 function dropItem(i){if(!inv[i])return;chat(`Eldobtad: ${ITEMS[inv[i]].name}.`);inv[i]=null;renderInv()}
 function useItem(i){
   const id=inv[i];if(!id||dead)return;const it=ITEMS[id];
-  if(shopOpen){if(SELL[id]===undefined||SELL[id]===0){chat('Mira ezt nem veszi meg.');return}setCoins(coins+SELL[id]);chat(`Eladtad: ${it.name}, ${SELL[id]} érme.`);inv[i]=null;renderInv();return}
+  if(shopOpen){if(SELL[id]===undefined||SELL[id]===0){chat('Mira ezt nem veszi meg.');return}setCoins(coins+SELL[id]);SFX.play('coin');chat(`Eladtad: ${it.name}, ${SELL[id]} érme.`);inv[i]=null;renderInv();return}
   if(it.gear){equipItem(i);return}
   if(it.quest){chat(id==='rozsdaskard'?'A kapitány rozsdás kardja. Vidd vissza neki.':'Egy aranykulcs. Valami ládát nyithat.');return}
   if(id==='vasrud'||id==='aranyrud'){chat('Rúd. Az üllőn kovácsolhatsz belőle.');return}
   if(id==='lavako'){chat('Forró, lüktető lávakő. A sámán tudná, mit kezdjen vele, vagy az üllőn páncél lehet belőle.');return}
   if(id==='kagylo'||id==='gyongy'){chat(id==='kagylo'?'Szép kagyló. Timi örülne neki.':'Gyönyörű gyöngy. Mira jó pénzt adna érte.');return}
-  if(it.heal){if(hp>=maxHp()){chat('Nem vagy éhes, tele az életerőd.');return}hp=Math.min(maxHp(),hp+it.heal);inv[i]=null;renderInv();updateHp();chat(`Megetted: ${it.name}. Gyógyított ${it.heal} pontot.`);return}
+  if(it.heal){if(hp>=maxHp()){chat('Nem vagy éhes, tele az életerőd.');return}hp=Math.min(maxHp(),hp+it.heal);inv[i]=null;renderInv();updateHp();SFX.play('eat');chat(`Megetted: ${it.name}. Gyógyított ${it.heal} pontot.`);return}
   if(id==='ronk'){
     if(fires.some(f=>Math.hypot(f.mesh.position.x-px,f.mesh.position.z-pz)<3)){chat('Itt már ég egy tűz.');return}
     if(isWater(px,pz)){chat('Vízen nem tudsz tüzet rakni.');return}
@@ -796,6 +841,47 @@ function useItem(i){
   if(id==='fullank'){chat('Hegyes skorpiófullánk. Óvatosan vele!');return}
 }
 renderInv();
+
+// ---------- hangok ----------
+const SFX=(()=>{
+  let ctx=null,master=null,amb=null;let muted=false;try{muted=localStorage.getItem('karamja_sound')==='0'}catch(e){}
+  function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=muted?0:1;master.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+  function tone(f,dur,type='square',vol=0.08,slide=0,delay=0){const c=ac();const o=c.createOscillator(),g=c.createGain();o.type=type;const t0=c.currentTime+delay;o.frequency.setValueAtTime(f,t0);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f+slide),t0+dur);g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);o.connect(g);g.connect(master);o.start(t0);o.stop(t0+dur+0.02)}
+  function noise(dur,vol=0.1,freq=1000,type='lowpass',delay=0){const c=ac();const n=c.sampleRate*dur;const b=c.createBuffer(1,n,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const src=c.createBufferSource();src.buffer=b;const f=c.createBiquadFilter();f.type=type;f.frequency.value=freq;const g=c.createGain();const t0=c.currentTime+delay;g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);src.connect(f);f.connect(g);g.connect(master);src.start(t0)}
+  const S={
+    chop(){noise(0.09,0.3,900);tone(160,0.08,'square',0.05,-60)},
+    mine(){tone(1100,0.05,'square',0.05);noise(0.06,0.25,2500,'highpass')},
+    splash(){noise(0.3,0.18,700);noise(0.15,0.1,300,'lowpass',0.1)},
+    hit(){tone(110,0.14,'sawtooth',0.12,-70);noise(0.07,0.25,700)},
+    miss(){noise(0.14,0.07,1800,'bandpass')},
+    hurt(){tone(220,0.16,'square',0.08,-120);noise(0.05,0.15,500)},
+    levelup(){[523,659,784,1046].forEach((f,i)=>tone(f,0.25,'triangle',0.09,0,i*0.11))},
+    quest(){[392,523,659,784,1046,1318].forEach((f,i)=>tone(f,0.3,'triangle',0.1,0,i*0.13));tone(1046,0.8,'triangle',0.07,0,0.8)},
+    coin(){tone(1300,0.06,'triangle',0.07);tone(1800,0.1,'triangle',0.07,0,0.05)},
+    eat(){noise(0.08,0.15,1200);noise(0.08,0.15,1200,'lowpass',0.14)},
+    equip(){tone(420,0.06,'square',0.05);tone(640,0.08,'square',0.05,0,0.06)},
+    smith(){tone(1500,0.07,'square',0.06,-300);tone(2300,0.05,'sine',0.04);noise(0.05,0.15,3000,'highpass')},
+    smelt(){noise(0.5,0.08,400);tone(80,0.5,'sawtooth',0.03)},
+    cook(){noise(0.45,0.07,2500,'highpass')},
+    click(){tone(800,0.03,'square',0.03)},
+    pickup(){tone(700,0.05,'triangle',0.05);tone(900,0.05,'triangle',0.05,0,0.05)},
+    die(){[330,262,196,131].forEach((f,i)=>tone(f,0.35,'sawtooth',0.08,0,i*0.3))},
+    boss(){tone(60,1.2,'sawtooth',0.1,-20);noise(1,0.1,200)}
+  };
+  function play(n){if(muted)return;try{S[n]&&S[n]()}catch(e){}}
+  // háttérhangok: hullám, madarak, tücsök, vulkán
+  function ambient(){if(amb||muted)return;const c=ac();amb={};
+    const mk=(freq,type)=>{const n=c.sampleRate*2;const b=c.createBuffer(1,n,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const src=c.createBufferSource();src.buffer=b;src.loop=true;const f=c.createBiquadFilter();f.type=type;f.frequency.value=freq;const g=c.createGain();g.gain.value=0;src.connect(f);f.connect(g);g.connect(master);src.start();return g};
+    amb.sea=mk(500,'lowpass');amb.lava=mk(120,'lowpass');amb.lfo=0;amb.chirpT=1;}
+  function update(dt,nearSea,nearLava,jungle,nightF){if(!amb)return;amb.lfo+=dt*0.9;const sw=0.55+Math.sin(amb.lfo)*0.35+Math.sin(amb.lfo*2.3)*0.1;
+    amb.sea.gain.value=nearSea*0.09*sw;amb.lava.gain.value=nearLava*0.12;
+    amb.chirpT-=dt;if(amb.chirpT<=0){if(nightF>0.5&&jungle>0){for(let i=0;i<4;i++)tone(4200,0.03,'square',0.012*jungle,0,i*0.07);amb.chirpT=0.6+Math.random()*1.2}
+      else if(nightF<0.5&&jungle>0&&Math.random()<0.7){const f=1800+Math.random()*1500;tone(f,0.08,'sine',0.025*jungle,f*0.4);tone(f*1.2,0.07,'sine',0.02*jungle,-f*0.3,0.12);amb.chirpT=1.5+Math.random()*4}else amb.chirpT=1}}
+  function toggle(){muted=!muted;try{localStorage.setItem('karamja_sound',muted?'0':'1')}catch(e){}if(master)master.gain.value=muted?0:1;if(!muted)ambient();return muted}
+  return {play,ambient,update,toggle,isMuted:()=>muted};
+})();
+(function(){const b=document.getElementById('snd');const r=()=>{b.textContent=SFX.isMuted()?'🔇':'🔊'};r();b.onclick=()=>{SFX.toggle();r();chat(SFX.isMuted()?'Hang kikapcsolva.':'Hang bekapcsolva.')};
+  const start=()=>{if(!SFX.isMuted())SFX.ambient();};addEventListener('pointerdown',start,{once:true});addEventListener('keydown',start,{once:true})})();
 
 // ---------- küldetések ----------
 const QUESTS={
@@ -811,7 +897,7 @@ const qs={};for(const k in QUESTS)qs[k]={st:0,n:0,m:0};
 function startQuest(id){qs[id].st=1;qs[id].n=0;qs[id].m=0;chat(`Küldetés elkezdve: ${QUESTS[id].name}.`,'xp');renderQuests();saveLocal&&saveLocal()}
 function questBanner(t){const e=document.getElementById('qdone');document.getElementById('qdoneT').textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function finishQuest(id){
-  const q=QUESTS[id];qs[id].st=2;const p=player.position;
+  const q=QUESTS[id];qs[id].st=2;const p=player.position;SFX.play('quest');
   if(id==='banan'){setCoins(coins+150);addXp('wc',300,p)}
   if(id==='kovacs'){giveItem('bronzkard');addXp('sm',200,p)}
   if(id==='zoli'){addXp('fi',400,p);addXp('ck',150,p);setCoins(coins+120)}
@@ -864,7 +950,7 @@ const DIALOG={
 // bolt
 questsReady=true;
 function openShop(){shopOpen=true;const el=document.getElementById('shopList');el.innerHTML='';
-  for(const [id,ar] of BUY){const d=document.createElement('div');d.className='it';d.innerHTML=`<span>${ITEMS[id].icon} ${ITEMS[id].name}</span><span>${ar} érme <button>Veszek</button></span>`;d.querySelector('button').onclick=()=>{if(coins<ar){chat('Nincs elég érméd.');return}if(!giveItem(id))return;setCoins(coins-ar);chat(`Vettél: ${ITEMS[id].name}.`)};el.appendChild(d)}
+  for(const [id,ar] of BUY){const d=document.createElement('div');d.className='it';d.innerHTML=`<span>${iconImg(id)}${ITEMS[id].name}</span><span>${ar} érme <button>Veszek</button></span>`;d.querySelector('button').onclick=()=>{if(coins<ar){chat('Nincs elég érméd.');return}if(!giveItem(id))return;setCoins(coins-ar);SFX.play('coin');chat(`Vettél: ${ITEMS[id].name}.`)};el.appendChild(d)}
   document.getElementById('shop').style.display='block';renderInv()}
 function closeShop(){shopOpen=false;document.getElementById('shop').style.display='none';renderInv()}
 document.getElementById('shopClose').onclick=closeShop;
@@ -877,7 +963,7 @@ function startAction(o){
   if(o.type==='npc'){if(o.dialog&&DIALOG[o.dialog])DIALOG[o.dialog](o);else{showDialog(o.name,o.lines[o.li%o.lines.length]);o.li++}return}
   if(o.type==='monkey'){const q=qs.majom;if(q.st===1&&!q.key){if(monkeys.indexOf(o)===q.thief){q.key=true;giveItem('aranykulcs');chat('A majom megijed, és a kezéből kiesik egy aranykulcs! Felveszed.','xp');chestObj.mesh.visible=true;chestObj.depleted=false;renderQuests()}else chat('Ez a majom csak vigyorog, nincs nála semmi.')}else chat('A majom rád néz, elvigyorodik, aztán elszalad. Ooh ooh aah!');o.target={x:o.mesh.position.x+(Math.random()-0.5)*20,z:o.mesh.position.z+(Math.random()-0.5)*20};return}
   if(o.type==='crab'){chat('A rák felemeli az ollóját, aztán oldalazva elsiet.');o.target={x:o.mesh.position.x+(Math.random()-0.5)*10,z:o.mesh.position.z+(Math.random()-0.5)*10};return}
-  if(o.type==='monster'){fight=o;o.target=null;o.aggro=true;atkT=0.3;chat(`Megtámadod: ${o.name}!`,'fight');return}
+  if(o.type==='monster'){fight=o;o.target=null;o.aggro=true;atkT=0.3;if(o.kind==='lavaspirit')SFX.play('boss');chat(`Megtámadod: ${o.name}!`,'fight');return}
   if(o.type==='fire'){if(!countItem('nyershal')){chat('Nincs nálad nyers hal, amit megsüthetnél.');return}busy={obj:o,t:0,dur:2};chat('A tűz fölé tartod a halat...');return}
   if(o.type==='shell'){busy={obj:o,t:0,dur:0.6};return}
   if(o.type==='chest'){if(!countItem('aranykulcs')){chat('A láda zárva van. Kulcs kell hozzá.');return}busy={obj:o,t:0,dur:1.2};chat('A kulcs illik a zárba...');return}
@@ -897,20 +983,20 @@ function startAction(o){
 }
 function finishAction(o){
   const p=o.mesh.position;
-  if(o.type==='tree'){if(!giveItem('ronk'))return;addXp('wc',o.xp,p);chat('Kivágtál egy rönköt.');deplete(o);return}
-  if(o.type==='rock'){if(!giveItem(o.gold?'arany':'erc'))return;addXp('mi',o.xp,p);chat(o.gold?'Aranyércet bányásztál! Csillog.':'Kibányásztál egy kis vasércet.');deplete(o);return}
-  if(o.type==='fish'){if(!giveItem('nyershal'))return;addXp('fi',o.xp,p);chat('Fogtál egy halat.');if(qs.zoli.st===1&&qs.zoli.n<5){qs.zoli.n++;renderQuests()}
+  if(o.type==='tree'){if(!giveItem('ronk'))return;SFX.play('pickup');addXp('wc',o.xp,p);chat('Kivágtál egy rönköt.');deplete(o);return}
+  if(o.type==='rock'){if(!giveItem(o.gold?'arany':'erc'))return;SFX.play('pickup');addXp('mi',o.xp,p);chat(o.gold?'Aranyércet bányásztál! Csillog.':'Kibányásztál egy kis vasércet.');deplete(o);return}
+  if(o.type==='fish'){if(!giveItem('nyershal'))return;SFX.play('splash');addXp('fi',o.xp,p);chat('Fogtál egy halat.');if(qs.zoli.st===1&&qs.zoli.n<5){qs.zoli.n++;renderQuests()}
     if(Math.random()<0.2){o.mesh.visible=false;o.depleted=true;setTimeout(()=>{o.depleted=false;o.mesh.visible=true},12000);chat('A halászhely elúszott.');return}
     startAction(o);return}
   if(o.type==='banana'){if(!giveItem('banan'))return;chat('Leszedtél egy banánt.');o.bunch.visible=false;o.depleted=true;setTimeout(()=>{o.bunch.visible=true;o.depleted=false},20000);return}
   if(o.type==='fire'){if(!takeItem('nyershal'))return;const burn=Math.random()<Math.max(0.05,0.25-lvlFor(xp.ck)*0.03);
-    if(burn){giveItem('egett');chat('Odaégetted a halat. Hát, megesik.')}else{giveItem('sulthal');addXp('ck',30,p);chat('Szépen megsült a hal.');if(qs.zoli.st===1&&qs.zoli.n>=5&&qs.zoli.m<3){qs.zoli.m++;renderQuests()}}
+    SFX.play('cook');if(burn){giveItem('egett');chat('Odaégetted a halat. Hát, megesik.')}else{giveItem('sulthal');addXp('ck',30,p);chat('Szépen megsült a hal.');if(qs.zoli.st===1&&qs.zoli.n>=5&&qs.zoli.m<3){qs.zoli.m++;renderQuests()}}
     if(countItem('nyershal')&&!o.depleted)startAction(o);return}
-  if(o.type==='shell'){if(!giveItem('kagylo'))return;chat('Felvettél egy kagylót.');o.depleted=true;o.mesh.visible=false;setTimeout(()=>{o.depleted=false;o.mesh.visible=true},90000);return}
-  if(o.type==='chest'){takeItem('aranykulcs');o.lid.rotation.x=-1.6;o.depleted=true;chat('A láda kinyílik: érmék és egy gyöngy csillog benne!','xp');finishQuest('majom');return}
+  if(o.type==='shell'){if(!giveItem('kagylo'))return;SFX.play('pickup');chat('Felvettél egy kagylót.');o.depleted=true;o.mesh.visible=false;setTimeout(()=>{o.depleted=false;o.mesh.visible=true},90000);return}
+  if(o.type==='chest'){takeItem('aranykulcs');SFX.play('coin');o.lid.rotation.x=-1.6;o.depleted=true;chat('A láda kinyílik: érmék és egy gyöngy csillog benne!','xp');finishQuest('majom');return}
   if(o.type==='furnace'){const b=busy||{};const make=o._make;if(make==='vasrud'){takeItem('erc');giveItem('vasrud');addXp('sm',12,p);chat('Vasrudat olvasztottál.')}else{takeItem('arany');takeItem('arany');giveItem('aranyrud');addXp('sm',30,p);chat('Aranyrudat olvasztottál.')}
     if((make==='vasrud'&&countItem('erc'))||(make==='aranyrud'&&countItem('arany')>=2))busy={obj:o,t:0,dur:make==='vasrud'?2.5:3,make};return}
-  if(o.type==='anvil'){const r=o._recipe,id=o._make;for(const [k,n] of Object.entries(r.need))for(let i=0;i<n;i++)takeItem(k);giveItem(id);addXp('sm',r.xp,p);chat(`Elkészült: ${ITEMS[id].name}! Kattints rá a táskában, és felveszed.`,'xp');return}
+  if(o.type==='anvil'){const r=o._recipe,id=o._make;for(const [k,n] of Object.entries(r.need))for(let i=0;i<n;i++)takeItem(k);giveItem(id);SFX.play('equip');addXp('sm',r.xp,p);chat(`Elkészült: ${ITEMS[id].name}! Kattints rá a táskában, és felveszed.`,'xp');return}
 }
 function deplete(o){
   o.depleted=true;
@@ -924,13 +1010,13 @@ function playerHit(s){
   const atk=lvlFor(xp.at);const g=gearBonus();const maxHit=1+Math.floor(atk/4)+g.hit;
   const hitChance=Math.min(0.95,0.55+atk*0.01+g.acc);
   const dmg=Math.random()<hitChance?1+Math.floor(Math.random()*maxHit):0;
-  s.hp=Math.max(0,s.hp-dmg);splat(s.mesh.position,dmg);
+  s.hp=Math.max(0,s.hp-dmg);splat(s.mesh.position,dmg);SFX.play(dmg?'hit':'miss');
   player.userData.armR.rotation.x=-2;
   if(s.hp<=0)monsterDie(s);else{addXp('at',dmg*4,s.mesh.position);if(dmg)addXp('hp',Math.ceil(dmg*1.33),player.position)}
 }
 function monsterHit(s){
   const dmg=Math.random()<Math.max(0.1,s.d.acc-gearBonus().def)?1+Math.floor(Math.random()*s.d.maxHit):0;
-  hp=Math.max(0,hp-dmg);splat(player.position,dmg);updateHp();
+  hp=Math.max(0,hp-dmg);splat(player.position,dmg);updateHp();SFX.play(dmg?'hurt':'miss');
   if(!fight&&!target&&!busy){fight=s;atkT=0.6;chat(`Megtámadott egy ${s.name.toLowerCase()}! Visszatámadsz.`,'fight')}
   if(hp<=0)die();
 }
@@ -939,12 +1025,12 @@ function monsterDie(s){
   if(s.kind==='scorpion'&&qs.kapitany.st===1&&!countItem('rozsdaskard')){qs.kapitany.n++;renderQuests();if(qs.kapitany.n>=3){giveItem('rozsdaskard');chat('A skorpió alól egy rozsdás kard kerül elő: a kapitányé!','xp')}}
   if(s.kind==='lavaspirit'&&qs.vulkan.st===1&&!countItem('lavako')){giveItem('lavako');chat('A Lávaszellem szétfoszlik, és egy izzó lávakő marad utána!','xp');renderQuests()}
   else{const r=Math.random();let acc=0;for(const [id,p] of s.d.drops){acc+=p;if(r<acc){giveItem(id);break}}}
-  if(Math.random()<0.5){const c=Math.ceil(s.level*(1+Math.random()));setCoins(coins+c);floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
+  if(Math.random()<0.5){const c=Math.ceil(s.level*(1+Math.random()));setCoins(coins+c);SFX.play('coin');floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
   s.depleted=true;s.mesh.visible=false;s.aggro=false;s.target=null;fight=null;
   setTimeout(()=>{s.hp=s.maxHp;s.depleted=false;s.mesh.visible=true;placeAt(s.mesh,s.home.x,s.home.z)},s.kind==='lavaspirit'?90000:25000);
 }
 function die(){
-  dead=true;fight=null;busy=null;target=null;marker.visible=false;document.getElementById('dead').style.display='flex';chat('Ó, jaj, meghaltál. A faluban ébredsz fel.','fight');
+  dead=true;SFX.play('die');fight=null;busy=null;target=null;marker.visible=false;document.getElementById('dead').style.display='flex';chat('Ó, jaj, meghaltál. A faluban ébredsz fel.','fight');
   for(const s of monsters){s.aggro=false;s.target=null}
   setTimeout(()=>{px=-30;pz=88;hp=maxHp();updateHp();dead=false;document.getElementById('dead').style.display='none';chat('Luthas talált rád a parton és visszavitt a faluba.')},3000);
 }
@@ -1066,7 +1152,7 @@ function animate(now){
   const sw=moving?Math.sin(t*(run?16:10))*0.7:0;
   u.legL.rotation.x=sw;u.legR.rotation.x=-sw;u.armL.rotation.x=-sw;u.armR.rotation.x=sw;
   {const T=u.tools;const bt=busy&&busy.obj.type;T.axe.visible=bt==='tree';T.pick.visible=bt==='rock';T.rod.visible=bt==='fish';T.sword.visible=(!bt||bt==='fire'||bt==='banana'||bt==='shell'||bt==='chest')&&!!equip.weapon;if(bt==='anvil')T.axe.visible=true;}
-  if(busy){busy.t+=dt;const o=busy.obj;u.armR.rotation.x=-1.2+Math.sin(busy.t*9)*0.9;if(o.type==='fish')u.armR.rotation.x=-1.6+Math.sin(busy.t*3)*0.2;
+  if(busy){busy.t+=dt;const o=busy.obj;const sw=Math.floor(busy.t*1.45);if(sw!==busy.sw){busy.sw=sw;const snd={tree:'chop',rock:'mine',anvil:'smith',furnace:'smelt',fish:sw===0?'splash':null}[o.type];if(snd)SFX.play(snd)}u.armR.rotation.x=-1.2+Math.sin(busy.t*9)*0.9;if(o.type==='fish')u.armR.rotation.x=-1.6+Math.sin(busy.t*3)*0.2;
     if(o.type==='tree')o.mesh.rotation.z=Math.sin(busy.t*9)>0.9?Math.sin(busy.t*40)*0.03:0;
     if(busy.t>=busy.dur){const fo=busy.obj;fo._make=busy.make;fo._recipe=busy.recipe;busy=null;finishAction(fo)}}
   if(fight&&!dead){
@@ -1112,6 +1198,7 @@ function animate(now){
     const occl=interactables.filter(o=>o.type==='tree'&&!o.depleted).map(o=>o.mesh).concat(huts);
     for(const m of occl){const wx=m.position.x-ax,wz=m.position.z-az;const tt=(wx*vx+wz*vz)/L2;
       const dd=tt>0.05&&tt<0.92?Math.hypot(wx-vx*tt,wz-vz*tt):99;m.visible=dd>3.2}}
+  {const h=height(px,pz);SFX.update(dt,clamp(1-(h-0.3)/4,0,1),clamp(1-(dVol(px,pz)-12)/30,0,1),clamp((h-4)/4,0,1),night)}
   renderer.render(scene,camera);drawMinimap();drawHpbars();
 }
 document.getElementById('load').remove();
