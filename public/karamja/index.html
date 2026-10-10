@@ -141,7 +141,9 @@
   #wmap .ztabs div.on{background:#6a4a26;color:#fff}#wmap .ztabs div.here{border-color:#6adb6a}
   #chat{position:absolute;left:0;bottom:0;width:min(520px,100%);height:150px;background:linear-gradient(#4a3a24,#2e2112);border-top:3px solid #8a6a3a;border-right:3px solid #8a6a3a;box-sizing:border-box;padding:6px 10px;overflow:hidden;color:#000;font-size:14px;line-height:18px}
   #chat .inner{background:#d8c8a0;height:100%;padding:4px 6px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
-  #chat .line{color:#111}
+  #chat .line{color:#111}#chat .line.mp{color:#0a5a1a}#chat .line.mpme{color:#1a3a8a}
+  #chatRow{display:flex;gap:6px;align-items:center;margin-top:4px}#chatIn{flex:1;background:#f0e4c4;border:1px solid #8a6a3a;padding:3px 6px;font:13px Trebuchet MS,sans-serif;color:#000;text-transform:none;letter-spacing:0}#onlineN{font-size:12px;color:#9ad08a;white-space:nowrap}
+  #chat{height:176px}
   #chat .line.game{color:#1a1aa8}
   #chat .line.npc{color:#7a1a1a}
   #chat .line.xp{color:#0a5a0a}
@@ -179,7 +181,7 @@
   <div id="run">Futás: KI</div>
   <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
-<div id="chat"><div class="inner" id="chatInner"></div></div>
+<div id="chat"><div class="inner" id="chatInner"></div><div id="chatRow"><input id="chatIn" maxlength="120" placeholder="Enter: üzenet a többi játékosnak…" autocomplete="off"><span id="onlineN" title="Játékosok a világban">●</span></div></div>
 <div id="dialog"></div>
 <div id="sail"><div>🚢 Hajózás...</div><small></small></div>
 <div id="ctx"></div>
@@ -898,7 +900,7 @@ function removeGenie(){if(!genie)return;scene.remove(genie.mesh);const i=interac
 function genieTalk(){const ks=skOrder.slice().sort(()=>Math.random()-0.5).slice(0,6);showDialog('Dzsinn','Egy kívánság: melyik képességedben legyél bölcsebb?',ks.map(k=>({t:`${skillNames[k]} (${lvlFor(xp[k])}. szint)`,f:()=>{const a=Math.max(100,lvlFor(xp[k])*15);addXp(k,a,player.position);chat(`A dzsinn bólint, és eltűnik. +${a} ${skillNames[k]} XP.`,'xp');removeGenie()}})))}
 // --- érzelmek ---
 let emoteT=0,emoteK=0;const EMOTES={1:'integetsz',2:'táncolsz',3:'meghajolsz',4:'nevetsz'};
-function emote(k){if(dead)return;emoteT=2.2;emoteK=k;chat(`Te ${EMOTES[k]}.`)}
+function emote(k){if(dead)return;emoteT=2.2;emoteK=k;chat(`Te ${EMOTES[k]}.`);if(typeof MP!=='undefined')MP.emote(k)}
 document.querySelectorAll('.emo').forEach(e=>e.onclick=()=>emote(+e.dataset.e));
 function updateOsrs(dt){
   if(stunT>0)stunT-=dt;
@@ -1463,7 +1465,7 @@ const marker=new THREE.Group();
 // kamera
 let camYaw=0, camPitch=0.8, camDist=24;
 const keys={};
-addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.target.tagName!=='INPUT'&&(e.key==='s'||e.key==='S'))useSpec();if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape'){const wm=document.getElementById('wmap');if(wm&&getComputedStyle(wm).display!=='none')toggleMap(false);else if(!ctxOpen)toggleCloud(cloudEl.style.display!=='block')}});
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.key!=='Escape')return;keys[e.key]=true;if(e.key==='Enter'&&!dead){const ci=document.getElementById('chatIn');if(ci){ci.focus();e.preventDefault()}}if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.target.tagName!=='INPUT'&&(e.key==='s'||e.key==='S'))useSpec();if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape'){const wm=document.getElementById('wmap');if(wm&&getComputedStyle(wm).display!=='none')toggleMap(false);else if(!ctxOpen)toggleCloud(cloudEl.style.display!=='block')}});
 addEventListener('keyup',e=>{keys[e.key]=false});
 let dragging=false,lastX=0,lastY=0;
 let rb=null;
@@ -3011,7 +3013,7 @@ function animate(now){
   for(const f of flies){f.ph+=dt;f.mesh.position.set(f.cx+Math.sin(f.ph*0.7)*2.5,height(f.cx,f.cz)+1+Math.sin(f.ph*1.9)*0.5,f.cz+Math.cos(f.ph*0.5)*2.5);f.mesh.rotation.y=f.ph*0.6;const w=Math.sin(t*22+f.ph)*0.9;f.pl.rotation.z=w;f.pr.rotation.z=-w}
   for(const n of npcs){const d=Math.hypot(n.mesh.position.x-px,n.mesh.position.z-pz);if(d<6){n.mesh.rotation.y=Math.atan2(px-n.mesh.position.x,pz-n.mesh.position.z)}if(n.mark.visible)n.mark.position.y=(3.6+Math.sin(t*3)*0.15)/(n.mesh.scale.x||1)}
   if(window.musicStarted&&musicStarted()&&!SFX.isMuted()&&MUSIC.isOn())MUSIC.setZone(zoneOf(px));
-  updateZoneVis();WX.update(dt);updateOsrs(dt);plotT-=dt;if(plotT<=0){plotT=5;renderPlots();updateBarn()}torch.position.set(px,height(px,pz)+2.5,pz);
+  updateZoneVis();WX.update(dt);MP.update(dt);updateOsrs(dt);plotT-=dt;if(plotT<=0){plotT=5;renderPlots();updateBarn()}torch.position.set(px,height(px,pz)+2.5,pz);
   if(zoneOf(px)===5&&!dead){const safe=Math.hypot(px-DX-OASIS.x,pz-OASIS.z)<OASIS.r+10||Math.hypot(px-DX-DTOWN.x,pz-DTOWN.z)<DTOWN.r;heatT+=safe?0:dt;if(heatT>25){heatT=0;if(countItem('vizestomlo')){takeItem('vizestomlo');giveItem('urestomlo');chat('Kortyolsz a tömlőből a hőségben.')}else{hp=Math.max(0,hp-2);updateHp();splat(player.position,2);chat('A sivatagi hőség kimerít! Vizestömlő kell.','fight');if(hp<=0)die()}}}
   {const z6=zoneOf(px)===6;fireflies.visible=z6&&night>0.3;if(fireflies.visible){fireflies.material.opacity=night*0.9;const a=fireflies.geometry.attributes.position;for(let i=0;i<a.count;i++){a.setX(i,a.getX(i)+Math.sin(t*0.7+i)*dt*0.6);a.setY(i,a.getY(i)+Math.cos(t*0.9+i*0.3)*dt*0.4)}a.needsUpdate=true;fireflies.position.set(px,height(px,pz),pz)}}
   {const zn2=zoneOf(px)===2;snow.visible=zn2;if(zn2){const a=snow.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*2.5;if(y<0)y+=30;a.setY(i,y);a.setX(i,a.getX(i)+Math.sin(t+i)*dt*0.3)}a.needsUpdate=true;snow.position.set(px,height(px,pz),pz)}}
@@ -3121,7 +3123,7 @@ let resetting=false;addEventListener('beforeunload',()=>{if(resetting)return;sav
 // felhő-panel
 const cloudEl=document.getElementById('cloud');
 function toggleCloud(on){cloudEl.style.display=on?'block':'none';if(on){document.getElementById('cloudCode').textContent=saveCode;document.getElementById('nameInput').value=playerName;cloudStatus()}}
-document.getElementById('nameInput').onchange=e=>{playerName=e.target.value.replace(/[^\p{L}\p{N} _.-]/gu,'').trim().slice(0,16);e.target.value=playerName;try{localStorage.setItem('karamja_name',playerName)}catch(err){}chat(playerName?`Játékosnév: ${playerName}. A ranglistán így jelensz meg.`:'Név törölve, nem szerepelsz a ranglistán.');saveLocal();cloudSave(true)};
+document.getElementById('nameInput').onchange=e=>{playerName=e.target.value.replace(/[^\p{L}\p{N} _.-]/gu,'').trim().slice(0,16);e.target.value=playerName;try{localStorage.setItem('karamja_name',playerName)}catch(err){}chat(playerName?`Játékosnév: ${playerName}. A ranglistán így jelensz meg.`:'Név törölve, nem szerepelsz a ranglistán.');saveLocal();cloudSave(true);MP.rename()};
 stEl.onclick=()=>toggleCloud(true);document.getElementById('cloudClose').onclick=()=>toggleCloud(false);
 document.getElementById('cloudCopy').onclick=async()=>{try{await navigator.clipboard.writeText(saveCode);chat('Mentéskód a vágólapon.')}catch(err){chat('Nem sikerült másolni, írd le kézzel.')}};
 document.getElementById('cloudNow').onclick=async()=>{saveLocal();await cloudSave(true);chat(cloud.ok?`Mentve helyben és a felhőben. Kódod: ${saveCode}`:'Mentve helyben. A felhő most nem elérhető.','xp')};
@@ -3158,13 +3160,54 @@ const WX=(()=>{const N=1600;const geo=new THREE.BufferGeometry();const pos=new F
       if(st.type==='sand'&&zn===5)heatT+=dt;}
     else{if(zn!==3&&allowed.length){st.next-=dt;if(st.next<=0)start(allowed[Math.floor(Math.random()*allowed.length)])}}}
   return {update,fog:()=>st.type?CFG[st.type]:null,type:()=>st.type,flash:()=>Math.max(0,st.flash),force:start,stop,pts}})();
+// ---------- többjátékos: WebSocket a karamja-api Worker Durable Objectjéhez ----------
+const MP=(()=>{const others=new Map();let ws=null,myId=null,lastSend=0,lastPos='',lastEq='',online=0,retry=2000,enabled=true,connecting=false;
+  const WSURL=/paduch\.hu$/.test(location.hostname)?'wss://paduch.hu/karamja/api/ws':'ws://127.0.0.1:8787/karamja/api/ws';
+  function label(txt,col='#ffe87a'){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='bold 26px Trebuchet MS';x.textAlign='center';x.lineWidth=5;x.strokeStyle='#000';x.strokeText(txt,128,40);x.fillStyle=col;x.fillText(txt,128,40);const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));sp.scale.set(4,1,1);return sp}
+  function eqOf(){const col=k=>equip[k]?ITEMS[equip[k]].gear.col:null;return {sh:col('body')??player.userData.shirtCol,pa:col('legs')??player.userData.pantsCol,bo:col('boots')??player.userData.bootsCol,bl:equip.weapon&&!ITEMS[equip.weapon].gear.ranged?ITEMS[equip.weapon].gear.col:0xc8c8d0,ca:col('cape'),he:equip.head&&equip.head!=='kalozkalap'?col('head'):null,hat:equip.head==='kalozkalap'?1:0,w:equip.weapon?(isBow()?'bow':isMage()?'staff':'sword'):''}}
+  function applyEq(o,e){if(!e)return;const u=o.mesh.userData;u.shirtMat.color.setHex(e.sh);u.pantsMat.color.setHex(e.pa);u.bootsMat.color.setHex(e.bo);u.tools.blade.material.color.setHex(e.bl||0xc8c8d0);for(const k in u.tools)u.tools[k].visible=false;if(e.w==='sword')u.tools.sword.visible=true;if(e.w==='bow')u.tools.bow.visible=true;if(e.w==='staff')u.tools.staff.visible=true;if(e.ca!=null){u.tools.cape.visible=true;u.tools.cape.children[0].material.color.setHex(e.ca)}if(e.he!=null){u.tools.helm.visible=true;u.tools.helm.children[0].material.color.setHex(e.he);u.tools.helm.children[1].material.color.setHex(e.he)}if(e.hat)u.tools.hat.visible=true}
+  function add(p){if(others.has(p.id)||p.id===myId)return;const mesh=humanoid({skin:0xe8c39e,hair:0x5a3a1a,shirt:0x3a7ac8,pants:0x4a3a2a,boots:0x2a1a0a});mesh.userData.mp=true;const nm=label(p.n);nm.position.y=3.3;mesh.add(nm);placeAt(mesh,p.x,p.z);scene.add(mesh);const o={id:p.id,n:p.n,mesh,tx:p.x,tz:p.z,f:p.f||0,m:p.m,a:p.a,bubble:null,bubbleT:0,last:Date.now()};applyEq(o,p.e);others.set(p.id,o);refresh()}
+  function remove(id){const o=others.get(id);if(!o)return;scene.remove(o.mesh);others.delete(id);refresh()}
+  function refresh(){const el=document.getElementById('onlineN');if(el)el.textContent=ws&&ws.readyState===1?`● ${online} online · ${others.size} itt`:'○ offline'}
+  function bubble(o,txt){if(o.bubble){o.mesh.remove(o.bubble)}const b=label(txt.slice(0,40),'#ffffff');b.position.y=4.1;b.scale.set(6,1.5,1);o.mesh.add(b);o.bubble=b;o.bubbleT=5}
+  function connect(){if(!enabled||connecting||!navigator.onLine)return;if(ws&&ws.readyState<2)return;connecting=true;try{ws=new WebSocket(WSURL+'?name='+encodeURIComponent(playerName||'Vándor'))}catch(e){connecting=false;return}
+    ws.onopen=()=>{connecting=false;retry=2000;lastPos='';lastEq='';refresh()};
+    ws.onmessage=ev=>{let d;try{d=JSON.parse(ev.data)}catch(e){return}
+      if(d.t==='hello'){myId=d.id;online=d.n;curZone=zoneOf(px);for(const p of d.list)if(p.zn===curZone)add(p);refresh()}
+      else if(d.t==='list'){for(const p of d.list)if(p.zn===zoneOf(px))add(p);refresh()}
+      else if(d.t==='join'){online++;if(d.p.zn===zoneOf(px))add(d.p);refresh()}
+      else if(d.t==='leave'){remove(d.id);online=Math.max(0,online-1);refresh()}
+      else if(d.t==='p'){const o=others.get(d.id);if(o){o.tx=d.x;o.tz=d.z;o.f=d.f;o.m=d.m;o.a=d.a;o.last=Date.now()}else if(Date.now()-lastList>2000){lastList=Date.now();ws.send(JSON.stringify({t:'list'}))}}
+      else if(d.t==='e'){const o=others.get(d.id);if(o)applyEq(o,d.e)}
+      else if(d.t==='c'){const mine=d.id===myId;chat(`${d.n}: ${d.m}`,mine?'mpme':'mp');const o=others.get(d.id);if(o)bubble(o,d.m)}
+      else if(d.t==='em'){const o=others.get(d.id);if(o){o.emT=2.2;o.emK=d.k}}
+      else if(d.t==='pong'){online=d.n;refresh()}};
+    ws.onclose=()=>{connecting=false;for(const id of[...others.keys()])remove(id);refresh();if(enabled)setTimeout(connect,retry);retry=Math.min(30000,retry*1.6)};
+    ws.onerror=()=>{try{ws.close()}catch(e){}}}
+  let curZone=-1,lastList=0;
+  function update(dt){if(!ws||ws.readyState!==1)return;const now=Date.now();const zn=zoneOf(px);
+    if(zn!==curZone){curZone=zn;for(const id of[...others.keys()])remove(id);lastPos='';ws.send(JSON.stringify({t:'p',x:+px.toFixed(1),z:+pz.toFixed(1),zn,f:+facing.toFixed(2),m:0,a:''}));ws.send(JSON.stringify({t:'list'}))}
+    if(now-lastSend>150){lastSend=now;const moving=!!target&&!dead;const a=dead?'dead':fight?'fight':busy?'busy':'';const ps=`${px.toFixed(1)},${pz.toFixed(1)},${zn},${facing.toFixed(2)},${moving?1:0},${a}`;if(ps!==lastPos){lastPos=ps;ws.send(JSON.stringify({t:'p',x:+px.toFixed(1),z:+pz.toFixed(1),zn,f:+facing.toFixed(2),m:moving?1:0,a}))}
+      const eq=JSON.stringify(eqOf());if(eq!==lastEq){lastEq=eq;ws.send(JSON.stringify({t:'e',e:JSON.parse(eq)}))}}
+    for(const o of others.values()){const m=o.mesh;const dx=o.tx-m.position.x,dz=o.tz-m.position.z,d=Math.hypot(dx,dz);if(d>14){m.position.x=o.tx;m.position.z=o.tz}else if(d>0.05){const sp=Math.min(d,Math.max(4.6,d*4)*dt);m.position.x+=dx/d*sp;m.position.z+=dz/d*sp;m.rotation.y=Math.atan2(dx,dz)}else m.rotation.y=o.f;m.position.y=height(m.position.x,m.position.z)+(onDock(m.position.x,m.position.z)?0.6:0);
+      const u=m.userData;const mv=d>0.1;const sw=mv?Math.sin(t*12)*0.7:0;u.legL.rotation.x=sw;u.legR.rotation.x=-sw;u.armL.rotation.x=-sw;u.armR.rotation.x=o.a==='fight'?-1.4+Math.sin(t*9)*0.6:(o.a==='busy'?-1.2+Math.sin(t*9)*0.9:sw);
+      if(o.emT>0){o.emT-=dt;const q=o.emT*6;if(o.emK===1)u.armR.rotation.x=-2.6;else if(o.emK===2){u.armL.rotation.x=-1.5+Math.sin(q)*1.2;u.armR.rotation.x=-1.5-Math.sin(q)*1.2;m.rotation.y+=dt*6}else if(o.emK===3)u.body.rotation.x=0.6;else u.body.rotation.x=-0.2+Math.sin(q*3)*0.1}else u.body.rotation.x=0;
+      if(o.bubble){o.bubbleT-=dt;if(o.bubbleT<=0){m.remove(o.bubble);o.bubble=null}}
+      if(now-o.last>20000)remove(o.id)}}
+  function say(txt){txt=txt.trim().slice(0,120);if(!txt)return;if(!ws||ws.readyState!==1){chat('Nincs kapcsolat a többi játékossal (offline).');return}ws.send(JSON.stringify({t:'c',m:txt}))}
+  function emote(k){if(ws&&ws.readyState===1)ws.send(JSON.stringify({t:'em',k}))}
+  function rename(){if(ws){enabled=true;try{ws.close()}catch(e){}}}
+  setInterval(()=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify({t:'ping'}))},25000);
+  return {connect,update,say,emote,rename,others,id:()=>myId,online:()=>online}})();
+(function(){const ci=document.getElementById('chatIn');ci.addEventListener('keydown',e=>{if(e.key==='Enter'){MP.say(ci.value);ci.value='';ci.blur();e.preventDefault()}if(e.key==='Escape'){ci.blur()}});ci.addEventListener('focus',()=>{for(const k in keys)keys[k]=false})})();
+setTimeout(()=>MP.connect(),1500);
 // zóna-csoportok: csak az aktuális sziget objektumai és fényei láthatók (a többi 600 egységre van, a ködön túl)
 const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THREE.Group();g.name='zone'+i;zoneGroups.push(g);scene.add(g)}
   const keep=new Set([water,player,marker,torch,sun,moon,hemi,stars,lavaPool,WX.pts,...smoke]);
   for(const o of scene.children.slice()){if(keep.has(o)||o.isDirectionalLight||o.isHemisphereLight||o.isPoints||zoneGroups.includes(o))continue;if(!(o.isMesh||o.isGroup||o.isPointLight||o.isInstancedMesh))continue;const zn=o.isInstancedMesh?o.userData.zone:zoneOf(o.position.x);if(zn==null||!zoneGroups[zn])continue;zoneGroups[zn].add(o)}
   const _rm=scene.remove.bind(scene);scene.remove=function(o){if(o&&o.parent&&o.parent!==scene){o.parent.remove(o);return scene}return _rm(o)};
   // később létrehozott, zónához kötött objektumok is a csoportba kerüljenek
-  const _add=scene.add.bind(scene);scene.add=function(o){if(o&&!keep.has(o)&&(o.isMesh||o.isGroup||o.isPointLight)&&!o.isInstancedMesh&&!zoneGroups.includes(o)&&!(o.userData&&o.userData.tail)){const zn=zoneOf(o.position.x);if(zoneGroups[zn]){zoneGroups[zn].add(o);return scene}}return _add(o)};
+  const _add=scene.add.bind(scene);scene.add=function(o){if(o&&!keep.has(o)&&(o.isMesh||o.isGroup||o.isPointLight)&&!o.isInstancedMesh&&!zoneGroups.includes(o)&&!(o.userData&&(o.userData.tail||o.userData.mp))){const zn=zoneOf(o.position.x);if(zoneGroups[zn]){zoneGroups[zn].add(o);return scene}}return _add(o)};
 })();
 let curVisZone=-1;function updateZoneVis(){const z=zoneOf(px);if(z===curVisZone)return;curVisZone=z;for(let i=0;i<zoneGroups.length;i++)zoneGroups[i].visible=i===z}
 updateZoneVis();
