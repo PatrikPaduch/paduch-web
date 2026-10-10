@@ -166,7 +166,7 @@
   <div class="page" id="p-pr"><div id="qp">Imapontok: <b id="prpN">1</b>/<b id="prmN">1</b></div><div id="prayers"></div><div id="qp" style="margin-top:6px">Az imák fogyasztják az imapontot. Oltárnál (falu, Port Sarim) töltődik, csontot temetve nő az Ima-szinted.</div><div id="qp" style="margin-top:6px">Érzelmek (1-4 billentyű): <span class="emo" data-e="1">👋 Integetés</span> <span class="emo" data-e="2">💃 Tánc</span> <span class="emo" data-e="3">🙇 Meghajlás</span> <span class="emo" data-e="4">😂 Nevetés</span></div></div>
   <div class="page" id="p-q"><div id="daily"></div><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qlist"></div><div id="bosslog"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
   <div id="run">Futás: KI</div>
-  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="saveSt" title="Felhőmentés beállításai">Felhő</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
+  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
 <div id="chat"><div class="inner" id="chatInner"></div></div>
 <div id="dialog"></div>
@@ -176,9 +176,9 @@
 <div id="qdone"><b>KÜLDETÉS TELJESÍTVE</b><div id="qdoneT"></div></div>
 <div id="bank"><span class="cls" id="bankClose">✕</span><b class="t">BANK</b><div class="grid" id="bankGrid"></div><div class="hint">Berakás: kattints a táskádban egy tárgyra (jobb klikk: mind). Kivétel: kattints a bankban (jobb klikk: 5 / mind).</div></div>
 <div id="shop"><span class="cls" id="shopClose">✕</span><b class="t">MIRA BOLTJA</b><div id="shopList"></div><div class="sellhint">Eladás: kattints a táskádban egy tárgyra, amíg a bolt nyitva van.</div></div>
-<div id="cloud"><span class="cls" id="cloudClose">✕</span><b class="t">FELHŐMENTÉS</b>
+<div id="cloud"><span class="cls" id="cloudClose">✕</span><b class="t">MENTÉS ÉS FOLYTATÁS (Esc)</b>
   <div class="row" style="margin-top:0;margin-bottom:8px;align-items:center"><span>Játékosnév (ranglistához):</span><input id="nameInput" maxlength="16" placeholder="pl. Patrik" style="text-transform:none;letter-spacing:0"></div>
-  <div>A mentéskódod (ez a jelszavad, írd fel):</div><div class="code" id="cloudCode">----</div>
+  <div>A játék 5 mp-enként ment helyben, 30 mp-enként a felhőbe. <b>Másik böngészőben vagy eszközön ezzel a kóddal folytathatod</b> (ez a jelszavad, írd fel):</div><div class="code" id="cloudCode">----</div>
   <div class="row"><button id="cloudCopy">Másolás</button><button id="cloudNow">Mentés most</button></div>
   <div style="margin-top:12px">Folytatás másik eszközről: írd be az ottani kódot.</div>
   <div class="row"><input id="cloudInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19"><button id="cloudLoad">Betöltés</button></div>
@@ -1391,7 +1391,7 @@ const marker=new THREE.Group();
 // kamera
 let camYaw=0, camPitch=0.8, camDist=24;
 const keys={};
-addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape')toggleMap(false)});
+addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape'){const wm=document.getElementById('wmap');if(wm&&getComputedStyle(wm).display!=='none')toggleMap(false);else if(!ctxOpen)toggleCloud(cloudEl.style.display!=='block')}});
 addEventListener('keyup',e=>{keys[e.key]=false});
 let dragging=false,lastX=0,lastY=0;
 let rb=null;
@@ -2966,7 +2966,7 @@ let saveCode=null;try{saveCode=localStorage.getItem(CODE_KEY)}catch(err){}
 if(!saveCode||!/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(saveCode)){saveCode=newCode();try{localStorage.setItem(CODE_KEY,saveCode)}catch(err){}}
 const cloud={ok:null,last:0,lastJson:'',busy:false};
 const stEl=document.getElementById('saveSt');
-function cloudStatus(){stEl.textContent=cloud.ok===null?'Felhő …':(cloud.ok?'Felhő ✓':'Felhő ✗');stEl.style.color=cloud.ok===false?'#ff8a8a':'#9ad08a';
+function cloudStatus(){stEl.textContent=cloud.ok===null?'Mentés …':(cloud.ok?'Mentés ✓':'Mentés ✗');stEl.style.color=cloud.ok===false?'#ff8a8a':'#9ad08a';
   document.getElementById('cloudSt').textContent=cloud.ok===null?'Felhő: még nem kapcsolódott.':(cloud.ok?`Felhő: rendben, utolsó mentés ${new Date(cloud.last).toLocaleTimeString('hu')}.`:'Felhő: nem elérhető, csak helyben mentünk.')}
 async function cloudSave(force,keep){
   const d=snapshot();const js=JSON.stringify({data:d});if(!force&&js===cloud.lastJson)return;if(cloud.busy&&!keep)return;cloud.busy=true;
@@ -2986,7 +2986,7 @@ if(localD&&applySave(localD))chat('Mentett állás betöltve. Üdv újra Karamj�
 (async()=>{
   const c=await cloudLoad(saveCode);
   if(c===null){cloud.ok=false;cloudStatus();chat('A felhőmentés most nem elérhető, helyben mentünk.');return}
-  if(c.none){cloud.ok=true;cloudStatus();if(localD)cloudSave(true);return}
+  if(c.none){cloud.ok=true;cloudStatus();if(localD)cloudSave(true);else setTimeout(()=>showDialog('Üdv Karamján!','Új játék indul ebben a böngészőben. Ha máshol már játszottál, a mentéskódoddal folytathatod.',[{t:'Új játékot kezdek.',f:()=>chat('Mentés: az Esc gomb vagy a Mentés gomb a panelen. A kódodat írd fel, azzal folytathatsz máshol.','xp')},{t:'Van mentéskódom, folytatom.',f:()=>{toggleCloud(true);document.getElementById('cloudInput').focus()}}]),800);return}
   const lt=localD&&localD.t||0;
   if(c.data&&c.data.t>lt+2000){applySave(c.data);saveLocal();chat('Frissebb állás jött a felhőből, onnan folytatod.','xp')}
   cloud.ok=true;cloud.last=c.updated_at||Date.now();cloud.lastJson=JSON.stringify({data:c.data});cloudStatus();if(lt>(c.data&&c.data.t||0))cloudSave(true);
@@ -2999,7 +2999,7 @@ function toggleCloud(on){cloudEl.style.display=on?'block':'none';if(on){document
 document.getElementById('nameInput').onchange=e=>{playerName=e.target.value.replace(/[^\p{L}\p{N} _.-]/gu,'').trim().slice(0,16);e.target.value=playerName;try{localStorage.setItem('karamja_name',playerName)}catch(err){}chat(playerName?`Játékosnév: ${playerName}. A ranglistán így jelensz meg.`:'Név törölve, nem szerepelsz a ranglistán.');saveLocal();cloudSave(true)};
 stEl.onclick=()=>toggleCloud(true);document.getElementById('cloudClose').onclick=()=>toggleCloud(false);
 document.getElementById('cloudCopy').onclick=async()=>{try{await navigator.clipboard.writeText(saveCode);chat('Mentéskód a vágólapon.')}catch(err){chat('Nem sikerült másolni, írd le kézzel.')}};
-document.getElementById('cloudNow').onclick=()=>{saveLocal();cloudSave(true)};
+document.getElementById('cloudNow').onclick=async()=>{saveLocal();await cloudSave(true);chat(cloud.ok?`Mentve helyben és a felhőben. Kódod: ${saveCode}`:'Mentve helyben. A felhő most nem elérhető.','xp')};
 document.getElementById('cloudLoad').onclick=async()=>{
   const code=document.getElementById('cloudInput').value.toUpperCase().trim();
   if(!/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(code)){chat('Hibás kód, a formátum: XXXX-XXXX-XXXX-XXXX.');return}
