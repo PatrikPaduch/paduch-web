@@ -44,7 +44,7 @@
   .qrow.s0{color:#ff6a6a}.qrow.s1{color:#ffe87a}.qrow.s2{color:#6adb6a}.qrow:hover{background:#4a3a24}
   #qp{font-size:11px;color:#ddd;margin-bottom:5px}
   .arow{padding:3px 6px;background:#2e2112;border:1px solid #0008;margin-bottom:2px;font-size:11px;color:#9a8a6a;cursor:default}.arow.on{color:#6adb6a}
-  #mus,#musList{cursor:pointer}
+  #mus,#musList,#wikiBtn{cursor:pointer}
   #dialog .opts{margin-top:8px;display:flex;flex-direction:column;gap:4px}
   #dialog .opts div{background:#f0e4c4;border:1px solid #8a6a3a;padding:5px 8px;cursor:pointer;color:#1a1aa8;font-size:14px;text-align:left}
   #dialog .opts div:hover{background:#fff4d4;color:#000}
@@ -179,7 +179,7 @@
   <div class="page" id="p-pr"><div id="qp">Imapontok: <b id="prpN">1</b>/<b id="prmN">1</b></div><div id="prayers"></div><div id="qp" style="margin-top:6px">Az imák fogyasztják az imapontot. Oltárnál (falu, Port Sarim) töltődik, csontot temetve nő az Ima-szinted.</div><div id="qp" style="margin-top:6px">Érzelmek (1-4 billentyű): <span class="emo" data-e="1">👋 Integetés</span> <span class="emo" data-e="2">💃 Tánc</span> <span class="emo" data-e="3">🙇 Meghajlás</span> <span class="emo" data-e="4">😂 Nevetés</span></div></div>
   <div class="page" id="p-q"><div id="daily"></div><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qfilt"></div><div id="qlist"></div><div id="bosslog"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
   <div id="run">Futás: KI</div>
-  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
+  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="wikiBtn" title="Karamja Wiki: minden a szigetekről, szörnyekről, tárgyakról">📜</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
 <div id="chat"><div class="inner" id="chatInner"></div><div id="chatRow"><input id="chatIn" maxlength="120" placeholder="Enter: üzenet a többi játékosnak…" autocomplete="off"><span id="onlineN" title="Játékosok a világban">●</span></div></div>
 <div id="dialog"></div>
@@ -3162,7 +3162,7 @@ async function showHiscores(){
     showDialog('Ranglista',`<div id="hs">${L.length?`<table><tr><th>#</th><th>Név</th><th class="r">Szint</th><th class="r">QP</th><th class="r">Boss</th></tr>${rows}</table>`:'Még senki nincs a listán.'}${playerName?'':'<div style="margin-top:8px;color:#7a1a1a">Adj meg egy nevet a Felhő panelen, hogy te is rajta legyél!</div>'}</div>`)}
   catch(e){showDialog('Ranglista','<div id="hs">A ranglista most nem elérhető.</div>')}
 }
-document.getElementById('hsBtn').onclick=showHiscores;
+document.getElementById('hsBtn').onclick=showHiscores;document.getElementById('wikiBtn').onclick=()=>window.open('wiki/','_blank');
 function applySave(d){
   if(!d||!d.xp)return false;
   for(const k in xp)xp[k]=typeof d.xp[k]==='number'?d.xp[k]:(k==='hp'?xpFor(10):0);if(typeof d.xp.st!=='number'){xp.st=xp.at;xp.df=Math.floor(xp.at*0.6);if(xp.at>0)setTimeout(()=>chat('Új képességek: Erő és Védelem. A Támadásodból indulnak, a stílust a Felszerelés fülön választod.','xp'),1500)}
