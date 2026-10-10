@@ -164,7 +164,7 @@
   <div class="page" id="p-eq"><div id="eqslots"></div><div id="eqstat"></div></div>
   <div class="page" id="p-mg"><div id="qp">Rúnák a táskában: <b id="runaN">0</b></div><div id="spells"></div><div id="qp" style="margin-top:6px">Varázsbottal a kézben a kijelölt harci varázslatot lövöd. Zara tanít, rúnát is árul.</div></div>
   <div class="page" id="p-pr"><div id="qp">Imapontok: <b id="prpN">1</b>/<b id="prmN">1</b></div><div id="prayers"></div><div id="qp" style="margin-top:6px">Az imák fogyasztják az imapontot. Oltárnál (falu, Port Sarim) töltődik, csontot temetve nő az Ima-szinted.</div><div id="qp" style="margin-top:6px">Érzelmek (1-4 billentyű): <span class="emo" data-e="1">👋 Integetés</span> <span class="emo" data-e="2">💃 Tánc</span> <span class="emo" data-e="3">🙇 Meghajlás</span> <span class="emo" data-e="4">😂 Nevetés</span></div></div>
-  <div class="page" id="p-q"><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qlist"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
+  <div class="page" id="p-q"><div id="daily"></div><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qlist"></div><div id="bosslog"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
   <div id="run">Futás: KI</div>
   <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="hsBtn" title="Ranglista">🏆</div><div id="saveSt" title="Felhőmentés beállításai">Felhő</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
@@ -1302,7 +1302,7 @@ const skOrder=['at','hp','rg','mg','pr','ag','th','sl','wc','fi','mi','fm','ck',
   const ce=document.getElementById('coins');ce.firstChild.innerHTML='';ce.firstChild.appendChild(skillIcon('coin'));ce.firstChild.insertAdjacentHTML('beforeend',' Érme');
 })();
 function combatLevel(){const L=k=>lvlFor(xp[k]);const base=0.25*(L('at')+L('hp')+Math.floor(L('pr')/2));const melee=0.325*(L('at')*2),rng=0.325*Math.floor(L('rg')*1.5),mag=0.325*Math.floor(L('mg')*1.5);return Math.max(3,Math.floor(base+Math.max(melee,rng,mag)))}
-const SKGUIDE={at:['1: Bronz kard','10: Vas kard','20: Acél kard','30: Vulkánkard, jégkard','40: Hősök kardja'],hp:['Minden harc növeli. 10-ről indul.'],rg:['1: Íj + nyíl','20: Tölgyíj','40: Elfíj'],mg:['1: Tűzgolyó (Zara tanít)','10: Gyógyítás','15: Jégnyíl','20: Teleport Karamjára'],
+const SKGUIDE={at:['1: Bronz kard','10: Vas kard','20: Acél kard','30: Vulkánkard, jégkard','40: Hősök kardja','Sárkánykard: ritka boss-drop'],hp:['Minden harc növeli. 10-ről indul.'],rg:['1: Íj + nyíl','20: Tölgyíj','40: Elfíj'],mg:['1: Tűzgolyó (Zara tanít)','10: Gyógyítás','15: Jégnyíl','20: Teleport Karamjára'],
   pr:['1: Gyors gyógyulás ima','10: Erő ima','20: Acélbőr ima','25: Sasszem ima','30: Misztikus ima','35: Oltalom ima (fele sebzés)','Csontokat temess, vagy áldozz az oltáron (dupla XP).'],
   ag:['Futás közben fogy az energia, magasabb szinten lassabban.','1: Kötélhinta, rönkhíd (Karamja, a falutól keletre)','5: Hálófal','10: Kötélcsúszda','A teljes pálya bónusz XP-t ad.'],
   th:['1: Gyümölcsös stand (Karamja), Gazda Feri zsebe','5: Kocsmáros Zsófi','8: Pékség stand (Port Sarim)','15: Kalóz Barnabás','25: Betty','35: Börtönőr Gábor','45: Vadászmester Kuno','Ha rajtakapnak: sebzés és pár másodperc kábulat.'],
@@ -1353,6 +1353,7 @@ const ITEMS={
   banan:{name:'Banán',icon:'🍌',heal:3},erc:{name:'Vasérc',icon:'⚙️'},arany:{name:'Aranyérc',icon:'🪙'},selyem:{name:'Pókselyem',icon:'🕸️'},tojas:{name:'Póktojás',icon:'🥚',heal:2},
   kigyobor:{name:'Kígyóbőr',icon:'🐍'},fullank:{name:'Skorpiófullánk',icon:'🦂'},
   vasrud:{name:'Vasrúd',icon:'🔩'},aranyrud:{name:'Aranyrúd',icon:'🟨'},lavako:{name:'Lávakő',icon:'🔥'},
+  sarkanykard:{name:'Sárkánykard',icon:'🗡️',gear:{slot:'weapon',hit:5,acc:0.18,col:0xc02020}},
   bronzkard:{name:'Bronz kard',icon:'🗡️',gear:{slot:'weapon',hit:1,acc:0.05,col:0xb87333}},
   vaskard:{name:'Vas kard',icon:'⚔️',gear:{slot:'weapon',hit:2,acc:0.08,col:0xc8c8d0}},
   acelkard:{name:'Acél kard',icon:'🔪',gear:{slot:'weapon',hit:3,acc:0.12,col:0xf0f0ff}},
@@ -1372,6 +1373,7 @@ const ITEMS={
   vulkankard:{name:'Vulkánkard',icon:'🗡️',gear:{slot:'weapon',hit:9,acc:0.22,col:0xff6a10}},
   kenyer:{name:'Kenyér',icon:'🍞',heal:6},halleves:{name:'Halleves',icon:'🍲',heal:12},ragu:{name:'Répás ragu',icon:'🥘',heal:14},
   aranygyuru:{name:'Arany gyűrű',icon:'💍',gear:{slot:'ring',hit:1,acc:0.03}},jeggyuru:{name:'Jéggyűrű',icon:'💍',gear:{slot:'ring',hit:2,def:0.05}},gyongylanc:{name:'Gyöngy nyaklánc',icon:'📿',gear:{slot:'neck',hit:1,def:0.06}},
+  pet_jegorias:{name:'Kis jégóriás',icon:'🧊',pet:'boss',boss:'jegorias'},pet_vulkankiraly:{name:'Kis vulkánkirály',icon:'🌋',pet:'boss',boss:'vulkankiraly'},pet_kalozkapitany:{name:'Kis kapitány',icon:'🏴‍☠️',pet:'boss',boss:'kalozkapitany'},pet_farao:{name:'Kis múmia',icon:'🧟',pet:'boss',boss:'farao'},pet_erdoorzo:{name:'Kis erdőőrző',icon:'🌳',pet:'boss',boss:'erdoorzo'},pet_lavaspirit:{name:'Kis lávaszellem',icon:'🔥',pet:'boss',boss:'lavaspirit'},
   kutya:{name:'Kiskutya',icon:'🐕',pet:'kutya'},majomkolyok:{name:'Majomkölyök',icon:'🐒',pet:'majom'},
   erositoital:{name:'Erősítő ital',icon:'🧪',buff:'str'},regenital:{name:'Regeneráló ital',icon:'🧪',buff:'regen'},
   timikutya:{name:'Timi kiskutyája',icon:'🐶',quest:true},bortonkulcs:{name:'Börtönkulcs',icon:'🗝️',quest:true},varazskonyv:{name:'Varázskönyv',icon:'📖',quest:true},agyagtabla:{name:'Agyagtábla',icon:'🪨',quest:true},
@@ -1494,7 +1496,7 @@ const CAPECOL={at:0xc02020,hp:0x40a040,rg:0x2a6a2a,mg:0x4040c0,sl:0x3a3a3a,wc:0x
 for(const k of Object.keys(CAPECOL)){ITEMS['kopeny_'+k]={name:(k==='all'?'Mesterek':skillNames[k])+' köpenye',icon:'🧥',gear:{slot:'cape',def:0.06,hit:1,col:CAPECOL[k]},cape:k}}
 const ICON={};for(const k in ITEMS)ICON[k]=itemIcon(k);
 const iconImg=(k)=>`<img src="${ICON[k]}" alt="">`;
-const SELL={csont:1,nagycsont:3,esszencia:2,borsapka:20,bormelleny:45,bornadrag:35,kincseskalap:500,imaital:30,jegpajzs:350,hosokkardja:5000,gyogyfu:12,gyogyfutea:30,tolgyij:150,elfij:600,osfabot:900,tundekopeny:800,vizestomlo:4,urestomlo:1,datolya:3,gyolcs:6,faraobot:900,skarabeusz:700,fejkendo:30,runa:2,rum:4,kalozkabat:400,aranykoponya:500,kapitanykard:2000,varazsbot:100,kenyer:8,halleves:20,ragu:25,aranygyuru:150,jeggyuru:400,gyongylanc:300,erositoital:60,regenital:50,buza:6,repa:5,krumpli:5,sultkrumpli:9,buzamag:2,repamag:4,krumplimag:6,vulkankard:1500,vassisak:40,acelsisak:90,jegsisak:400,vaslabszar:60,acellabszar:140,jeglabszar:500,borcsizma:30,premcsizma:90,jegkristaly:120,farkasbor:35,jegkard:600,premkopeny:300,garnela:3,sultgarnela:5,hering:5,sulthering:8,pisztrang:10,sultpisztrang:15,lazac:18,sultlazac:25,tonhal:25,sulttonhal:35,capa:60,sultcapa:90,toll:2,nyil:1,ij:60,fapajzs:40,tyuktojas:3,sor:2,gyogyital:15,nyershal:5,sulthal:8,ronk:3,erc:10,arany:40,selyem:15,kigyobor:25,fullank:30,tojas:4,gyongy:150,kagylo:2,vasrud:20,aranyrud:80,banan:2,egett:0,bronzkard:30,vaskard:60,acelkard:120,aranykard:300,kigyomelleny:150};
+const SELL={sarkanykard:4000,nagycsont:3,esszencia:2,borsapka:20,bormelleny:45,bornadrag:35,kincseskalap:500,imaital:30,jegpajzs:350,hosokkardja:5000,gyogyfu:12,gyogyfutea:30,tolgyij:150,elfij:600,osfabot:900,tundekopeny:800,vizestomlo:4,urestomlo:1,datolya:3,gyolcs:6,faraobot:900,skarabeusz:700,fejkendo:30,runa:2,rum:4,kalozkabat:400,aranykoponya:500,kapitanykard:2000,varazsbot:100,kenyer:8,halleves:20,ragu:25,aranygyuru:150,jeggyuru:400,gyongylanc:300,erositoital:60,regenital:50,buza:6,repa:5,krumpli:5,sultkrumpli:9,buzamag:2,repamag:4,krumplimag:6,vulkankard:1500,vassisak:40,acelsisak:90,jegsisak:400,vaslabszar:60,acellabszar:140,jeglabszar:500,borcsizma:30,premcsizma:90,jegkristaly:120,farkasbor:35,jegkard:600,premkopeny:300,garnela:3,sultgarnela:5,hering:5,sulthering:8,pisztrang:10,sultpisztrang:15,lazac:18,sultlazac:25,tonhal:25,sulttonhal:35,capa:60,sultcapa:90,toll:2,nyil:1,ij:60,fapajzs:40,tyuktojas:3,sor:2,gyogyital:15,nyershal:5,sulthal:8,ronk:3,erc:10,arany:40,selyem:15,kigyobor:25,fullank:30,tojas:4,gyongy:150,kagylo:2,vasrud:20,aranyrud:80,banan:2,egett:0,bronzkard:30,vaskard:60,acelkard:120,aranykard:300,kigyomelleny:150};
 const BUY=[['tu',20,1],['uvegcse',5,1],['borcsizma',80,1],['banan',4,1],['sulthering',12,1],['nyil',15,10],['ij',120,1],['fapajzs',150,1],['kigyomelleny',300,1]];
 let questsReady=false,shopOpen=false;
 let coins=0;function setCoins(n){coins=Math.max(0,n);document.getElementById('coinN').textContent=coins.toLocaleString('hu')}
@@ -1818,7 +1820,8 @@ function finishQuest(id){
 const slay={kind:null,need:0,n:0,done:0};
 function renderSlay(){const e=document.getElementById('slayT');if(e)e.textContent=slay.kind?`${MON[slay.kind].name} ${slay.n}/${slay.need}`:'nincs (Kuno, Port Sarim)'}
 // elérések
-const stats={kills:0,trees:0,fish:0,cook:0,zones:[0],chests:[],harvest:0};const ach=new Set();
+const stats={kills:0,trees:0,fish:0,cook:0,zones:[0],chests:[],harvest:0,bk:{},kk:{},ore:0};
+const BOSSES=['lavaspirit','jegorias','vulkankiraly','kalozkapitany','farao','erdoorzo'];const ach=new Set();
 const ACH=[
   {id:'q1',name:'Első küldetés',desc:'Teljesíts egy küldetést.',chk:()=>Object.values(qs).some(q=>q.st===2)},
   {id:'q5',name:'Segítőkész',desc:'Teljesíts 5 küldetést.',chk:()=>Object.values(qs).filter(q=>q.st===2).length>=5},
@@ -1839,6 +1842,10 @@ const ACH=[
   {id:'chests',name:'Kincskereső',desc:'Találd meg mind a 3 rejtett ládát.',chk:()=>stats.chests.length>=3},
   {id:'king',name:'A mélység ura',desc:'Győzd le a Vulkánkirályt.',chk:()=>qs.melyseg.st===2},
   {id:'farm',name:'Gazda',desc:'Szüretelj 10 termést.',chk:()=>stats.harvest>=10},
+  {id:'boss25',name:'Bossvadász',desc:'Győzz le 25 bosst összesen.',chk:()=>BOSSES.reduce((a,k)=>a+((stats.bk||{})[k]||0),0)>=25},
+  {id:'bosspet',name:'Kis szörnyeteg',desc:'Szerezz egy boss-petet.',chk:()=>Object.keys(ITEMS).some(k=>ITEMS[k].boss&&(countItem(k)||bank[k]||pet.id===k))},
+  {id:'dragon',name:'Sárkányvér',desc:'Szerezz Sárkánykardot.',chk:()=>!!(countItem('sarkanykard')||bank.sarkanykard||equip.weapon==='sarkanykard')},
+  {id:'daily7',name:'Szorgalmas',desc:'Teljesítsd 7 napon mind a három napi kihívást.',chk:()=>(stats.dailyAll||0)>=7},
   {id:'clue5',name:'Kincsvadász',desc:'Oldj meg 5 kincses tekercset.',chk:()=>(stats.clues||0)>=5},
   {id:'pick50',name:'Zsebtolvaj',desc:'50 sikeres lopás.',chk:()=>(stats.picks||0)>=50},
   {id:'lap10',name:'Pályabajnok',desc:'10 teljes kör az ügyességi pályán.',chk:()=>(stats.laps||0)>=10},
@@ -1860,14 +1867,27 @@ const ACH=[
   {id:'pet',name:'Hű társ',desc:'Szerezz egy háziállatot.',chk:()=>!!pet.id},
   {id:'jewel',name:'Ékszerész',desc:'Készíts egy ékszert a kemencében.',chk:()=>['aranygyuru','jeggyuru','gyongylanc'].some(k=>countItem(k)||bank[k]||equip.ring===k||equip.neck===k)}
 ];
-let achT=0;function updateAch(dt){achT-=dt;if(achT>0)return;achT=2;const zn=zoneOf(px);if(!stats.zones.includes(zn))stats.zones.push(zn);
+const DPOOL=[{id:'fish',txt:'Fogj 20 halat',n:20,key:'fish',sk:'fi'},{id:'trees',txt:'Vágj ki 15 rönköt',n:15,key:'trees',sk:'wc'},{id:'kills',txt:'Győzz le 15 szörnyet',n:15,key:'kills',sk:'at'},{id:'goblin',txt:'Győzz le 8 goblint',n:8,kind:'goblin',sk:'at'},{id:'farkas',txt:'Győzz le 5 hófarkast',n:5,kind:'farkas',sk:'at'},{id:'pok',txt:'Győzz le 6 pókot',n:6,kind:'spider',sk:'at'},{id:'cook',txt:'Süss 10 ételt',n:10,key:'cook',sk:'ck'},{id:'bones',txt:'Temess el 10 csontot',n:10,key:'bones',sk:'pr'},{id:'picks',txt:'Lopj 8-szor sikeresen',n:8,key:'picks',sk:'th'},{id:'lap',txt:'Fuss egy teljes kört az ügyességi pályán',n:1,key:'laps',sk:'ag'},{id:'harvest',txt:'Arass le 4 parcellát',n:4,key:'harvest',sk:'fa'},{id:'ore',txt:'Bányássz 12 ércet',n:12,key:'ore',sk:'mi'},{id:'boss',txt:'Győzz le egy bosst',n:1,boss:true,sk:'hp'}];
+let daily={date:'',tasks:[],base:{},done:[]};
+function dayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function seedRand(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
+function dailyVal(t){const kk=stats.kk||{},bk=stats.bk||{};if(t.kind)return kk[t.kind]||0;if(t.boss)return BOSSES.reduce((a,k)=>a+(bk[k]||0),0);return stats[t.key]||0}
+function newDaily(){const r=seedRand('karamja'+dayKey());const pool=DPOOL.slice();const tasks=[];while(tasks.length<3&&pool.length){tasks.push(pool.splice(Math.floor(r()*pool.length),1)[0].id)}
+  daily={date:dayKey(),tasks,base:{},done:[]};for(const id of tasks){const t=DPOOL.find(x=>x.id===id);daily.base[id]=dailyVal(t)}renderDaily()}
+function checkDaily(){if(daily.date!==dayKey()){newDaily();if(questsReady)chat('Új nap, új napi kihívások! Nézd meg a Küldetések fülön.','xp')}
+  let ch=false;for(const id of daily.tasks){if(daily.done.includes(id))continue;const t=DPOOL.find(x=>x.id===id);if(!t)continue;const v=dailyVal(t)-(daily.base[id]||0);if(v>=t.n){daily.done.push(id);const lv=lvlFor(xp[t.sk]);const a=Math.max(200,lv*25),c=250+lv*10;addXp(t.sk,a,player.position);setCoins(coins+c);SFX.play('quest');questBanner('Napi kihívás kész');chat(`Napi kihívás teljesítve: ${t.txt}. +${a} ${skillNames[t.sk]} XP, +${c} érme.`,'xp');ch=true;
+      if(daily.done.length===3){const b=500+combatLevel()*10;setCoins(coins+b);stats.dailyAll=(stats.dailyAll||0)+1;chat(`Mind a három napi kihívás kész! Bónusz: ${b} érme.`,'xp')}}}
+  if(ch)renderDaily()}
+function renderDaily(){const el=document.getElementById('daily');if(!el)return;const rows=daily.tasks.map(id=>{const t=DPOOL.find(x=>x.id===id);if(!t)return '';const d=daily.done.includes(id);const v=Math.min(t.n,dailyVal(t)-(daily.base[id]||0));return `<div class="qrow ${d?'s2':'s1'}">${t.txt} <span style="color:#9a8a6a">${d?'✓':v+'/'+t.n}</span></div>`}).join('');el.innerHTML=`<div id="qp">Napi kihívások <span style="color:#9a8a6a">(${daily.date})</span></div>${rows}`}
+let dailyT=0;
+let achT=0;function updateAch(dt){achT-=dt;if(achT>0)return;achT=2;checkDaily();dailyT++;if(dailyT%5===0)renderDaily();const zn=zoneOf(px);if(!stats.zones.includes(zn))stats.zones.push(zn);
   for(const a of ACH){if(ach.has(a.id))continue;let ok=false;try{ok=a.chk()}catch(e){}if(ok){ach.add(a.id);setCoins(coins+100);SFX.play('quest');chat(`Elérés: ${a.name}! (+100 érme)`,'xp');questBanner(a.name+' · elérés');renderAch()}}}
 function renderAch(){const el=document.getElementById('achlist');if(!el)return;el.innerHTML='';for(const a of ACH){const d=document.createElement('div');d.className='arow'+(ach.has(a.id)?' on':'');d.textContent=(ach.has(a.id)?'✓ ':'· ')+a.name;d.title=a.desc;el.appendChild(d)}document.getElementById('achN').textContent=ach.size+'/'+ACH.length}
 function renderQuests(){
   const el=document.getElementById('qlist');if(!el)return;el.innerHTML='';let qp=0;
   for(const k in QUESTS){const q=QUESTS[k],st=qs[k].st;if(st===2)qp+=q.qp;const d=document.createElement('div');d.className='qrow s'+st;d.textContent=q.name;
     d.onclick=()=>showDialog(q.name,`<div style="text-align:left;font-size:13px"><b style="color:#000;font-size:13px;display:inline">Adja:</b> ${q.giver}<br>${q.desc}<br><br><b style="color:#000;font-size:13px;display:inline">${st===0?'Még nem kezdted el.':(st===1?'Feladat: ':'Teljesítve!')}</b>${st===1?' '+q.obj(qs[k]):''}<br><br><b style="color:#0a5a0a;font-size:13px;display:inline">Jutalom:</b> ${q.reward}</div>`);el.appendChild(d)}
-  document.getElementById('qpN').textContent=qp;renderAch();renderSlay();renderSpells();renderPrayers();
+  document.getElementById('qpN').textContent=qp;renderAch();renderSlay();renderSpells();renderPrayers();renderBossLog();renderDaily();
 }
 // mellékküldetés-párbeszéd segéd: true, ha kezelte a beszélgetést
 function sq(S,id,o){const q=qs[id];if(!q)return false;
@@ -2041,6 +2061,7 @@ function setPet(){if(petMesh){scene.remove(petMesh);petMesh=null}if(!pet.id||!pe
   const g=new THREE.Group();
   if(pet.id==='kutya'){const body=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.4,0.9),M(0xb8864a));body.position.y=0.45;g.add(body);const head=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.38,0.42),M(0xb8864a));head.position.set(0,0.75,0.6);g.add(head);const nose=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1),M(0x222222));nose.position.set(0,0.7,0.83);g.add(nose);
     for(const sx of[-1,1]){const ear=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.25,0.08),M(0x8a5a2a));ear.position.set(sx*0.18,0.95,0.5);g.add(ear)}for(let i=0;i<4;i++){const leg=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.3,0.12),M(0xa07040));leg.position.set(i%2?0.15:-0.15,0.15,i<2?0.3:-0.3);g.add(leg)}const tail=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.4),M(0xb8864a));tail.position.set(0,0.65,-0.6);tail.rotation.x=0.6;g.add(tail);g.userData.tail=tail}
+  else if(ITEMS[pet.id].boss){const m=MON[ITEMS[pet.id].boss].build();const bb=new THREE.Box3().setFromObject(m);const h=bb.max.y-bb.min.y||1;m.scale.multiplyScalar(0.95/h);g.add(m);const tail=new THREE.Object3D();g.userData.tail=tail}
   else{const body=new THREE.Mesh(new THREE.SphereGeometry(0.3,6,5),mats.monkey);body.position.y=0.4;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,5),mats.monkey);head.position.set(0,0.75,0.12);g.add(head);const face=new THREE.Mesh(new THREE.SphereGeometry(0.13,5,4),M(0xd8b090));face.position.set(0,0.72,0.27);g.add(face);const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.8,4),mats.monkey);tail.position.set(0,0.6,-0.35);tail.rotation.x=0.8;g.add(tail);g.userData.tail=tail}
   shadowed(g);placeAt(g,px-1.2,pz+1);scene.add(g);petMesh=g}
 function updatePet(dt){if(!petMesh)return;const m=petMesh;const dx=px-m.position.x,dz=pz-m.position.z,d=Math.hypot(dx,dz);
@@ -2126,7 +2147,7 @@ function startAction(o){
 function finishAction(o){
   const p=o.mesh.position;
   if(o.type==='tree'){if(!giveItem('ronk'))return;stats.trees++;SFX.play('pickup');addXp('wc',o.xp,p);chat('Kivágtál egy rönköt.');deplete(o);return}
-  if(o.type==='rock'){if(!giveItem(o.ore||(o.gold?'arany':'erc')))return;SFX.play('pickup');addXp('mi',o.xp,p);chat(o.ore==='esszencia'?'Rúnaesszenciát fejtettél ki. Hűvösen dereng.':o.ore?'Jégkristályt fejtettél ki! Hideg és fényes.':(o.gold?'Aranyércet bányásztál! Csillog.':'Kibányásztál egy kis vasércet.'));deplete(o);return}
+  if(o.type==='rock'){if(!giveItem(o.ore||(o.gold?'arany':'erc')))return;stats.ore=(stats.ore||0)+1;SFX.play('pickup');addXp('mi',o.xp,p);chat(o.ore==='esszencia'?'Rúnaesszenciát fejtettél ki. Hűvösen dereng.':o.ore?'Jégkristályt fejtettél ki! Hideg és fényes.':(o.gold?'Aranyércet bányásztál! Csillog.':'Kibányásztál egy kis vasércet.'));deplete(o);return}
   if(o.type==='fish'){const fl=lvlFor(xp.fi);const ok=FISH.filter(f=>fl>=f.lvl);let wsum=0;const ws=ok.map((f,i)=>wsum+=i+1);let r=Math.random()*wsum,f=ok[0];for(let i=0;i<ok.length;i++)if(r<ws[i]){f=ok[i];break}
     if(!giveItem(f.raw))return;stats.fish++;SFX.play('splash');addXp('fi',f.xp,p);chat(`Fogtál egy ${f.name}t.`);if(f.lvl>=20&&Math.random()<0.3)chat(`Szép fogás! A ${f.nom} sütve sokat gyógyít.`);if(qs.zoli.st===1&&qs.zoli.n<5){qs.zoli.n++;renderQuests()}
     if(Math.random()<0.2){o.mesh.visible=false;o.depleted=true;setTimeout(()=>{o.depleted=false;o.mesh.visible=true},12000);chat('A halászhely elúszott.');return}
@@ -2190,6 +2211,17 @@ function monsterHit(s){
   if(!fight&&!target&&!busy){fight=s;atkT=0.6;chat(`Megtámadott egy ${s.name.toLowerCase()}! Visszatámadsz.`,'fight')}
   if(hp<=0)die();
 }
+const RDT=[['runa',30],['aranyrud',3],['gyogyital',5],['nagycsont',6],['imaital',3],['jegkristaly',3],['lavako',2],['kincsestekercs',1],['coins',400],['sarkanykard',1]];
+function rareDrop(where,boss){let pick=pickR(RDT);if(pick[0]==='sarkanykard'&&!boss&&Math.random()<0.7)pick=['coins',300];if(pick[0]==='kincsestekercs'&&countItem('kincsestekercs'))pick=['runa',20];
+  if(pick[0]==='coins'){setCoins(coins+pick[1]);floatText('+'+pick[1]+' érme',where,'#ffd040',-22);chat(`Ritka zsákmány: ${pick[1]} érme!`,'xp');return}
+  let k=0;for(let i=0;i<pick[1];i++)if(giveItem(pick[0]))k++;if(!k)bank[pick[0]]=(bank[pick[0]]||0)+pick[1];SFX.play('quest');floatText('✦ ritka',where,'#ff80ff',-22);chat(`Ritka zsákmány: ${ITEMS[pick[0]].name}${pick[1]>1?' ×'+pick[1]:''}${k?'':' (a bankba került)'}!`,'xp')}
+function bossLoot(s){const boss=BOSSES.includes(s.kind);const w=s.mesh.position;
+  if(boss){stats.bk=stats.bk||{};stats.bk[s.kind]=(stats.bk[s.kind]||0)+1;const kc=stats.bk[s.kind];chat(`${s.name} legyőzve (${kc}. alkalom).`,'xp');renderBossLog();
+    giveItem('nagycsont');const c=s.level*6+Math.floor(Math.random()*s.level*6);setCoins(coins+c);floatText('+'+c+' érme',w,'#ffd040',-10);
+    if(Math.random()<0.2)rareDrop(w,true);
+    if(Math.random()<1/35){const id='pet_'+s.kind;if(!countItem(id)&&!bank[id]&&pet.id!==id){if(giveItem(id))chat(`Valami pici mozog a zsákmány között... ${ITEMS[id].name} követ téged! (Kattints rá a táskában.)`,'xp');else{bank[id]=1;chat(`${ITEMS[id].name} elkísért volna, de tele a táskád: a bankban vár.`,'xp')}SFX.play('quest');questBanner('Boss-pet: '+ITEMS[id].name)}}}
+  else if(s.level>=8&&Math.random()<1/48)rareDrop(w,false)}
+function renderBossLog(){const el=document.getElementById('bosslog');if(!el)return;const bk=stats.bk||{};const rows=BOSSES.map(k=>`<div class="qrow ${bk[k]?'s2':'s0'}">${MON[k].name} <span style="color:#9a8a6a">${bk[k]||0}×</span></div>`).join('');el.innerHTML=`<div id="qp" style="margin-top:8px">Boss-napló</div>${rows}`}
 function monsterDie(s){
   chat(`Legyőzted: ${s.name}!`,'fight');addXp(cmbSkill(),s.level*8,s.mesh.position);if(s.kind!=='csirke'||Math.random()<0.5)giveItem(s.level>=18?'nagycsont':'csont');if(s.level>=5&&Math.random()<0.04&&!countItem('kincsestekercs')){if(giveItem('kincsestekercs'))chat('A szörny egy összetekert, pecsétes tekercset hagyott hátra: kincses tekercs!','xp')}addXp('hp',Math.ceil(s.level*2.7),player.position);
   if(s.kind==='scorpion'&&qs.kapitany.st===1&&!countItem('rozsdaskard')){qs.kapitany.n++;renderQuests();if(qs.kapitany.n>=3){giveItem('rozsdaskard');chat('A skorpió alól egy rozsdás kard kerül elő: a kapitányé!','xp')}}
@@ -2210,6 +2242,7 @@ function monsterDie(s){
   if(s.kind==='goblin'&&qs.kaloz.st===1&&!qs.kaloz.map&&!countItem('terkepdarab')){qs.kaloz.n++;renderQuests();if(qs.kaloz.n>=3){giveItem('terkepdarab');chat('A goblin zsebéből egy szakadt térképdarab esik ki!','xp')}}
   if(s.kind==='lavaspirit'&&qs.vulkan.st===1&&!countItem('lavako')){giveItem('lavako');chat('A Lávaszellem szétfoszlik, és egy izzó lávakő marad utána!','xp');renderQuests()}
   else{const r=Math.random();let acc=0;for(const [id,p] of s.d.drops){acc+=p;if(r<acc){giveItem(id);break}}}
+  stats.kk=stats.kk||{};stats.kk[s.kind]=(stats.kk[s.kind]||0)+1;bossLoot(s);
   if(Math.random()<0.5){const c=Math.ceil(s.level*(1+Math.random()));setCoins(coins+c);SFX.play('coin');floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
   s.depleted=true;s.mesh.visible=false;s.aggro=false;s.target=null;fight=null;
   setTimeout(()=>{s.hp=s.maxHp;s.depleted=false;s.mesh.visible=true;placeAt(s.mesh,s.home.x,s.home.z)},s.kind==='lavaspirit'||s.kind==='jegorias'||s.kind==='vulkankiraly'||s.kind==='kalozkapitany'||s.kind==='farao'||s.kind==='erdoorzo'?120000:(s.kind==='csirke'?12000:25000));
@@ -2446,12 +2479,12 @@ chat('Beszélj a falubeliekkel: küldetéseket adnak, ezekből lesz kardod, érm
 const SAVE_KEY='karamja_save_v1',CODE_KEY='karamja_code';
 const API=/paduch\.hu$/.test(location.hostname)?'/karamja/api':'http://127.0.0.1:8787/karamja/api';
 let playerName='';try{playerName=localStorage.getItem('karamja_name')||''}catch(e){}
-function snapshot(){return {xp,hp,inv,px,pz,dayT,run,facing,coins,equip,qs,bank,slay,stats,farm,pet,buffs,hard,activeSpell,barn,house:house_,myboat,ach:[...ach],name:playerName?(hard?playerName+'_V':playerName):'',prp,energy,clue,prayers:[...prayers],agilNext,t:Date.now()}}
+function snapshot(){return {xp,hp,inv,px,pz,dayT,run,facing,coins,equip,qs,bank,slay,stats,farm,pet,buffs,hard,activeSpell,barn,house:house_,myboat,ach:[...ach],name:playerName?(hard?playerName+'_V':playerName):'',prp,energy,clue,prayers:[...prayers],agilNext,daily,t:Date.now()}}
 async function showHiscores(){
   showDialog('Ranglista','<div id="hs">Betöltés...</div>');
   try{const r=await fetch(API+'/hiscores');if(!r.ok)throw 0;const j=await r.json();const L=j.list||[];
-    const rows=L.map((e,i)=>`<tr class="${e.nev===playerName&&playerName?'me':''}"><td>${i+1}.</td><td>${e.nev.replace(/[<>&]/g,'')}</td><td class="r">${e.szint}</td><td class="r">${e.qp}</td></tr>`).join('');
-    showDialog('Ranglista',`<div id="hs">${L.length?`<table><tr><th>#</th><th>Név</th><th class="r">Szint</th><th class="r">QP</th></tr>${rows}</table>`:'Még senki nincs a listán.'}${playerName?'':'<div style="margin-top:8px;color:#7a1a1a">Adj meg egy nevet a Felhő panelen, hogy te is rajta legyél!</div>'}</div>`)}
+    const rows=L.map((e,i)=>`<tr class="${e.nev===playerName&&playerName?'me':''}"><td>${i+1}.</td><td>${e.nev.replace(/[<>&]/g,'')}</td><td class="r">${e.szint}</td><td class="r">${e.qp}</td><td class="r">${e.boss|0}</td></tr>`).join('');
+    showDialog('Ranglista',`<div id="hs">${L.length?`<table><tr><th>#</th><th>Név</th><th class="r">Szint</th><th class="r">QP</th><th class="r">Boss</th></tr>${rows}</table>`:'Még senki nincs a listán.'}${playerName?'':'<div style="margin-top:8px;color:#7a1a1a">Adj meg egy nevet a Felhő panelen, hogy te is rajta legyél!</div>'}</div>`)}
   catch(e){showDialog('Ranglista','<div id="hs">A ranglista most nem elérhető.</div>')}
 }
 document.getElementById('hsBtn').onclick=showHiscores;
@@ -2467,7 +2500,8 @@ function applySave(d){
   target=null;route=[];pendingAction=null;busy=null;fight=null;marker.visible=false;
   setCoins(typeof d.coins==='number'?d.coins:0);
   if(d.slay&&typeof d.slay==='object'){slay.kind=MON[d.slay.kind]?d.slay.kind:null;slay.need=d.slay.need|0;slay.n=d.slay.n|0;slay.done=d.slay.done|0}else{slay.kind=null;slay.done=0}
-  if(d.stats&&typeof d.stats==='object'){stats.kills=d.stats.kills|0;stats.trees=d.stats.trees|0;stats.fish=d.stats.fish|0;stats.cook=d.stats.cook|0;stats.zones=Array.isArray(d.stats.zones)?d.stats.zones.slice():[0];stats.chests=Array.isArray(d.stats.chests)?d.stats.chests.slice():[];stats.harvest=d.stats.harvest|0}else{stats.chests=[];stats.harvest=0}
+  if(d.stats&&typeof d.stats==='object'){stats.kills=d.stats.kills|0;stats.trees=d.stats.trees|0;stats.fish=d.stats.fish|0;stats.cook=d.stats.cook|0;stats.zones=Array.isArray(d.stats.zones)?d.stats.zones.slice():[0];stats.chests=Array.isArray(d.stats.chests)?d.stats.chests.slice():[];stats.harvest=d.stats.harvest|0;for(const k of['bones','picks','laps','clues','ore','spells','firePower','healPower','dailyAll'])stats[k]=d.stats[k]|0;stats.bk=d.stats.bk&&typeof d.stats.bk==='object'?Object.assign({},d.stats.bk):{};stats.kk=d.stats.kk&&typeof d.stats.kk==='object'?Object.assign({},d.stats.kk):{}}else{stats.chests=[];stats.harvest=0;stats.bk={};stats.kk={}}
+  daily=d.daily&&Array.isArray(d.daily.tasks)?{date:String(d.daily.date||''),tasks:d.daily.tasks.slice(0,3),base:Object.assign({},d.daily.base||{}),done:(d.daily.done||[]).slice()}:{date:'',tasks:[],base:{},done:[]};checkDaily();renderDaily();renderBossLog();
   pet.id=d.pet&&ITEMS[d.pet.id]&&ITEMS[d.pet.id].pet?d.pet.id:null;pet.out=!!(pet.id&&d.pet.out);setPet();
   buffs.str=d.buffs&&+d.buffs.str||0;buffs.regen=d.buffs&&+d.buffs.regen||0;
   setHard(typeof d.hard==='boolean'?d.hard:hard);
