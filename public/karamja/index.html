@@ -68,7 +68,7 @@
   .slot.sell{outline:2px solid #ffd040}
   .slot img,.eqs img,#shop img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}
   #shop img{width:20px;height:20px;margin-right:4px}
-  #prBar,#enBar{height:5px;background:#1a1a1a;border:1px solid #000;margin-top:2px}#prBar i{display:block;height:100%;width:100%;background:#4ad0ff}#enBar i{display:block;height:100%;width:100%;background:#ffd040}
+  #prBar,#enBar,#spBar{height:5px;background:#1a1a1a;border:1px solid #000;margin-top:2px}#spBar i{display:block;height:100%;width:100%;background:#c060ff}#prBar i{display:block;height:100%;width:100%;background:#4ad0ff}#enBar i{display:block;height:100%;width:100%;background:#ffd040}
   .emo{cursor:pointer;color:#ffe87a;margin-right:4px}.emo:hover{color:#fff}
   #snd{cursor:pointer}#fsBtn{cursor:pointer}
   #ctx{position:absolute;display:none;background:#5d5447;border:1px solid #000;box-shadow:2px 2px 0 #000;z-index:9;min-width:150px;font-size:13px;user-select:none}
@@ -165,14 +165,14 @@
 <canvas id="c"></canvas>
 <div id="hover" class="ui"></div>
 <div id="help" class="ui">Bal klikk: menj / használd &nbsp;|&nbsp; Középső/jobb egér, nyilak: kamera &nbsp;|&nbsp; Görgő: zoom &nbsp;|&nbsp; R: futás</div>
-<div id="hpWrap"><div class="lbl">Életerő <span id="hpTxt">10/10</span> <span id="hardB" style="display:none;color:#ff6a6a">☠ Veszélyes</span> <span id="buffT" style="color:#9ad08a"></span></div><div id="hpBar"><i id="hpFill"></i></div><div id="prBar" title="Imapontok"><i id="prFill"></i></div><div id="enBar" title="Futóenergia"><i id="enFill"></i></div></div>
+<div id="hpWrap"><div class="lbl">Életerő <span id="hpTxt">10/10</span> <span id="hardB" style="display:none;color:#ff6a6a">☠ Veszélyes</span> <span id="buffT" style="color:#9ad08a"></span></div><div id="hpBar"><i id="hpFill"></i></div><div id="prBar" title="Imapontok"><i id="prFill"></i></div><div id="enBar" title="Futóenergia"><i id="enFill"></i></div><div id="spBar" title="Speciális támadás (S)"><i id="spFill"></i></div></div>
 <div id="clock">🌞 08:00</div>
 <div id="minimapWrap"><canvas id="minimap" width="170" height="170"></canvas><div id="compass"><span>N</span></div></div>
 <div id="panel">
   <div id="tabs"><div data-p="inv" class="on" title="Táska"></div><div data-p="sk" title="Képességek"></div><div data-p="eq" title="Felszerelés"></div><div data-p="q" title="Küldetések"></div><div data-p="mg" title="Varázslatok"></div><div data-p="pr" title="Ima"></div></div>
   <div class="page on" id="p-inv"><div id="coins"><span>Érme</span><span id="coinN">0</span></div><div id="inv"></div><div id="invHint">Klikk: használ/eszik. Jobb klikk: eldob. Rönk: tüzet rak. Nyers halat a tűzre kattintva sütsz.</div></div>
   <div class="page" id="p-sk"><div id="skgrid"></div><div id="sktot">Összes szint: <b id="lv-tot">17</b> · Harci szint: <b id="lv-cmb">3</b></div></div>
-  <div class="page" id="p-eq"><div id="eqslots"></div><div id="eqstat"></div></div>
+  <div class="page" id="p-eq"><div id="eqslots"></div><div id="eqstat"></div><div id="styles"></div><div id="specBox"></div></div>
   <div class="page" id="p-mg"><div id="qp">Rúnák a táskában: <b id="runaN">0</b></div><div id="spells"></div><div id="qp" style="margin-top:6px">Varázsbottal a kézben a kijelölt harci varázslatot lövöd. Zara tanít, rúnát is árul.</div></div>
   <div class="page" id="p-pr"><div id="qp">Imapontok: <b id="prpN">1</b>/<b id="prmN">1</b></div><div id="prayers"></div><div id="qp" style="margin-top:6px">Az imák fogyasztják az imapontot. Oltárnál (falu, Port Sarim) töltődik, csontot temetve nő az Ima-szinted.</div><div id="qp" style="margin-top:6px">Érzelmek (1-4 billentyű): <span class="emo" data-e="1">👋 Integetés</span> <span class="emo" data-e="2">💃 Tánc</span> <span class="emo" data-e="3">🙇 Meghajlás</span> <span class="emo" data-e="4">😂 Nevetés</span></div></div>
   <div class="page" id="p-q"><div id="daily"></div><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qlist"></div><div id="bosslog"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
@@ -902,6 +902,7 @@ function emote(k){if(dead)return;emoteT=2.2;emoteK=k;chat(`Te ${EMOTES[k]}.`)}
 document.querySelectorAll('.emo').forEach(e=>e.onclick=()=>emote(+e.dataset.e));
 function updateOsrs(dt){
   if(stunT>0)stunT-=dt;
+  if(spec<100){spec=Math.min(100,spec+dt/0.3);const el=document.getElementById('spFill');if(el)el.style.width=spec+'%'}
   if(poisonT>0&&!dead){poisonT-=dt;poisonTick+=dt;if(poisonTick>=3){poisonTick=0;const d=hard?2:1;hp=Math.max(0,hp-d);splat(player.position,d);updateHp();if(hp<=0)die()}if(poisonT<=0){updateHp();chat('A méreg kiürült a testedből.')}}
   if(poisonImm>0)poisonImm-=dt;
   batT-=dt;if(batT<=0){batT=3+Math.random()*4;if(zoneOf(px)===7&&monsters.some(m=>m.kind==='oriasdenever'&&!m.depleted&&Math.hypot(m.mesh.position.x-px,m.mesh.position.z-pz)<14))SFX.play('bat')}
@@ -1462,7 +1463,7 @@ const marker=new THREE.Group();
 // kamera
 let camYaw=0, camPitch=0.8, camDist=24;
 const keys={};
-addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape'){const wm=document.getElementById('wmap');if(wm&&getComputedStyle(wm).display!=='none')toggleMap(false);else if(!ctxOpen)toggleCloud(cloudEl.style.display!=='block')}});
+addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='r'||e.key==='R')toggleRun();if(e.target.tagName!=='INPUT'&&['1','2','3','4'].includes(e.key))emote(+e.key);if(e.target.tagName!=='INPUT'&&(e.key==='s'||e.key==='S'))useSpec();if(e.key==='m'||e.key==='M')toggleMap();if(e.key==='Escape'){const wm=document.getElementById('wmap');if(wm&&getComputedStyle(wm).display!=='none')toggleMap(false);else if(!ctxOpen)toggleCloud(cloudEl.style.display!=='block')}});
 addEventListener('keyup',e=>{keys[e.key]=false});
 let dragging=false,lastX=0,lastY=0;
 let rb=null;
@@ -1609,8 +1610,8 @@ document.querySelectorAll('#tabs div').forEach(t=>t.onclick=()=>{document.queryS
 // ---------- képességek ----------
 function xpFor(l){let t=0;for(let i=1;i<l;i++)t+=Math.floor(i+300*Math.pow(2,i/7))/4;return t}
 function lvlFor(x){let l=1;while(l<99&&x>=xpFor(l+1))l++;return l}
-const xp={at:0,hp:xpFor(10),rg:0,mg:0,pr:0,ag:0,th:0,sl:0,fa:0,wc:0,fi:0,mi:0,fm:0,ck:0,sm:0,hb:0,rc:0,cr:0};
-const skillNames={at:'Támadás',hp:'Életerő',wc:'Favágás',fi:'Horgászat',mi:'Bányászat',fm:'Tűzrakás',ck:'Főzés',sm:'Kovácsolás',rg:'Távolsági',sl:'Vadászat',fa:'Földművelés',mg:'Mágia',pr:'Ima',ag:'Ügyesség',th:'Tolvajlás',hb:'Gyógynövénytan',rc:'Rúnakészítés',cr:'Kézművesség'};
+const xp={at:0,st:0,df:0,hp:xpFor(10),rg:0,mg:0,pr:0,ag:0,th:0,sl:0,fa:0,wc:0,fi:0,mi:0,fm:0,ck:0,sm:0,hb:0,rc:0,cr:0};
+const skillNames={at:'Támadás',hp:'Életerő',wc:'Favágás',fi:'Horgászat',mi:'Bányászat',fm:'Tűzrakás',ck:'Főzés',sm:'Kovácsolás',rg:'Távolsági',sl:'Vadászat',fa:'Földművelés',mg:'Mágia',pr:'Ima',ag:'Ügyesség',th:'Tolvajlás',hb:'Gyógynövénytan',rc:'Rúnakészítés',cr:'Kézművesség',st:'Erő',df:'Védelem'};
 let hp=10;
 function maxHp(){return lvlFor(xp.hp)}
 // pixel-ikonok (OSRS-stílus), 24x24 canvasra rajzolva
@@ -1628,6 +1629,8 @@ function skillIcon(k){
   if(k==='ck'){R(4,9,16,11,'#000');R(6,11,12,7,'#5a4a8a');R(3,8,18,3,'#000');R(4,9,16,1,'#8a7ab8');R(10,5,4,4,'#000');R(11,6,2,2,'#8a7ab8');R(1,11,3,3,'#000');R(20,11,3,3,'#000');x.fillStyle='#f06a10';x.beginPath();x.moveTo(7,23);x.lineTo(9,19);x.lineTo(11,23);x.lineTo(13,18);x.lineTo(15,23);x.lineTo(17,20);x.lineTo(18,23);x.fill()}
   if(k==='mg'){L(5,21,16,7,'#000',5);L(5,21,16,7,'#6a4a2a',3);Cc(17,6,5,'#000');Cc(17,6,3.5,'#c080ff');R(16,5,1.5,1.5,'#fff');R(3,4,2,2,'#e0c0ff');R(20,16,2,2,'#e0c0ff');R(8,8,2,2,'#e0c0ff')}
   if(k==='pr'){x.fillStyle='#000';x.beginPath();x.moveTo(12,1);x.lineTo(15,9);x.lineTo(23,9);x.lineTo(17,14);x.lineTo(19,22);x.lineTo(12,17);x.lineTo(5,22);x.lineTo(7,14);x.lineTo(1,9);x.lineTo(9,9);x.fill();x.fillStyle='#e8f0ff';x.beginPath();x.moveTo(12,4);x.lineTo(14,10);x.lineTo(20,10);x.lineTo(15.5,14);x.lineTo(17,20);x.lineTo(12,16);x.lineTo(7,20);x.lineTo(8.5,14);x.lineTo(4,10);x.lineTo(10,10);x.fill();R(11,9,2,2,'#8ab0ff')}
+  if(k==='st'){x.fillStyle='#000';x.beginPath();x.moveTo(3,20);x.lineTo(6,9);x.lineTo(13,5);x.lineTo(21,8);x.lineTo(22,14);x.lineTo(15,13);x.lineTo(13,20);x.fill();x.fillStyle='#e8c39e';x.beginPath();x.moveTo(5,19);x.lineTo(8,11);x.lineTo(13,8);x.lineTo(19,10);x.lineTo(19,13);x.lineTo(14,13);x.lineTo(12,19);x.fill();Cc(14,8,3.5,'#000');Cc(14,8,2.2,'#d08060');R(4,20,10,3,'#000');R(5,21,8,1,'#8a5a2a')}
+  if(k==='df'){x.fillStyle='#000';x.beginPath();x.moveTo(12,1);x.lineTo(22,4);x.lineTo(21,13);x.lineTo(12,23);x.lineTo(3,13);x.lineTo(2,4);x.fill();x.fillStyle='#3a6ad8';x.beginPath();x.moveTo(12,4);x.lineTo(19,6);x.lineTo(18,12);x.lineTo(12,20);x.lineTo(6,12);x.lineTo(5,6);x.fill();R(11,5,2,14,'#c0d0ff');R(7,9,10,2,'#c0d0ff')}
   if(k==='ag'){Cc(14,4,3.5,'#000');Cc(14,4,2.2,'#e8c39e');L(13,8,9,15,'#000',5);L(13,8,9,15,'#2a5ad8',3);L(9,15,4,21,'#000',4);L(9,15,4,21,'#4a3a2a',2);L(10,13,17,19,'#000',4);L(10,13,17,19,'#4a3a2a',2);L(12,9,19,7,'#000',3);L(12,9,19,7,'#e8c39e',1.5);L(12,10,6,12,'#000',3);L(12,10,6,12,'#e8c39e',1.5)}
   if(k==='th'){R(2,6,20,11,'#000');R(4,8,16,7,'#1a1a1a');R(6,10,4,3,'#fff');R(14,10,4,3,'#fff');R(7,11,2,2,'#000');R(15,11,2,2,'#000');R(1,10,2,3,'#000');R(21,10,2,3,'#000');R(9,18,6,4,'#000');R(10,19,4,2,'#d8c040')}
   if(k==='hb'){R(9,1,6,4,'#000');R(10,2,4,2,'#8a5a2a');R(7,5,10,16,'#000');R(8,6,8,14,'#c8e8f0');R(8,12,8,8,'#3ab040');R(9,8,2,3,'#fff');L(3,20,8,12,'#1a6a1a',2);L(6,21,11,14,'#2a8a2a',2)}
@@ -1644,7 +1647,7 @@ function skillIcon(k){
   if(k==='stats'){R(2,14,5,8,'#000');R(9,9,5,13,'#000');R(16,3,5,19,'#000');R(3,15,3,6,'#30c030');R(10,10,3,11,'#30c030');R(17,4,3,17,'#30c030')}
   return c;
 }
-const skOrder=['at','hp','rg','mg','pr','ag','th','sl','wc','fi','mi','fm','ck','sm','fa','hb','rc','cr'];
+const skOrder=['at','st','df','hp','rg','mg','pr','ag','th','sl','wc','fi','mi','fm','ck','sm','fa','hb','rc','cr'];
 (function buildSkills(){
   const g=document.getElementById('skgrid');
   for(const k of skOrder){const d=document.createElement('div');d.className='skc';d.dataset.k=k;d.style.cursor='pointer';d.onclick=()=>skillGuide(k);d.appendChild(skillIcon(k));
@@ -1652,10 +1655,11 @@ const skOrder=['at','hp','rg','mg','pr','ag','th','sl','wc','fi','mi','fm','ck',
   const ic={inv:'inv',sk:'stats',eq:'eq',q:'q',mg:'mg',pr:'pr'};document.querySelectorAll('#tabs div').forEach(t=>{t.innerHTML='';t.appendChild(skillIcon(ic[t.dataset.p]))});
   const ce=document.getElementById('coins');ce.firstChild.innerHTML='';ce.firstChild.appendChild(skillIcon('coin'));ce.firstChild.insertAdjacentHTML('beforeend',' Érme');
 })();
-function combatLevel(){const L=k=>lvlFor(xp[k]);const base=0.25*(L('at')+L('hp')+Math.floor(L('pr')/2));const melee=0.325*(L('at')*2),rng=0.325*Math.floor(L('rg')*1.5),mag=0.325*Math.floor(L('mg')*1.5);return Math.max(3,Math.floor(base+Math.max(melee,rng,mag)))}
-const SKGUIDE={at:['1: Bronz kard','10: Vas kard','20: Acél kard','30: Vulkánkard, jégkard','40: Hősök kardja','Sárkánykard: ritka boss-drop'],hp:['Minden harc növeli. 10-ről indul.'],rg:['1: Íj + nyíl','20: Tölgyíj','40: Elfíj'],mg:['1: Tűzgolyó (Zara tanít)','10: Gyógyítás','15: Jégnyíl','20: Teleport Karamjára'],
+function combatLevel(){const L=k=>lvlFor(xp[k]);const base=0.25*(L('df')+L('hp')+Math.floor(L('pr')/2));const melee=0.325*(L('at')+L('st')),rng=0.325*Math.floor(L('rg')*1.5),mag=0.325*Math.floor(L('mg')*1.5);return Math.max(3,Math.floor(base+Math.max(melee,rng,mag)))}
+const SKGUIDE={at:['Pontos stílusban nő. A találati esélyt adja.','1: Bronz kard','10: Vas kard','20: Acél kard','30: Vulkánkard, jégkard','40: Hősök kardja','Sárkánykard: ritka boss-drop','S billentyű: speciális támadás (fegyverenként más).'],hp:['Minden harc növeli. 10-ről indul.'],rg:['1: Íj + nyíl','20: Tölgyíj','40: Elfíj'],mg:['1: Tűzgolyó (Zara tanít)','10: Gyógyítás','15: Jégnyíl','20: Teleport Karamjára'],
   pr:['1: Gyors gyógyulás ima','10: Erő ima','20: Acélbőr ima','25: Sasszem ima','30: Misztikus ima','35: Oltalom ima (fele sebzés)','Csontokat temess, vagy áldozz az oltáron (dupla XP).'],
   ag:['Futás közben fogy az energia, magasabb szinten lassabban.','1: Kötélhinta, rönkhíd (Karamja, a falutól keletre)','5: Hálófal','10: Kötélcsúszda','A teljes pálya bónusz XP-t ad.'],
+  st:['Agresszív stílusban nő. A max találatot az Erő adja.','Minden 4 szint +1 max találat.'],df:['Védekező stílusban nő. Csökkenti a szörnyek találati esélyét.','99-es Védelem: 35%-kal kevesebb találat.'],
   th:['1: Gyümölcsös stand (Karamja), Gazda Feri zsebe','5: Kocsmáros Zsófi','8: Pékség stand (Port Sarim)','15: Kalóz Barnabás','25: Betty','35: Börtönőr Gábor','45: Vadászmester Kuno','Ha rajtakapnak: sebzés és pár másodperc kábulat.'],
   hb:['Üvegcse + gyógyfű kell (üvegcse Mirától, Bettytől).','1: Gyógyital','10: Erősítő ital (+ skorpiófullánk)','15: Imaital (+ csont)','22: Regeneráló ital (+ jégkristály)'],
   rc:['Rúnaesszencia a vulkán lábánál és Zúzmara-fokon bányászható.','Rúnaoltár: Koponya-öböl (Zara mellett) és Tündeerdő.','1: 1 rúna / esszencia','11: 2 rúna','22: 3 rúna','33: 4 rúna'],
@@ -1849,7 +1853,7 @@ function itemIcon(k){
   }
   return c.toDataURL();
 }
-const CAPECOL={at:0xc02020,hp:0x40a040,rg:0x2a6a2a,mg:0x4040c0,sl:0x3a3a3a,wc:0x5a8a3a,fi:0x3a8ad8,mi:0x6a5a4a,fm:0xf06a10,ck:0x8a3a8a,sm:0x8a8a90,fa:0x6aa040,pr:0xe8e8f8,ag:0x2a4a8a,th:0x3a2a3a,hb:0x2a8a4a,rc:0xc0b060,cr:0x8a6a3a,all:0xf0d040};
+const CAPECOL={at:0xc02020,hp:0x40a040,rg:0x2a6a2a,mg:0x4040c0,sl:0x3a3a3a,wc:0x5a8a3a,fi:0x3a8ad8,mi:0x6a5a4a,fm:0xf06a10,ck:0x8a3a8a,sm:0x8a8a90,fa:0x6aa040,st:0x8a2a2a,df:0x2a4a8a,pr:0xe8e8f8,ag:0x2a4a8a,th:0x3a2a3a,hb:0x2a8a4a,rc:0xc0b060,cr:0x8a6a3a,all:0xf0d040};
 for(const k of Object.keys(CAPECOL)){ITEMS['kopeny_'+k]={name:(k==='all'?'Mesterek':skillNames[k])+' köpenye',icon:'🧥',gear:{slot:'cape',def:0.06,hit:1,col:CAPECOL[k]},cape:k}}
 const ICON={};for(const k in ITEMS)ICON[k]=itemIcon(k);
 const iconImg=(k)=>`<img src="${ICON[k]}" alt="">`;
@@ -1872,6 +1876,31 @@ function castSpell(id){const sp=SPELLS[id];if(qs.tanitvany.st<2){chat('Még nem 
 function renderSpells(){const el=document.getElementById('spells');if(!el)return;el.innerHTML='';const learned=qs.tanitvany.st===2;
   for(const id in SPELLS){const sp=SPELLS[id];const ok=learned&&lvlFor(xp.mg)>=sp.lvl;const d=document.createElement('div');d.className='qrow '+(ok?(sp.cmb&&activeSpell===id?'s2':'s1'):'s0');d.innerHTML=`${sp.name} <span style="color:#9a8a6a">(${sp.lvl}. szint, ${sp.runes} rúna)</span>${sp.cmb&&activeSpell===id?' ✓':''}`;d.title=sp.desc;d.onclick=()=>castSpell(id);el.appendChild(d)}
   document.getElementById('runaN').textContent=countItem('runa')}
+let atkStyle='pontos',spec=100;
+const STYLES={pontos:{name:'Pontos',desc:'Támadás XP, +3% találati esély'},agressziv:{name:'Agresszív',desc:'Erő XP, +1 max találat'},vedekezo:{name:'Védekező',desc:'Védelem XP, +5% kivédés'},kontrollalt:{name:'Kontrollált',desc:'XP elosztva a háromra'}};
+function combatXp(dmg,where){const a=dmg*4;if(atkStyle==='kontrollalt'){addXp('at',a/3,where);addXp('st',a/3,where);addXp('df',a/3,where)}else addXp({pontos:'at',agressziv:'st',vedekezo:'df'}[atkStyle],a,where)}
+const UNDEAD=new Set(['zombi','csontvazharcos','kisertet','ghoul','mumia','farao','vampirur','lidercfeny']);
+const SPECS={sarkanykard:{name:'Sárkányszúrás',cost:25,desc:'Két gyors döfés, mindkettő 15%-kal erősebb.'},hosokkardja:{name:'Hősi csapás',cost:50,desc:'Biztos találat, dupla max sebzés.'},vulkankard:{name:'Lávaroham',cost:35,desc:'Találat, és az ellenfél 8 mp-ig ég.'},jegkard:{name:'Jégbörtön',cost:35,desc:'Találat, és az ellenfél 8 mp-re megfagy.'},ezustkard:{name:'Ezüstfény',cost:30,desc:'Másfélszeres sebzés, élőholtak ellen háromszoros, a sebzés ötöde gyógyít.'},kapitanykard:{name:'Kalózvágás',cost:30,desc:'Találat, és érmét lopsz az ellenféltől.'},acelkard:{name:'Kábítás',cost:40,desc:'Találat, 3 mp kábítás.'},aranykard:{name:'Aranycsapás',cost:40,desc:'Találat, dupla érme a szörnytől, ha elesik.'},vaskard:{name:'Vágás',cost:40,desc:'Egy erősebb találat (+2).'},elfij:{name:'Kettős lövés',cost:40,desc:'Két nyíl egyszerre.'},tolgyij:{name:'Kettős lövés',cost:45,desc:'Két nyíl egyszerre.'},ij:{name:'Kettős lövés',cost:50,desc:'Két nyíl egyszerre.'},osfabot:{name:'Mana-robbanás',cost:45,desc:'A harci varázslat dupla sebzéssel, 2 mp fagyással.'},varazsbot:{name:'Mana-robbanás',cost:50,desc:'A harci varázslat dupla sebzéssel, 2 mp fagyással.'}};
+function specInfo(){return equip.weapon&&SPECS[equip.weapon]||null}
+function rawHit(s,mult=1,sure=false,flat=0){const bow=isBow(),mage=isMage();const g=gearBonus();let maxHit;if(mage){const sp=SPELLS[activeSpell]||SPELLS.tuzgolyo;maxHit=sp.dmg+(activeSpell==='tuzgolyo'?(stats.firePower||0):0)+Math.floor(lvlFor(xp.mg)/5)}else if(bow)maxHit=1+Math.floor(lvlFor(xp.rg)/4);else maxHit=1+Math.floor(lvlFor(xp.st)/4)+(atkStyle==='agressziv'?1:0);
+  maxHit=Math.round((maxHit+g.hit+(buffs.str>Date.now()?3:0)+flat)*mult);const lv=lvlFor(xp[cmbSkill()]);const hc=Math.min(0.95,0.55+lv*0.01+g.acc+(atkStyle==='pontos'&&!isRanged()?0.03:0));
+  const dmg=sure||Math.random()<hc?1+Math.floor(Math.random()*maxHit):0;s.hp=Math.max(0,s.hp-dmg);splat(s.mesh.position,dmg);SFX.play(dmg?'hit':'miss');if(dmg){if(isRanged())addXp(cmbSkill(),dmg*4,s.mesh.position);else combatXp(dmg,s.mesh.position);addXp('hp',Math.ceil(dmg*1.33),player.position)}return dmg}
+function useSpec(){const sp=specInfo();if(!sp){chat('Ennek a fegyvernek nincs speciális támadása.');return}if(!fight){chat('Előbb támadj meg valakit, aztán jöhet a speciális.');return}if(spec<sp.cost){chat(`Nincs elég speciális energiád (${sp.cost}% kell, ${Math.floor(spec)}% van).`);return}
+  const s=fight;const d=Math.hypot(s.mesh.position.x-px,s.mesh.position.z-pz);if(d>(isRanged()?7:2.5)){chat('Túl messze van.');return}spec-=sp.cost;stats.specs=(stats.specs||0)+1;const w=equip.weapon;SFX.play('quest');floatText('✦ '+sp.name,player.position,'#e0a0ff',-28);let dmg=0;
+  if(w==='sarkanykard'){dmg=rawHit(s,1.15);setTimeout(()=>{if(!s.depleted){dmg+=rawHit(s,1.15);if(s.hp<=0)monsterDie(s)}},220)}
+  else if(w==='hosokkardja')dmg=rawHit(s,2,true);
+  else if(w==='vulkankard'){dmg=rawHit(s,1.2);s.burnT=8}
+  else if(w==='jegkard'){dmg=rawHit(s,1.2);s.frozenT=8;floatText('❄ fagy',s.mesh.position,'#a0e0ff',-20)}
+  else if(w==='ezustkard'){dmg=rawHit(s,UNDEAD.has(s.kind)?3:1.5);if(dmg){hp=Math.min(maxHp(),hp+Math.ceil(dmg/5));updateHp()}}
+  else if(w==='kapitanykard'){dmg=rawHit(s,1.3);const c=10+Math.floor(Math.random()*s.level*3);setCoins(coins+c);floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
+  else if(w==='acelkard'){dmg=rawHit(s,1.1);s.frozenT=3}
+  else if(w==='aranykard'){dmg=rawHit(s,1.2);s.goldMark=true}
+  else if(w==='vaskard')dmg=rawHit(s,1,false,2);
+  else if(isBow()){if(countItem('nyil')<2){chat('Két nyíl kell a kettős lövéshez.');spec+=sp.cost;return}takeItem('nyil');takeItem('nyil');shootArrow(player.position,s.mesh.position);dmg=rawHit(s,1);setTimeout(()=>{if(!s.depleted){shootArrow(player.position,s.mesh.position);dmg+=rawHit(s,1);if(s.hp<=0)monsterDie(s)}},200)}
+  else if(isMage()){const spl=SPELLS[activeSpell]||SPELLS.tuzgolyo;if(countItem('runa')<spl.runes){chat('Nincs rúnád a varázslathoz.');spec+=sp.cost;return}for(let i=0;i<spl.runes;i++)takeItem('runa');shootArrow(player.position,s.mesh.position,spl.col);dmg=rawHit(s,2);s.frozenT=2}
+  atkT=Math.max(atkT,1.2);if(s.hp<=0)monsterDie(s);renderSpec()}
+function renderSpec(){const el=document.getElementById('spFill');if(el)el.style.width=spec+'%';const b=document.getElementById('specBox');if(!b)return;const sp=specInfo();b.innerHTML=`<div id="qp">Speciális támadás (S): <b>${Math.floor(spec)}%</b></div>`+(sp?`<div class="qrow ${spec>=sp.cost?'s1':'s0'}" id="specBtn">${sp.name} <span style="color:#9a8a6a">(${sp.cost}%)</span><br><small>${sp.desc}</small></div>`:`<div class="qrow s0">Ennek a fegyvernek nincs speciális támadása.</div>`);const btn=document.getElementById('specBtn');if(btn)btn.onclick=useSpec}
+function renderStyles(){const el=document.getElementById('styles');if(!el)return;el.innerHTML='<div id="qp">Harci stílus (közelharc)</div>';for(const k in STYLES){const d=document.createElement('div');d.className='qrow '+(atkStyle===k?'s2':'s1');d.innerHTML=`${STYLES[k].name} <span style="color:#9a8a6a">${STYLES[k].desc}</span>${atkStyle===k?' ✓':''}`;d.onclick=()=>{atkStyle=k;chat(`Harci stílus: ${STYLES[k].name}. ${STYLES[k].desc}.`);renderStyles()};el.appendChild(d)}}
 function gearBonus(){let hit=0,acc=0,def=0;for(const k in equip){const id=equip[k];if(id&&ITEMS[id]&&ITEMS[id].gear){const g=ITEMS[id].gear;hit+=g.hit||0;acc+=g.acc||0;def+=g.def||0}}if(equip.head==='vadaszsisak'&&fight&&slay.kind&&fight.kind===slay.kind)hit+=2;if(prayers.has('ero')&&!isRanged())hit+=1;if(prayers.has('acelbor'))def+=0.12;if(prayers.has('sasszem')&&isBow())hit+=1;if(prayers.has('misztikus')&&isMage())hit+=1;return {hit,acc,def}}
 function refreshGear(){
   const u=player.userData;const w=equip.weapon;if(w&&!ITEMS[w].gear.ranged)u.tools.blade.material.color.setHex(ITEMS[w].gear.col);
@@ -1882,7 +1911,7 @@ function refreshGear(){
   const c=equip.cape;u.tools.cape.visible=!!c;if(c)u.tools.cape.children[0].material.color.setHex(ITEMS[c].gear.col);
   const names={weapon:'Fegyver',shield:'Pajzs',head:'Fej',body:'Test',legs:'Láb',boots:'Csizma',neck:'Nyak',ring:'Gyűrű',cape:'Köpeny'};const el=document.getElementById('eqslots');el.innerHTML='';
   for(const k of['weapon','shield','head','body','legs','boots','neck','ring','cape']){const id=equip[k];const d=document.createElement('div');d.className='eqs';d.innerHTML=`<span class="ic">${id?iconImg(id):'·'}</span><span><div class="sl">${names[k]}</div><div class="nm">${id?ITEMS[id].name:'üres'}</div></span>`;if(id){d.onclick=()=>unequip(k);d.oncontextmenu=e=>{e.preventDefault();openCtx(e.clientX,e.clientY,[{t:`Leveszem <span class="n">${ITEMS[id].name}</span>`,f:()=>unequip(k)},{t:`Megvizsgálom <span class="n">${ITEMS[id].name}</span>`,f:()=>examine({name:id,type:id})},{t:'Mégsem'}])}}d.title=id?'Kattints a levételhez':'';el.appendChild(d)}
-  const g=gearBonus();document.getElementById('eqstat').innerHTML=`Max találat bónusz: +${g.hit}<br>Pontosság: +${Math.round(g.acc*100)}%<br>Védelem: ${Math.round(g.def*100)}%<br><span style="color:#9a8a6a">Felvétel: kattints a tárgyra a táskában.</span>`;
+  const g=gearBonus();document.getElementById('eqstat').innerHTML=`Max találat bónusz: +${g.hit}<br>Pontosság: +${Math.round(g.acc*100)}%<br>Védelem: ${Math.round(g.def*100)}% + Védelem-szint ${Math.round(lvlFor(xp.df)*0.35)}%<br><span style="color:#9a8a6a">Felvétel: kattints a tárgyra a táskában.</span>`;renderStyles();renderSpec();
 }
 function equipItem(i){const id=inv[i].id;const g=ITEMS[id].gear;const old=equip[g.slot];takeOne(i);equip[g.slot]=id;if(old)giveItem(old);renderInv();refreshGear();SFX.play('equip');chat(`Felvetted: ${ITEMS[id].name}.`)}
 function unequip(k){const id=equip[k];if(!id)return;if(!giveItem(id))return;equip[k]=null;renderInv();refreshGear();chat(`Levetted: ${ITEMS[id].name}.`)}
@@ -1913,6 +1942,7 @@ function useItem(i){
   if(id==='lavako'){chat('Forró, lüktető lávakő. A sámán tudná, mit kezdjen vele, vagy az üllőn páncél lehet belőle.');return}
   if(id==='kagylo'||id==='gyongy'){chat(id==='kagylo'?'Szép kagyló. Timi örülne neki.':'Gyönyörű gyöngy. Mira jó pénzt adna érte.');return}
   if((id==='gyogyital'||id==='gyogyfutea')&&poisonT>0){poisonT=0;updateHp();chat('A méreg elmúlt.','xp')}
+  if(id==='szenteltviz'&&fight&&fight.kind==='vampirur'&&Math.hypot(fight.mesh.position.x-px,fight.mesh.position.z-pz)<6){takeOne(i);const s=fight;s.hp=Math.max(0,s.hp-40);splat(s.mesh.position,40);SFX.play('thunder');chat('Drakmorra loccsantod a szenteltvizet: sistereg és sikolt!','fight');if(s.hp<=0)monsterDie(s);return}
   if(id==='szenteltviz'){takeOne(i);prp=maxPr();poisonT=0;buffs.regen=Date.now()+60000;renderPrayers();updateHp();SFX.play('levelup');chat('Szenteltvíz: az imapontjaid megtelnek, a méreg elmúlik, és egy percig gyorsan gyógyulsz.','xp');return}
   if(id==='energiaital'){takeOne(i);energy=100;SFX.play('eat');chat('Energiaital: a lábad újra friss, futhatsz tovább.','xp');return}
   if(id==='gnomkoktel'){takeOne(i);hp=Math.min(maxHp(),hp+8);energy=Math.min(100,energy+40);updateHp();SFX.play('eat');chat('Gnómkoktél: édes, erős, és frissít. +8 életerő, +40 energia.','xp');return}
@@ -2303,6 +2333,8 @@ const ACH=[
   {id:'chests',name:'Kincskereső',desc:'Találd meg mind a 3 rejtett ládát.',chk:()=>stats.chests.length>=3},
   {id:'king',name:'A mélység ura',desc:'Győzd le a Vulkánkirályt.',chk:()=>qs.melyseg.st===2},
   {id:'farm',name:'Gazda',desc:'Szüretelj 10 termést.',chk:()=>stats.harvest>=10},
+  {id:'spec50',name:'Specialista',desc:'Használj 50 speciális támadást.',chk:()=>(stats.specs||0)>=50},
+  {id:'st99',name:'Erős',desc:'Érj el 60-as Erőt.',chk:()=>lvlFor(xp.st)>=60},
   {id:'dragon1',name:'Sárkányölő',desc:'Győzd le a zöld sárkányt.',chk:()=>!!((stats.bk||{}).zoldsarkany)},
   {id:'vamp1',name:'Vámpírvadász',desc:'Győzd le Drakmort, a vámpír urat.',chk:()=>!!((stats.bk||{}).vampirur)},
   {id:'wool50',name:'Juhász',desc:'Nyírj meg 50 juhot.',chk:()=>(stats.wool||0)>=50},
@@ -2566,6 +2598,7 @@ function updatePet(dt){if(!petMesh)return;const m=petMesh;const dx=px-m.position
     else{const id=pickR(['kagylo','toll','banan','tojas','garnela']);if(giveItem(id))chat(`${nm} talált egy ${ITEMS[id].name.toLowerCase()}t, és odahozta neked.`,'xp')}}}
 // italok
 const buffs={str:0,regen:0,th:0,luck:0};
+
 function updateBuffs(dt){const now=Date.now();const el=document.getElementById('buffT');const parts=[];if(buffs.str>now)parts.push('💪'+Math.ceil((buffs.str-now)/1000));if(buffs.regen>now)parts.push('💚'+Math.ceil((buffs.regen-now)/1000));if(buffs.th>now)parts.push('🖐'+Math.ceil((buffs.th-now)/1000));if(buffs.luck>now)parts.push('🍀'+Math.ceil((buffs.luck-now)/1000));el.textContent=parts.join(' ')}
 // ---------- cselekvések ----------
 const woodMsgs=['Lendíted a fejszét a fára...','Forgács repül mindenfelé.','Már majdnem megvan...'];
@@ -2695,18 +2728,31 @@ function playerHit(s){
   const bow=isBow(),mage=isMage();const sk=cmbSkill();let sp=null;
   if(bow){if(!countItem('nyil')){chat('Elfogyott a nyilad! Vegyél Mirától, vagy faragj rönkből és tollból.');fight=null;return}takeItem('nyil');shootArrow(player.position,s.mesh.position)}
   if(mage){sp=SPELLS[activeSpell]||SPELLS.tuzgolyo;if(qs.tanitvany.st<2){chat('A bot csak dísz, amíg Zara nem tanít meg varázsolni.');fight=null;return}if(countItem('runa')<sp.runes){chat('Elfogyott a rúnád! Zara árul, a kalózok is dobnak.');fight=null;return}for(let i=0;i<sp.runes;i++)takeItem('runa');shootArrow(player.position,s.mesh.position,sp.col);stats.spells=(stats.spells||0)+1;SFX.play('smith')}
-  const atk=lvlFor(xp[sk]);const g=gearBonus();const maxHit=(mage?sp.dmg+(activeSpell==='tuzgolyo'?(stats.firePower||0):0)+Math.floor(atk/5):1+Math.floor(atk/4))+g.hit+(buffs.str>Date.now()?3:0);
-  const hitChance=Math.min(0.95,0.55+atk*0.01+g.acc);
+  const atk=lvlFor(xp[sk]);const g=gearBonus();const maxHit=(mage?sp.dmg+(activeSpell==='tuzgolyo'?(stats.firePower||0):0)+Math.floor(atk/5):(bow?1+Math.floor(atk/4):1+Math.floor(lvlFor(xp.st)/4)+(atkStyle==='agressziv'?1:0)))+g.hit+(buffs.str>Date.now()?3:0);
+  const hitChance=Math.min(0.95,0.55+atk*0.01+g.acc+(atkStyle==='pontos'&&!isRanged()?0.03:0));
   const dmg=Math.random()<hitChance?1+Math.floor(Math.random()*maxHit):0;
   s.hp=Math.max(0,s.hp-dmg);splat(s.mesh.position,dmg);SFX.play(dmg?'hit':'miss');
   if(dmg&&equip.weapon==='jegkard'&&Math.random()<0.2){s.frozenT=4;s.hp=Math.max(0,s.hp-2);chat(`A jégkard megfagyasztja: ${s.name} nem mozdul!`,'fight');floatText('❄ fagy',s.mesh.position,'#a0e0ff',-20)}
   if(dmg&&equip.weapon==='vulkankard'&&Math.random()<0.25){s.burnT=3;chat(`A vulkánkard lángra lobbantja: ${s.name} ég!`,'fight');floatText('🔥 ég',s.mesh.position,'#ff6a10',-20)}
   player.userData.armR.rotation.x=-2;
   if(mage&&sp.freeze&&dmg){s.frozenT=sp.freeze}
-  if(s.hp<=0)monsterDie(s);else{addXp(sk,dmg*4+(mage?sp.xp:0),s.mesh.position);if(dmg)addXp('hp',Math.ceil(dmg*1.33),player.position)}
+  if(s.hp<=0)monsterDie(s);else{if(isRanged())addXp(sk,dmg*4+(mage?sp.xp:0),s.mesh.position);else combatXp(dmg,s.mesh.position);if(dmg)addXp('hp',Math.ceil(dmg*1.33),player.position)}
 }
+const tempMons=[];
+function bossMech(s,dt,d){s.mechT=(s.mechT||0)-dt;const k=s.kind;const hurt=(n,txt,col='#ff6a10')=>{if(prayers.has('oltalom'))n=Math.floor(n/2);hp=Math.max(0,hp-n);splat(player.position,n);updateHp();if(txt)chat(txt,'fight');if(hp<=0)die()};
+  if(k==='zoldsarkany'){if(s.mechT<=0&&d<10){s.mechT=7;const sh=equip.shield==='sarkanypajzs';const n=sh?1+Math.floor(Math.random()*3):6+Math.floor(Math.random()*9);const l=new THREE.PointLight(0xff6a10,2,12);l.position.set(px,height(px,pz)+2,pz);scene.add(l);setTimeout(()=>scene.remove(l),500);floatText('🔥 tűzcsóva',player.position,'#ff8a20',-30);SFX.play('thunder');hurt(n,sh?'A sárkány tüzet okád, de a sárkánypajzs felfogja a lángok nagyját.':'A sárkány tüzet okád rád! Sárkánypajzs nélkül ez nagyon fáj.')}}
+  else if(k==='vampirur'){if(s.mechT<=0&&d<4){s.mechT=12;const n=6;hurt(n,'Drakmor a nyakadba harap: életet szív belőled!','#ff4060');s.hp=Math.min(s.maxHp,s.hp+15);floatText('+15',s.mesh.position,'#ff4060',-22)}}
+  else if(k==='varur'){if(!s.m60&&s.hp<s.maxHp*0.6){s.m60=true;callKnights(s)}if(!s.m30&&s.hp<s.maxHp*0.3){s.m30=true;callKnights(s)}}
+  else if(k==='farao'){if(s.mechT<=0&&d<8){s.mechT=9;prp=Math.max(0,prp-8);renderPrayers();floatText('☠ átok',player.position,'#c0a0ff',-30);chat('A fáraó átka kiszívja az imapontjaidat!','fight')}}
+  else if(k==='jegorias'){if(s.mechT<=0&&d<4.5){s.mechT=8;stunT=1.5;hurt(3,'A jégóriás dobbant: megremeg a föld, és megszédülsz.')}}
+  else if(k==='erdoorzo'){if(s.mechT<=0&&d<6){s.mechT=10;stunT=2;s.hp=Math.min(s.maxHp,s.hp+20);floatText('+20',s.mesh.position,'#60ff80',-22);chat('Az Erdőőrző gyökerei megkötik a lábadat, és ő eközben gyógyul.','fight')}}
+  else if(k==='kalozkapitany'){if(s.mechT<=0&&d>2.5&&d<13){s.mechT=8;shootArrow(s.mesh.position,player.position,0xffe060);hurt(5+Math.floor(Math.random()*5),'Szakáll kapitány rád lő a pisztolyával!')}}
+  else if(k==='vulkankiraly'){if(s.mechT<=0&&d<6){s.mechT=9;const l=new THREE.PointLight(0xff4a00,2.5,14);l.position.set(s.mesh.position.x,height(s.mesh.position.x,s.mesh.position.z)+1,s.mesh.position.z);scene.add(l);setTimeout(()=>scene.remove(l),600);hurt(4+Math.floor(Math.random()*5),'A Vulkánkirály lávát fakaszt a lábad alatt!')}}}
+function callKnights(s){chat('Morlak felordít: "Lovagjaim, hozzám!" Két árnylovag ugrik elő a torony árnyékából.','fight');SFX.play('boss');for(const sx of[-1,1]){const m=spawnAt('arnylovag',s.mesh.position.x+sx*3,s.mesh.position.z+2);m.temp=true;m.aggro=true;m.home={x:s.mesh.position.x,z:s.mesh.position.z};tempMons.push(m)}}
+function clearTemp(){while(tempMons.length){const m=tempMons.pop();scene.remove(m.mesh);const i=monsters.indexOf(m);if(i>=0)monsters.splice(i,1);const j=interactables.indexOf(m);if(j>=0)interactables.splice(j,1);if(fight===m)fight=null}}
 function monsterHit(s){
-  let dmg=Math.random()<Math.max(0.1,s.d.acc-gearBonus().def)?1+Math.floor(Math.random()*s.d.maxHit):0;if(dmg&&prayers.has('oltalom'))dmg=Math.floor(dmg/2);
+  let dmg=Math.random()<Math.max(0.08,s.d.acc-gearBonus().def-lvlFor(xp.df)*0.0035-(atkStyle==='vedekezo'&&!isRanged()?0.05:0))?1+Math.floor(Math.random()*s.d.maxHit):0;if(dmg&&prayers.has('oltalom'))dmg=Math.floor(dmg/2);
+  if(dmg&&s.kind==='vampirur'){s.hp=Math.min(s.maxHp,s.hp+dmg*2);floatText('+'+dmg*2,s.mesh.position,'#ff4060',-22)}
   hp=Math.max(0,hp-dmg);splat(player.position,dmg);updateHp();SFX.play(dmg?'hurt':'miss');
   if(dmg&&s.d.poison&&poisonT<=0&&poisonImm<=0&&Math.random()<0.35){poisonT=18;poisonTick=0;updateHp();chat(`${s.name} megmart: mérgezett vagy! Gyógyital vagy gyógyfűtea segít.`,'fight')}
   if(!fight&&!target&&!busy){fight=s;atkT=0.6;chat(`Megtámadott egy ${s.name.toLowerCase()}! Visszatámadsz.`,'fight')}
@@ -2723,7 +2769,7 @@ function bossLoot(s){const boss=BOSSES.includes(s.kind);const w=s.mesh.position;
     if(Math.random()<1/35){const id='pet_'+s.kind;if(!countItem(id)&&!bank[id]&&pet.id!==id){if(giveItem(id))chat(`Valami pici mozog a zsákmány között... ${ITEMS[id].name} követ téged! (Kattints rá a táskában.)`,'xp');else{bank[id]=1;chat(`${ITEMS[id].name} elkísért volna, de tele a táskád: a bankban vár.`,'xp')}SFX.play('quest');questBanner('Boss-pet: '+ITEMS[id].name)}}}
   else if(s.level>=8&&Math.random()<(buffs.luck>Date.now()?3:1)/48)rareDrop(w,false)}
 function renderBossLog(){const el=document.getElementById('bosslog');if(!el)return;const bk=stats.bk||{};const rows=BOSSES.map(k=>`<div class="qrow ${bk[k]?'s2':'s0'}">${MON[k].name} <span style="color:#9a8a6a">${bk[k]||0}×</span></div>`).join('');el.innerHTML=`<div id="qp" style="margin-top:8px">Boss-napló</div>${rows}`}
-function monsterDie(s){
+function monsterDie(s){if(s.temp){s.depleted=true;s.mesh.visible=false;fight=null;stats.kills++;addXp(cmbSkill(),s.level*4,s.mesh.position);chat(`Legyőzted: ${s.name}!`,'fight');return}if(s.kind==='varur')clearTemp();
   chat(`Legyőzted: ${s.name}!`,'fight');addXp(cmbSkill(),s.level*8,s.mesh.position);if(s.kind!=='csirke'||Math.random()<0.5)giveItem(s.level>=18?'nagycsont':'csont');if(s.level>=5&&Math.random()<0.04&&!countItem('kincsestekercs')){if(giveItem('kincsestekercs'))chat('A szörny egy összetekert, pecsétes tekercset hagyott hátra: kincses tekercs!','xp')}addXp('hp',Math.ceil(s.level*2.7),player.position);
   if(s.kind==='scorpion'&&qs.kapitany.st===1&&!countItem('rozsdaskard')){qs.kapitany.n++;renderQuests();if(qs.kapitany.n>=3){giveItem('rozsdaskard');chat('A skorpió alól egy rozsdás kard kerül elő: a kapitányé!','xp')}}
   stats.kills++;if(slay.kind===s.kind&&slay.n<slay.need){slay.n++;addXp('sl',s.level*6,s.mesh.position);renderSlay();if(slay.n>=slay.need)chat('Megvan a vadászmegbízás! Menj vissza Kunóhoz.','xp')}
@@ -2747,7 +2793,7 @@ function monsterDie(s){
   if(s.kind==='lavaspirit'&&qs.vulkan.st===1&&!countItem('lavako')){giveItem('lavako');chat('A Lávaszellem szétfoszlik, és egy izzó lávakő marad utána!','xp');renderQuests()}
   else{const r=Math.random();let acc=0;for(const [id,p] of s.d.drops){acc+=p;if(r<acc){if(ITEMS[id])giveItem(id);break}}}
   stats.kk=stats.kk||{};stats.kk[s.kind]=(stats.kk[s.kind]||0)+1;bossLoot(s);
-  if(Math.random()<0.5){const c=Math.ceil(s.level*(1+Math.random()));setCoins(coins+c);SFX.play('coin');floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
+  if(s.goldMark||Math.random()<0.5){const c=Math.ceil(s.level*(1+Math.random()))*(s.goldMark?2:1);s.goldMark=false;setCoins(coins+c);SFX.play('coin');floatText('+'+c+' érme',s.mesh.position,'#ffd040',-16)}
   s.depleted=true;s.mesh.visible=false;s.aggro=false;s.target=null;fight=null;
   setTimeout(()=>{s.hp=s.maxHp;s.depleted=false;s.mesh.visible=true;placeAt(s.mesh,s.home.x,s.home.z)},s.kind==='lavaspirit'||s.kind==='jegorias'||s.kind==='vulkankiraly'||s.kind==='kalozkapitany'||s.kind==='farao'||s.kind==='erdoorzo'?120000:(s.kind==='csirke'?12000:25000));
 }
@@ -2947,6 +2993,7 @@ function animate(now){
     if(!dead&&!s.aggro&&d<aggroR&&dHome<30){s.aggro=true;const asn={dzsungeltroll:'troll',kogolem:'golem',oriasdenever:'bat',varur:'troll'}[s.kind];if(asn)SFX.play(asn)}
     if(s.aggro&&(dead||d>35||dHome>45)){s.aggro=false;s.target={x:s.home.x,z:s.home.z};if(fight===s)fight=null}
     let mv=false;
+    if(s.aggro&&!dead)bossMech(s,dt,d);
     if(s.aggro){
       if(s.frozenT>0){s.frozenT-=dt}else if(d>1.6){const dx=px-m.position.x,dz=pz-m.position.z;const sp=Math.min(s.d.speed*dt,d-1.5);m.position.x+=dx/d*sp;m.position.z+=dz/d*sp;m.rotation.y=Math.atan2(dx,dz);mv=true}
       else{m.rotation.y=Math.atan2(px-m.position.x,pz-m.position.z);if(s.frozenT>0){s.frozenT-=dt}else{s.atkT-=dt;if(s.atkT<=0){monsterHit(s);s.atkT=2.4}}}
@@ -2991,7 +3038,7 @@ chat('Beszélj a falubeliekkel: küldetéseket adnak, ezekből lesz kardod, érm
 const SAVE_KEY='karamja_save_v1',CODE_KEY='karamja_code';
 const API=/paduch\.hu$/.test(location.hostname)?'/karamja/api':'http://127.0.0.1:8787/karamja/api';
 let playerName='';try{playerName=localStorage.getItem('karamja_name')||''}catch(e){}
-function snapshot(){return {xp,hp,inv,px,pz,dayT,run,facing,coins,equip,qs,bank,slay,stats,farm,pet,buffs,hard,activeSpell,barn,house:house_,myboat,ach:[...ach],name:playerName?(hard?playerName+'_V':playerName):'',prp,energy,clue,prayers:[...prayers],agilNext,daily,t:Date.now()}}
+function snapshot(){return {xp,hp,inv,px,pz,dayT,run,facing,coins,equip,qs,bank,slay,stats,farm,pet,buffs,hard,activeSpell,barn,house:house_,myboat,ach:[...ach],name:playerName?(hard?playerName+'_V':playerName):'',prp,energy,clue,prayers:[...prayers],agilNext,daily,atkStyle,spec,t:Date.now()}}
 async function showHiscores(){
   showDialog('Ranglista','<div id="hs">Betöltés...</div>');
   try{const r=await fetch(API+'/hiscores');if(!r.ok)throw 0;const j=await r.json();const L=j.list||[];
@@ -3002,7 +3049,8 @@ async function showHiscores(){
 document.getElementById('hsBtn').onclick=showHiscores;
 function applySave(d){
   if(!d||!d.xp)return false;
-  for(const k in xp)xp[k]=typeof d.xp[k]==='number'?d.xp[k]:(k==='hp'?xpFor(10):0);
+  for(const k in xp)xp[k]=typeof d.xp[k]==='number'?d.xp[k]:(k==='hp'?xpFor(10):0);if(typeof d.xp.st!=='number'){xp.st=xp.at;xp.df=Math.floor(xp.at*0.6);if(xp.at>0)setTimeout(()=>chat('Új képességek: Erő és Védelem. A Támadásodból indulnak, a stílust a Felszerelés fülön választod.','xp'),1500)}
+  atkStyle=['pontos','agressziv','vedekezo','kontrollalt'].includes(d.atkStyle)?d.atkStyle:'pontos';spec=typeof d.spec==='number'?d.spec:100;
   hp=clamp(d.hp||maxHp(),1,maxHp());
   if(Array.isArray(d.inv)){for(let i=0;i<28;i++){const v=d.inv[i];inv[i]=null;if(typeof v==='string'&&ITEMS[v])inv[i]={id:v,n:1};else if(v&&typeof v==='object'&&ITEMS[v.id])inv[i]={id:v.id,n:Math.max(1,v.n|0)}}
     for(let i=0;i<28;i++){const a=inv[i];if(!a||!STACK.has(a.id))continue;for(let j=i+1;j<28;j++){const b=inv[j];if(b&&b.id===a.id){a.n+=b.n;inv[j]=null}}}}
@@ -3012,7 +3060,7 @@ function applySave(d){
   target=null;route=[];pendingAction=null;busy=null;fight=null;marker.visible=false;
   setCoins(typeof d.coins==='number'?d.coins:0);
   if(d.slay&&typeof d.slay==='object'){slay.kind=MON[d.slay.kind]?d.slay.kind:null;slay.need=d.slay.need|0;slay.n=d.slay.n|0;slay.done=d.slay.done|0}else{slay.kind=null;slay.done=0}
-  if(d.stats&&typeof d.stats==='object'){stats.kills=d.stats.kills|0;stats.trees=d.stats.trees|0;stats.fish=d.stats.fish|0;stats.cook=d.stats.cook|0;stats.zones=Array.isArray(d.stats.zones)?d.stats.zones.slice():[0];stats.chests=Array.isArray(d.stats.chests)?d.stats.chests.slice():[];stats.harvest=d.stats.harvest|0;for(const k of['bones','picks','laps','clues','ore','spells','firePower','healPower','dailyAll'])stats[k]=d.stats[k]|0;stats.bk=d.stats.bk&&typeof d.stats.bk==='object'?Object.assign({},d.stats.bk):{};stats.woods=d.stats.woods&&typeof d.stats.woods==='object'?Object.assign({},d.stats.woods):{};stats.maze=d.stats.maze|0;stats.wool=d.stats.wool|0;stats.kk=d.stats.kk&&typeof d.stats.kk==='object'?Object.assign({},d.stats.kk):{}}else{stats.chests=[];stats.harvest=0;stats.bk={};stats.kk={}}
+  if(d.stats&&typeof d.stats==='object'){stats.kills=d.stats.kills|0;stats.trees=d.stats.trees|0;stats.fish=d.stats.fish|0;stats.cook=d.stats.cook|0;stats.zones=Array.isArray(d.stats.zones)?d.stats.zones.slice():[0];stats.chests=Array.isArray(d.stats.chests)?d.stats.chests.slice():[];stats.harvest=d.stats.harvest|0;for(const k of['bones','picks','laps','clues','ore','spells','firePower','healPower','dailyAll','specs'])stats[k]=d.stats[k]|0;stats.bk=d.stats.bk&&typeof d.stats.bk==='object'?Object.assign({},d.stats.bk):{};stats.woods=d.stats.woods&&typeof d.stats.woods==='object'?Object.assign({},d.stats.woods):{};stats.maze=d.stats.maze|0;stats.wool=d.stats.wool|0;stats.kk=d.stats.kk&&typeof d.stats.kk==='object'?Object.assign({},d.stats.kk):{}}else{stats.chests=[];stats.harvest=0;stats.bk={};stats.kk={}}
   daily=d.daily&&Array.isArray(d.daily.tasks)?{date:String(d.daily.date||''),tasks:d.daily.tasks.slice(0,3),base:Object.assign({},d.daily.base||{}),done:(d.daily.done||[]).slice()}:{date:'',tasks:[],base:{},done:[]};checkDaily();renderDaily();renderBossLog();
   pet.id=d.pet&&ITEMS[d.pet.id]&&ITEMS[d.pet.id].pet?d.pet.id:null;pet.out=!!(pet.id&&d.pet.out);setPet();
   buffs.str=d.buffs&&+d.buffs.str||0;buffs.regen=d.buffs&&+d.buffs.regen||0;
