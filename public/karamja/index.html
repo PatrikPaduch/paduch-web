@@ -2812,8 +2812,8 @@ const WLAY=[[0,1],[1,1],[2,0],[1,2],[0,2],[2,1],[2,2],[0,0],[1,0],[3,0],[3,1]];c
 function drawOverview(){const W=wmC.width;wmX.fillStyle='#1d5f8a';wmX.fillRect(0,0,W,W);for(let i=0;i<40;i++){wmX.fillStyle='rgba(255,255,255,0.08)';wmX.fillRect(Math.random()*W,Math.random()*W,30,2)}
   const cell=W/WCOLS;const here=zoneOf(px);
   for(let z=0;z<ZNAMES.length;z++){if(!mapImgs[z])continue;const [cx,cy]=WLAY[z];const x0=cx*cell+10,y0=cy*cell+10,sz=cell-20;const known=z===here||stats.zones.includes(z);
-    wmX.save();wmX.globalAlpha=known?1:0.35;wmX.imageSmoothingEnabled=false;wmX.drawImage(mapImgs[z],x0,y0,sz,sz);wmX.restore();
-    wmX.font='bold 12px Trebuchet MS';wmX.textAlign='center';wmX.lineWidth=3;wmX.strokeStyle='#000';wmX.fillStyle=known?'#ffe87a':'#aaa';wmX.strokeText(known?ZNAMES[z]:'???',x0+sz/2,y0+sz-6);wmX.fillText(known?ZNAMES[z]:'???',x0+sz/2,y0+sz-6);
+    wmX.save();wmX.globalAlpha=known?1:0.8;wmX.imageSmoothingEnabled=false;wmX.drawImage(mapImgs[z],x0,y0,sz,sz);wmX.restore();if(!known){wmX.font='bold 10px Trebuchet MS';wmX.textAlign='right';wmX.fillStyle='#ffe87a';wmX.strokeStyle='#000';wmX.lineWidth=2;wmX.strokeText('még nem jártál itt',x0+sz-4,y0+12);wmX.fillText('még nem jártál itt',x0+sz-4,y0+12)}
+    wmX.font='bold 12px Trebuchet MS';wmX.textAlign='center';wmX.lineWidth=3;wmX.strokeStyle='#000';wmX.fillStyle=known?'#ffe87a':'#d8c8a0';wmX.strokeText(ZNAMES[z],x0+sz/2,y0+sz-6);wmX.fillText(ZNAMES[z],x0+sz/2,y0+sz-6);
     if(z===here){const a=x0+(px-z*ZX+HALF)/SIZE*sz,b=y0+(pz+HALF)/SIZE*sz;wmX.fillStyle='#fff';wmX.strokeStyle='#000';wmX.lineWidth=2;wmX.beginPath();wmX.arc(a,b,4,0,6.283);wmX.fill();wmX.stroke();wmX.strokeStyle='#6adb6a';wmX.lineWidth=2;wmX.strokeRect(x0-2,y0-2,sz+4,sz+4)}}
   document.querySelector('#wmap .ttl').textContent='A VILÁG';document.getElementById('wmapLeg').textContent='Kattints egy szigetre a részletes térképhez. Zöld keret: itt vagy.';}
 document.getElementById('mapBtn').onclick=()=>toggleMap();document.getElementById('wmapClose').onclick=()=>toggleMap(false);
@@ -2848,7 +2848,7 @@ function drawWorldMap(){
 }
 wmC.addEventListener('click',e=>{
   if(dead)return;const r=wmC.getBoundingClientRect();
-  if(mapZone<0){const cx=Math.floor((e.clientX-r.left)/r.width*WCOLS),cy=Math.floor((e.clientY-r.top)/r.height*WCOLS);const z=WLAY.findIndex(([a,b])=>a===cx&&b===cy);if(z>=0&&mapImgs[z]&&(z===zoneOf(px)||stats.zones.includes(z))){mapZone=z;drawWorldMap()}return}
+  if(mapZone<0){const cx=Math.floor((e.clientX-r.left)/r.width*WCOLS),cy=Math.floor((e.clientY-r.top)/r.height*WCOLS);const z=WLAY.findIndex(([a,b])=>a===cx&&b===cy);if(z>=0&&mapImgs[z]){mapZone=z;drawWorldMap()}return}
   if(mapZone!==zoneOf(px)){chat(`${ZNAMES[mapZone]} térképét nézed. ${mapZone===7?'Oda Karamjáról gyalog, a keleti ösvényen jutsz.':mapZone===8?'Oda a Tündeerdőből gyalog, a keleti ösvényen jutsz.':mapZone===9?'Oda Gnómvárosból gyalog, a keleti ösvényen jutsz.':mapZone===10?'Oda a Dzsungelvárból gyalog, a keleti ösvényen jutsz.':'Oda hajóval juthatsz.'}`);return}
   const wx=(e.clientX-r.left)/r.width*SIZE-HALF+zoneOf(px)*ZX,wz=(e.clientY-r.top)/r.height*SIZE-HALF;
   if(isWater(wx,wz)){chat('Az ott víz, oda nem mész.');return}
