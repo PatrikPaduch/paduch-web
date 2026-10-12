@@ -1649,7 +1649,8 @@ function closeCtx(){ctxEl.style.display='none';ctxOpen=false}
 addEventListener('mousedown',e=>{if(ctxOpen&&!ctxEl.contains(e.target))closeCtx()});
 addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx()});
 function ctxWorld(cx,cy){
-  const r=pick(cx,cy);const opts=[];if(!r)return opts;
+  // csak ott nyílik menü, ahol a kurzor is narancssárga (van mit vizsgálni vagy használni)
+  const r=pick(cx,cy);const opts=[];if(!r||!r.obj)return opts;
   if(r.obj){const o=r.obj;const cls=o.type==='npc'||o.type==='player'||o.type==='monkey'||o.type==='crab'||o.type==='boat'?'np':(o.type==='monster'?'mo':'n');const nm=`<span class="${cls}">${o.name}${o.type==='monster'?' (szint '+o.level+')':''}</span>`;
     opts.push({t:`${o.action} ${nm}`,f:()=>{hideDialog();useObj(o)}});
     if(o.type==='npc'&&THIEF[o.name])opts.push({t:`Kizsebelem ${nm}`,f:()=>{hideDialog();o._pick=true;useObj(o)}});
