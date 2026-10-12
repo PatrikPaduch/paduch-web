@@ -267,6 +267,7 @@ function frostHeight(x,z){
   if(z>60){const t=(z-60)/40;h-=t*t*12}
   return h;
 }
+var FLOORS=[];function floorAt(x,z){let y=null;for(const f of FLOORS){const dx=x-f.x,dz=z-f.z,lx=dx*f.c-dz*f.s,lz=dx*f.s+dz*f.c;if(Math.abs(lx)<=f.hw&&Math.abs(lz)<=f.hd){const v=f.y0+(f.y1-f.y0)*(lz+f.hd)/(2*f.hd);if(y===null||v>y)y=v}}return y}
 const DOCKS=[];function onDock(x,z){for(const d of DOCKS)if(Math.abs(x-d.x)<=2.2&&z>=d.z1&&z<=d.z2)return true;return false}
 function isWater(x,z){return height(x,z)<0.3&&!onDock(x,z)}
 // ösvények
@@ -1061,14 +1062,14 @@ const HOUSE2=(()=>{
       B(g, 7, 0.25, 7.4, dk, 0, 2.1, 1.0, 1.6); B(g, 6, 3.0, 5, pl, 0, 3.7, 0, 1.6); const r = B(g, 7, 0.22, 6.4, T.planks(0x5a4a3a, 'r'), 0, 5.6, 0.2, 1.6); r.rotation.x = 0.28;
       door(g, -1.4, 2.52, 0, { y0: 2.2, door: 0x5a4030, step: false }); win(g, 1.4, 3.9, 2.52, 0, { frame: 0x4a3a2a, shut: 0x2a6a7a });
       for (let i = 0; i < 2; i++) C(g, 0.38, 0.33, 0.9, 0x7a4a24, 2.4 - i * 0.85, 2.7, 3.8, 10); const rope = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.1, 5, 12), flat(0xc8b080)); rope.rotation.x = Math.PI / 2; rope.position.set(-2.6, 2.3, 3.8); g.add(rope);
-      const net = B(g, 2.2, 1.6, 0.04, 0x5a6a5a, 3.02, 3.8, 0); net.rotation.y = Math.PI / 2; for (let i = 0; i < 5; i++) { B(g, 0.05, 2.0, 0.05, 0x4a3a2a, -2.8 + i * 0.4, 1.2, 4.6) } return g },
+      const net = B(g, 2.2, 1.6, 0.04, 0x5a6a5a, 3.02, 3.8, 0); net.rotation.y = Math.PI / 2; for (let i = 0; i < 5; i++) { B(g, 0.05, 2.0, 0.05, 0x4a3a2a, -2.8 + i * 0.4, 1.2, 4.6) } g.userData.stilt = { y: 2.225, room: [-3, 3, -2.5, 2.5], deck: [-3.5, 3.5, -2.7, 4.7], doorX: -1.4, sw: 2.0, stairL: 3.2, col: 0x6a5038 }; return g },
     // 9. Mocsári cölöpkunyhó: ferde sötét deszkák, meredek mohás nádtető, lógó moha, lámpás (Holtláp)
     mocsar(o = {}) { const g = new THREE.Group(), pl = T.planks(0x3e3428, 'm'), th = T.thatch(0x5a5a30);
       for (const [sx, sz] of [[-2.2, -2], [2.2, -2], [-2.2, 2], [2.2, 2], [0, 3.5]]) { const p = C(g, 0.16, 0.2, 1.8, 0x2a2420, sx, 0.9, sz, 6); p.rotation.z = (Rn() - 0.5) * 0.12 }
       const body = sub(g, 0, 0, 0); body.rotation.z = 0.04; B(body, 5, 0.2, 5.4, pl, 0, 1.9, 0.6, 1.6); B(body, 4.4, 2.6, 4, pl, 0, 3.3, 0, 1.6); gable(body, 4.4, 4, 4.6, 3.2, th, pl, 0.6, 0.45);
       door(body, -0.8, 2.02, 0, { y0: 2.0, door: 0x2a2218, step: false }); win(body, 1.2, 3.4, 2.02, 0, { w: 0.7, h: 0.7, glass: 0xd8c060, frame: 0x2a2218, sill: false });
       for (let i = 0; i < 10; i++) { const m = B(g, 0.06, 0.6 + Rn() * 0.8, 0.06, 0x4a5a2a, -2.6 + i * 0.58, 4.4, 2.75); m.position.y -= m.geometry.parameters.height / 2 }
-      C(g, 0.06, 0.06, 2.6, 0x2a2420, 2.8, 1.3, 3.4, 4); const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.3), new THREE.MeshBasicMaterial({ color: 0xffd060 })); l.position.set(2.8, 2.4, 3.6); g.add(l); return g } };
+      C(g, 0.06, 0.06, 2.6, 0x2a2420, 2.8, 1.3, 3.4, 4); const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.3), new THREE.MeshBasicMaterial({ color: 0xffd060 })); l.position.set(2.8, 2.4, 3.6); g.add(l); g.userData.stilt = { y: 2.0, room: [-2.2, 2.2, -2, 2], deck: [-2.5, 2.5, -2.1, 3.3], doorX: -0.8, sw: 1.9, stairL: 2.8, col: 0x3e3428 }; return g } };
   return H2})();
 function houseStyle(x,z,w,d,o){const zn=zoneOf(x),h=(hash(Math.floor(x*3)+17,Math.floor(z*3)+5)*1000)|0;if(w>=12)return null;
   if(o.style)return o.style;if(o.sign===0x5a8a3a)return 'vadasz';
@@ -1087,7 +1088,7 @@ function house(x,z,w,d,ry,o={}){const st=houseStyle(x,z,w,d,o);if(!st)return hou
   if(o.sign){const fz=sz.z/2+0.6,fx=sz.x/2-0.8,post=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,3.2,5),M(0x4a3020));post.position.set(fx,1.6,fz);g.add(post);const arm=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.1,0.1),M(0x4a3020));arm.position.set(fx-0.6,3.1,fz);g.add(arm);
     const bd=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.75,0.08),M(o.sign));bd.position.set(fx-0.75,2.55,fz);g.add(bd)}
   const s=clamp(Math.min(w*1.3/sz.x,d*1.3/sz.z),0.62,1.1);g.scale.setScalar(s);
-  g.rotation.y=ry;placeAt(g,x,z);shadowed(g);scene.add(g);huts.push(g);return g}
+  g.userData.style=st;g.rotation.y=ry;placeAt(g,x,z);shadowed(g);scene.add(g);huts.push(g);return g}
 function houseOld(x,z,w,d,ry,o={}){
   const g=new THREE.Group();const B=(bw,bh,bd,mat,bx,by,bz)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd),mat);m.position.set(bx,by,bz);g.add(m);return m};
   B(w,3.2,d,o.stone?mats.stone:mats.wall,0,1.6,0);
@@ -3558,7 +3559,7 @@ for(let i=0,k=0;i<7&&k<400;k++){const x=KR.ash.x+(kr()-0.5)*300,z=KR.ash.z+(kr()
     for(let k=0;k<3;k++)B(g,0.5,0.06,1.6,0x6a5236,0,0.6-k*0.25,2.6+k*0.5);g.rotation.y=-a+Math.PI/2;kAdd(g,x,z);huts.push(g)}
   for(let i=0;i<3;i++){const t=new THREE.Group(),{B,Cy,F}=SX2;Cy(t,0.38,0.44,4.4,0x5a4028,0,2.2,0,8);for(let k=0;k<3;k++){const c=[0x8a3a2a,0x3a7a4a,0xd8b040][k];const f=Cy(t,0.48,0.42,0.9,c,0,1.2+k*1.1,0,8);for(const s_ of[-1,1])B(t,0.12,0.12,0.06,0x111111,s_*0.18,1.35+k*1.1,0.45);B(t,0.3,0.08,0.06,0xf0f0e0,0,1.0+k*1.1,0.47);for(const s_ of[-1,1])B(t,0.5,0.2,0.1,c,s_*0.6,1.3+k*1.1,0)}const sk=SX2.rock(t,0.3,0xe8e0c8,0xe8e0c8,0,4.7,0,1);for(const s_ of[-1,1]){const h=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.6,5),F(0xd8d0b8));h.position.set(s_*0.3,5.1,0);h.rotation.z=-s_*0.6;t.add(h)}kAdd(t,V.x+(i-1)*9,V.z-4)}
   campfire(KX+V.x,V.z+2,true);
-  const H=[-470,-62];{const {B,Cy,seg,F,glow,planks}=SX2,st=new THREE.Group(),hs=HOUSE2.mocsar({});hs.scale.setScalar(1.3);st.add(hs);const P=planks(0x5a4a36);
+  const H=[-470,-62];{const {B,Cy,seg,F,glow,planks}=SX2,st=new THREE.Group(),hs=HOUSE2.mocsar({});hs.scale.setScalar(1.3);st.add(hs);hs.userData.stilt=Object.assign({},hs.userData.stilt,{noStair:true,stairL:1.9,style:'mocsar'});const P=planks(0x5a4a36);
     for(let k=0;k<6;k++)B(st,1.4,0.16,0.5,0x5a4a36,-1.04,0.3+k*0.42,4.0+k*0.0-(k*0.0)).position.z=5.6-k*0.5;for(const s_ of[-1.75,-0.35])seg(st,[s_,0,5.9],[s_,2.8,3.1],0.06,0x3a2e22,4);
     B(st,2.2,0.2,9,P,-1,0.35,10.5,1.6);for(let k=0;k<5;k++)for(const s_ of[-1,1])Cy(st,0.1,0.12,1.2,0x2a2420,-1+s_*1.0,0.1,6.5+k*2,5);
     const rk=new THREE.Group();rk.position.set(3.2,0,7);st.add(rk);for(const s_ of[-1,1])seg(rk,[s_*1.2,0,0],[s_*1.2,2.2,0],0.06,0x4a3a2a,4);seg(rk,[-1.4,2.1,0],[1.4,2.1,0],0.04,0x4a3a2a,4);for(let k=0;k<4;k++){const f=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,4),F(k%2?0x7a8a9a:0x8a7a5a));f.scale.set(0.5,1.8,0.3);f.position.set(-0.9+k*0.6,1.7,0);rk.add(f);seg(rk,[-0.9+k*0.6,2.1,0],[-0.9+k*0.6,2.0,0],0.01,0xc8b080,3)}
@@ -3801,7 +3802,7 @@ function astarK(ax,az,bx,bz){const L=kGL(),W=KGW,N=KGW*KGH;const gi=(x,z)=>clamp
   const out=[];let cur={x:ax,z:az},k=0;while(k<pts.length){let best=k;for(let m=Math.min(pts.length-1,k+30);m>k;m--){if(lineClear(cur.x,cur.z,pts[m].x,pts[m].z)){best=m;break}}out.push(pts[best]);cur=pts[best];k=best+1}
   return out}
 const gIdx=(x,z)=>[clamp(Math.floor((x-zoneOf(x)*ZX+HALF)/GC),0,GN-1),clamp(Math.floor((z+HALF)/GC),0,GN-1)];
-function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);if(COLG)for(let q=0.5;q<d;q+=0.5){const t=q/d;if(colHit(ax+(bx-ax)*t,az+(bz-az)*t))return false}const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;const x=ax+(bx-ax)*t,z=az+(bz-az)*t;const hh=height(x,z);if((hh<0.3&&!onDock(x,z))||([7,8,10].includes(zoneOf(x))&&hh>13)||(zoneOf(x)===12&&kOnWall(x-KX,z)))return false}return true}
+function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);if(COLG)for(let q=0.5;q<d;q+=0.5){const t=q/d;if(colHit(ax+(bx-ax)*t,az+(bz-az)*t))return false}const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;const x=ax+(bx-ax)*t,z=az+(bz-az)*t;const hh=height(x,z);if((hh<0.3&&!onDock(x,z)&&floorAt(x,z)===null)||([7,8,10].includes(zoneOf(x))&&hh>13)||(zoneOf(x)===12&&kOnWall(x-KX,z)))return false}return true}
 function astar(ax,az,bx,bz){
   const zn=zoneOf(ax);if(zoneOf(bx)!==zn)return null;if(zn===12)return astarK(ax,az,bx,bz);const gLand=gLands[zn];const zx=zn*ZX;
   const [si,sj]=gIdx(ax,az),[ti,tj]=gIdx(bx,bz);if(!gLand[tj*GN+ti])return null;
@@ -5668,9 +5669,9 @@ function animate(now){
     if(d<0.15){if(route.length){target=route.shift()}else{target=null;marker.visible=false;if(pendingAction){const a=pendingAction;pendingAction=null;startAction(a)}}}
     else{const s=Math.min(sp,d);const nx=px+dx/d*s,nz=pz+dz/d*s;
       const hh=height(nx,nz);const wall=(zoneOf(nx)===3&&hh>6)||([7,8,10].includes(zoneOf(nx))&&hh>13)||(zoneOf(nx)===12&&kOnWall(nx-KX,nz));const cb=COLG&&colHit(nx,nz)&&!colHit(px,pz);if(cb){colReplan=(colReplan||0)+1;const fin=route.length?route[route.length-1]:target;const r=colReplan<3?astarFine(px,pz,fin.x,fin.z):null;if(r&&r.length&&!(r.length===1&&!lineClear(px,pz,r[0].x,r[0].z))){target=r.shift();route=r}else{target=null;route=[];marker.visible=false;colReplan=0}}
-      else if((hh>0.0&&!wall)||onDock(nx,nz)||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true;colReplan=0}else{target=null;route=[];marker.visible=false;chat(wall?(zoneOf(nx)===12?'Koronavár fala. Kapu mind a négy égtáj felé nyílik.':zoneOf(nx)===7?'Várfal. A kapu a déli oldalon van.':zoneOf(nx)===8?'Sövényfal. Keresd a folyosót.':zoneOf(nx)===10?'A kastély fala. A kapu a déli oldalon.':'Sziklafal. Erre nem jutsz tovább.'):(zoneOf(nx)===11?'Ott csak felhő van, alatta a semmi. Keresd a hidakat.':'Ott víz van, nem gázolsz bele.'))}}
+      else if((hh>0.0&&!wall)||onDock(nx,nz)||floorAt(nx,nz)!==null||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true;colReplan=0}else{target=null;route=[];marker.visible=false;chat(wall?(zoneOf(nx)===12?'Koronavár fala. Kapu mind a négy égtáj felé nyílik.':zoneOf(nx)===7?'Várfal. A kapu a déli oldalon van.':zoneOf(nx)===8?'Sövényfal. Keresd a folyosót.':zoneOf(nx)===10?'A kastély fala. A kapu a déli oldalon.':'Sziklafal. Erre nem jutsz tovább.'):(zoneOf(nx)===11?'Ott csak felhő van, alatta a semmi. Keresd a hidakat.':'Ott víz van, nem gázolsz bele.'))}}
   }
-  player.position.set(px,Math.max(height(px,pz),0.3)+(onDock(px,pz)&&height(px,pz)<0.3?1.05:0),pz);
+  {const fy=floorAt(px,pz);player.position.set(px,fy!==null?Math.max(fy,height(px,pz)):Math.max(height(px,pz),0.3)+(onDock(px,pz)&&height(px,pz)<0.3?1.05:0),pz)}
   if(voyage)player.position.y=OCEAN.ship.position.y+0.95;
   player.rotation.y=facing;player.visible=!dead;
   const sw=moving?Math.sin(t*(run?16:10))*0.7:0;
@@ -5724,7 +5725,7 @@ function animate(now){
   furnaceObj.fl.scale.y=0.8+Math.sin(t*12)*0.3;
   for(const f of fires){f.f1.scale.y=0.8+Math.sin(t*14+f.born)*0.25;f.f2.scale.y=0.7+Math.sin(t*19)*0.3;f.f1.rotation.y+=dt*3;f.light.intensity=1+Math.sin(t*11)*0.3+night*0.8}
   for(const s of smoke){s.userData.t+=dt*0.12;if(s.userData.t>1)s.userData.t=0;const k=s.userData.t;s.position.set(VOLC.x+Math.sin(k*9+s.id)*3*k,height(VOLC.x,VOLC.z)+6+k*45,VOLC.z+Math.cos(k*7+s.id)*3*k);s.scale.setScalar(0.6+k*2.2);s.material.opacity=0.4*(1-k)}
-  const cy=Math.max(height(px,pz),0.3)+1.5;
+  const fyc=floorAt(px,pz),cy=(fyc!==null?Math.max(fyc,height(px,pz)):Math.max(height(px,pz),0.3))+1.5;
   const cx=px+Math.sin(camYaw)*Math.cos(camPitch)*camDist,cz=pz+Math.cos(camYaw)*Math.cos(camPitch)*camDist,ch=cy+Math.sin(camPitch)*camDist;
   camera.position.set(cx,Math.max(ch,height(cx,cz)+1.5),cz);camera.lookAt(px,cy,pz);
   housesStep();updateOcclusion(dt);
@@ -5923,8 +5924,8 @@ function kRng(s){let a=s|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,
 const KGEO={trunk:new THREE.CylinderGeometry(0.4,0.65,4,6),can:TREEV.canGeo(0),canD:TREEV.canGeo(1),tuft:crossGeo(0.9,0.9,2),flower:crossGeo(0.8,0.8,2),fern:crossGeo(1.6,1.3,2),reed:crossGeo(1.1,2.2,2),rock:new THREE.DodecahedronGeometry(1,0),crystal:new THREE.OctahedronGeometry(0.6,0),bush:crossGeo(2.2,1.9,3)};
 const KMAT={reed:amat(TEX.tuft,{color:0xa8c070}),ashTuft:amat(TEX.tuft,{color:0x8a8070}),snowTuft:amat(TEX.tuft,{color:0xb0b8a0})};
 function kRegW(x,z){const R=KR;return {sw:kW(Math.hypot(x-R.swamp.x,z-R.swamp.z),R.swamp.r,110),ash:kW(Math.hypot(x-R.ash.x,z-R.ash.z),R.ash.r,120),arc:kW(Math.hypot(x-R.arkan.x,z-R.arkan.z),150,110),fo:kW(Math.hypot(x-R.forest.x,z-R.forest.z),R.forest.r,110),fa:kW(Math.hypot(x-R.farm.x,z-R.farm.z),R.farm.r,110),mo:kW(Math.hypot(x-R.mount.x,z-R.mount.z),R.mount.r,150)}}
-function kInst(c,geo,mat,list,o={}){if(!list.length)return null;const im=new THREE.InstancedMesh(geo,mat,list.length);const d=new THREE.Object3D();
-  list.forEach(([x,z,y,s,r],i)=>{d.position.set(KX+x,y+(o.dy||0)*s,z);d.rotation.set(0,r,0);d.scale.set(s,s*(o.sy||1),s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});
+function kInst(c,geo,mat,list,o={}){if(!list.length)return null;const im=new THREE.InstancedMesh(geo,mat,list.length);const d=new THREE.Object3D();im.userData.hideIn=true;
+  list.forEach(([x,z,y,s,r],i)=>{d.position.set(KX+x,y+(o.dy||0)*s,z);d.rotation.set(0,r,0);d.scale.set(s,s*(o.sy||1),s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});hideInHouses(im);
   im.frustumCulled=false;im.receiveShadow=true;if(o.shadow){im.castShadow=true;if(mat.userData.depth)im.customDepthMaterial=mat.userData.depth}
   if([KGEO.tuft,KGEO.flower,KGEO.fern,KGEO.reed,KGEO.bush].includes(geo)){im.userData.decor=true;im.userData.full=list.length;if(GFX.p.grass<1){im.count=Math.floor(list.length*GFX.p.grass);im.visible=im.count>0}}c.g.add(im);return im}
 // egy darab (160x160) növényzete és erőforrásai: determinisztikus, a darab első közelítésekor készül
@@ -6019,7 +6020,7 @@ function colFromGroup(g,tag,minH=1.5){g.updateMatrixWorld(true);_ci.copy(g.matri
     if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();_cm.multiplyMatrices(_ci,m.matrixWorld);_cb.copy(m.geometry.boundingBox).applyMatrix4(_cm);
     const h=(_cb.max.y-_cb.min.y)*sc;if(h<minH||_cb.min.y*sc>1.2)return;const w=(_cb.max.x-_cb.min.x),d=(_cb.max.z-_cb.min.z);if(w*sc<0.25||d*sc<0.25)return;
     _cv.set((_cb.min.x+_cb.max.x)/2,0,(_cb.min.z+_cb.max.z)/2).applyMatrix4(g.matrixWorld);colAdd(_cv.x,_cv.z,w*sc/2,d*sc/2,rot,tag);n++});return n}
-function walkable(x,z){const zn=zoneOf(x),hh=height(x,z);if((hh<0.3&&!onDock(x,z))||(zn===3&&hh>6)||([7,8,10].includes(zn)&&hh>13)||(zn===12&&kOnWall(x-KX,z)))return false;return !colHit(x,z)}
+function walkable(x,z){const zn=zoneOf(x),hh=height(x,z);if((hh<0.3&&!onDock(x,z)&&floorAt(x,z)===null)||(zn===3&&hh>6)||([7,8,10].includes(zn)&&hh>13)||(zn===12&&kOnWall(x-KX,z)))return false;return !colHit(x,z)}
 // finom A* egy ablakban (1 egységes cellák); ha a cél nem érhető el, a hozzá legközelebbi elérhető pontig visz
 function astarFine(ax,az,bx,bz){const pad=24,x0=Math.floor(Math.min(ax,bx)-pad),z0=Math.floor(Math.min(az,bz)-pad),W=Math.min(260,Math.ceil(Math.abs(bx-ax)+pad*2)),H=Math.min(260,Math.ceil(Math.abs(bz-az)+pad*2)),N=W*H;
   const ok=new Int8Array(N);const OK=n=>{if(ok[n])return ok[n]>0;const v=walkable(x0+(n%W)+0.5,z0+((n/W)|0)+0.5);ok[n]=v?1:-1;return v};
@@ -6058,13 +6059,14 @@ function localBoxes(g,minH=1.5){g.updateMatrixWorld(true);const inv=new THREE.Ma
     if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();m4.multiplyMatrices(inv,m.matrixWorld);b.copy(m.geometry.boundingBox).applyMatrix4(m4);
     if((b.max.y-b.min.y)*sc<minH||b.min.y*sc>1.2||(b.max.x-b.min.x)*sc<0.25||(b.max.z-b.min.z)*sc<0.25)return;out.push({x0:b.min.x,x1:b.max.x,z0:b.min.z,z1:b.max.z,y0:b.min.y,y1:b.max.y,mat:m.material})});return {out,sc,inv}}
 function matHex(mt){if(!mt)return 0xd8ccb0;if(mt.map&&mt.map.image&&mt.map.image.getContext){try{const c=document.createElement('canvas');c.width=c.height=1;const x=c.getContext('2d');x.drawImage(mt.map.image,0,0,1,1);const d=x.getImageData(0,0,1,1).data;return new THREE.Color(d[0]/255,d[1]/255,d[2]/255).getHex()}catch(e){}}if(mt.color){const c=mt.color.clone();if(mt.vertexColors)return 0xc8b8a0;return c.convertLinearToSRGB().getHex()}return 0xd8ccb0}
-function houseEnter(h){let dm=null;h.traverse(o=>{if(!dm&&o.userData.door)dm=o});if(!dm)return false;const {out,sc,inv}=localBoxes(h);
+function houseEnter(h){let dm=null,so=null;h.traverse(o=>{if(!dm&&o.userData.door)dm=o;if(!so&&o.userData.stilt)so=o});if(!dm)return false;const {out,sc,inv}=localBoxes(h);
+  if(so)return stiltEnter(h,so,dm,sc,inv);
   const rooms=out.filter(b=>(b.x1-b.x0)*sc>2.4&&(b.z1-b.z0)*sc>2.4);if(!rooms.length)return false;
   const dp=new THREE.Vector3();dm.getWorldPosition(dp);const dl=dp.clone().applyMatrix4(inv);const dq=new THREE.Quaternion();dm.getWorldQuaternion(dq);const hq=new THREE.Quaternion();h.getWorldQuaternion(hq);
   const nrm=new THREE.Vector3(0,0,1).applyQuaternion(dq).applyQuaternion(hq.clone().invert());
   const edges=r=>[{ax:'z',v:r.z1,n:1,lo:r.x0,hi:r.x1},{ax:'z',v:r.z0,n:-1,lo:r.x0,hi:r.x1},{ax:'x',v:r.x1,n:1,lo:r.z0,hi:r.z1},{ax:'x',v:r.x0,n:-1,lo:r.z0,hi:r.z1}];
   let best=null;for(const r of rooms)for(const e of edges(r)){const dist=Math.abs((e.ax==='z'?dl.z:dl.x)-e.v),along=e.ax==='z'?dl.x:dl.z;if(along<e.lo-0.3||along>e.hi+0.3)continue;const dot=e.ax==='z'?e.n*nrm.z:e.n*nrm.x;if(dot<0.5)continue;if(!best||dist<best.dist)best={r,e,dist,along}}
-  if(!best||best.dist*sc>1.6)return false;const gapH=(dm.userData.door.w||1.2)/2+0.12;
+  if(!best||best.dist*sc>1.6)return false;const gapH=Math.max((dm.userData.door.w||1.2)/2+0.12,0.95/sc); // széles nyílás: az 1 egységes A* rács mindig átfér
   const inRoom=(x,z,skip)=>rooms.some(r=>r!==skip&&x>r.x0-0.02&&x<r.x1+0.02&&z>r.z0-0.02&&z<r.z1+0.02);const segs=[];const T=0.15;
   for(const r of rooms)for(const e of edges(r)){let cur=null;for(let a=e.lo;a<e.hi-1e-6;a+=0.25){const t=Math.min(a+0.25,e.hi),mid=(a+t)/2,ox=e.ax==='z'?mid:e.v+e.n*0.2,oz=e.ax==='z'?e.v+e.n*0.2:mid;
       const gap=best.r===r&&best.e.ax===e.ax&&best.e.v===e.v&&Math.abs(mid-best.along)<gapH;if(!gap&&!inRoom(ox,oz,r)){if(cur&&Math.abs(cur.b-a)<1e-6)cur.b=t;else{cur={e,a,b:t,r};segs.push(cur)}}else cur=null}}
@@ -6072,37 +6074,154 @@ function houseEnter(h){let dm=null;h.traverse(o=>{if(!dm&&o.userData.door)dm=o})
   const rot=new THREE.Euler().setFromQuaternion(hq,'YXZ').y,wv=new THREE.Vector3();
   const addLocal=(cx,cz,hw,hd,tag)=>{wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);colAdd(wv.x,wv.z,hw*sc,hd*sc,rot,tag)};
   for(const s of segs){const e=s.e,m=(s.a+s.b)/2,hl=(s.b-s.a)/2;if(e.ax==='z')addLocal(m,e.v-e.n*T,hl,T,'fal');else addLocal(e.v-e.n*T,m,T,hl,'fal')}
-  for(const b of out)if(!rooms.includes(b))addLocal((b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2,(b.z1-b.z0)/2,'haz');
+  const nA=best.e.v-0.4*best.e.n,nB=best.e.v+1.6*best.e.n,nl=Math.min(nA,nB),nh=Math.max(nA,nB),al=best.along-gapH,ah=best.along+gapH,dz0=best.e.ax==='z'?{x0:al,x1:ah,z0:nl,z1:nh}:{x0:nl,x1:nh,z0:al,z1:ah}; // az ajtó előtti sáv
+  for(const b of out)if(!rooms.includes(b)){const ov=b.x1>Math.min(dz0.x0,dz0.x1)&&b.x0<Math.max(dz0.x0,dz0.x1)&&b.z1>Math.min(dz0.z0,dz0.z1)&&b.z0<Math.max(dz0.z0,dz0.z1);if(!ov)addLocal((b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2,(b.z1-b.z0)/2,'haz')}
   // az eredeti festett ajtólap eltűnik, helyette nyitható ajtó (a ház mellett, hogy bentről is látszódjon)
   h.traverse(o=>{if(o.userData.leaf)o.visible=false});const dg=new THREE.Group();dm.updateMatrixWorld(true);dm.matrixWorld.decompose(dg.position,dg.quaternion,dg.scale);scene.add(dg);dg.userData.keep=true;
-  const y0=dm.userData.door.y0||0,dw=dm.userData.door.w||1.2;makeDoor(dg,-dw/2,0.08,dw,'x',1,'Ajtó',dm.userData.door.h||2.25,y0);
+  const y0=dm.userData.door.y0||0,dw=Math.max(dm.userData.door.w||1.2,(gapH*2-0.06));makeDoor(dg,-dw/2,0.08,dw,'x',1,'Ajtó',dm.userData.door.h||2.25,y0);
   let cx=0,cz=0,R=0;for(const r of rooms){cx+=(r.x0+r.x1)/2/rooms.length;cz+=(r.z0+r.z1)/2/rooms.length}for(const r of rooms)R=Math.max(R,Math.hypot(r.x1-cx,r.z1-cz),Math.hypot(r.x0-cx,r.z0-cz));wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);
   (HOUSES_IN||(HOUSES_IN=[])).push({h,rooms,segs,best,sc,inv:inv.clone(),wx:wv.x,wz:wv.z,R:R*sc+1,zone:zoneOf(wv.x),shell:null,inn:false});return true}
+// cölöpház: a szoba és a fedélzet a házépítő adataiból; a fedélzet körül korlát (ütköző), elöl lépcső; a fedélzet és a lépcső
+// emelt padló (FLOORS), így a karakter felsétál; bent ugyanúgy berendezett szoba, mint a földszinti házakban
+function stiltEnter(h,so,dm,sc,inv){h.updateMatrixWorld(true);const S=so.userData.stilt,M4=new THREE.Matrix4().multiplyMatrices(inv,so.matrixWorld),P=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(M4);
+  const rect=a=>{const p=P(a[0],S.y,a[2]),q=P(a[1],S.y,a[3]);return {x0:Math.min(p.x,q.x),x1:Math.max(p.x,q.x),z0:Math.min(p.z,q.z),z1:Math.max(p.z,q.z),y0:p.y}};
+  const R=rect(S.room),D=rect(S.deck),room={x0:R.x0,x1:R.x1,z0:R.z0,z1:R.z1,y0:R.y0,y1:R.y0+2.8,mat:{color:new THREE.Color(S.col).convertSRGBToLinear()}},rooms=[room];
+  const dl=P(S.doorX,S.y,S.room[3]),best={r:room,e:{ax:'z',v:room.z1,n:1,lo:room.x0,hi:room.x1},dist:0,along:dl.x},gapH=Math.max((dm.userData.door.w||1.2)/2+0.12,(1.0+0.3*Math.abs(Math.sin(2*h.rotation.y)))/sc),T=0.15,segs=[];
+  {const e=best.e;let cur=null;for(const ed of[{ax:'z',v:room.z1,n:1,lo:room.x0,hi:room.x1},{ax:'z',v:room.z0,n:-1,lo:room.x0,hi:room.x1},{ax:'x',v:room.x1,n:1,lo:room.z0,hi:room.z1},{ax:'x',v:room.x0,n:-1,lo:room.z0,hi:room.z1}]){cur=null;for(let a=ed.lo;a<ed.hi-1e-6;a+=0.25){const t=Math.min(a+0.25,ed.hi),mid=(a+t)/2,gap=ed===undefined?false:(ed.ax==='z'&&ed.n===1&&Math.abs(mid-best.along)<gapH);if(!gap){if(cur&&Math.abs(cur.b-a)<1e-6)cur.b=t;else{cur={e:ed,a,b:t,r:room};segs.push(cur)}}else cur=null}}}
+  const hq=new THREE.Quaternion();h.getWorldQuaternion(hq);const rot=new THREE.Euler().setFromQuaternion(hq,'YXZ').y,wv=new THREE.Vector3();
+  const addLocal=(cx,cz,hw,hd,tag)=>{wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);colAdd(wv.x,wv.z,hw*sc,hd*sc,rot,tag)};
+  for(const sg of segs){const e=sg.e,m=(sg.a+sg.b)/2,hl=(sg.b-sg.a)/2;if(e.ax==='z')addLocal(m,e.v-e.n*T,hl,T,'fal');else addLocal(e.v-e.n*T,m,T,hl,'fal')}
+  // korlát a fedélzet szélén (a lépcső előtt rés); a fedélzet alá így nem lehet besétálni
+  const ux=P(1,0,0).x-P(0,0,0).x,sx=P(S.doorX,0,0).x,sw=Math.max(S.sw*ux,2.1/sc),swS=sw/ux,Rk=0.08;addLocal(D.x0,(D.z0+D.z1)/2,Rk,(D.z1-D.z0)/2,'korlat');addLocal(D.x1,(D.z0+D.z1)/2,Rk,(D.z1-D.z0)/2,'korlat');addLocal((D.x0+D.x1)/2,D.z0,(D.x1-D.x0)/2,Rk,'korlat');
+  if(sx-sw/2>D.x0)addLocal((D.x0+sx-sw/2)/2,D.z1,(sx-sw/2-D.x0)/2,Rk,'korlat');if(sx+sw/2<D.x1)addLocal((sx+sw/2+D.x1)/2,D.z1,(D.x1-sx-sw/2)/2,Rk,'korlat');
+  // padló-régiók: fedélzet (vízszintes) és rámpa (a lépcső vonalán, a talajig)
+  const L=S.stairL*(P(0,0,1).z-P(0,0,0).z),top=new THREE.Vector3((D.x0+D.x1)/2,R.y0,(D.z0+D.z1)/2).applyMatrix4(h.matrixWorld);
+  FLOORS.push({x:top.x,z:top.z,hw:(D.x1-D.x0)/2*sc,hd:(D.z1-D.z0)/2*sc,c:Math.cos(rot),s:Math.sin(rot),y0:top.y+0.12,y1:top.y+0.12});
+  const rc=new THREE.Vector3(sx,R.y0,D.z1+L/2).applyMatrix4(h.matrixWorld),foot=new THREE.Vector3(sx,0,D.z1+L).applyMatrix4(h.matrixWorld);
+  FLOORS.push({x:rc.x,z:rc.z,hw:sw/2*sc,hd:L/2*sc,c:Math.cos(rot),s:Math.sin(rot),y0:top.y+0.12,y1:Math.max(height(foot.x,foot.z),0.3)});
+  for(const e of[-1,1])addLocal(sx+e*(sw/2+Rk),D.z1+L/2,Rk,L/2-0.25,'korlat');
+  // látható lépcső (fokok, két tartógerenda, korlátoszlopok) és korlát a fedélzet szélén
+  if(!S.noStair){const g=new THREE.Group();so.matrixWorld.decompose(g.position,g.quaternion,g.scale);scene.add(g);const W1=HMAT(0x6a5038),W2=HMAT(0x4a3a2a),n=Math.ceil(S.y/0.3),tr=S.stairL/n;
+    for(let i=0;i<n;i++){const st=new THREE.Mesh(new THREE.BoxGeometry(swS,0.08,tr+0.06),W1);st.position.set(S.doorX,S.y-(i+1)*S.y/n+0.04,S.deck[3]+(i+0.5)*tr);g.add(st)}
+    for(const e of[-1,1]){const x=S.doorX+e*swS/2;SX2.seg(g,[x,S.y,S.deck[3]],[x,0,S.deck[3]+S.stairL],0.07,0x4a3a2a,4);SX2.seg(g,[x,S.y+0.9,S.deck[3]],[x,0.9,S.deck[3]+S.stairL],0.035,0x5a4a3a,4);const p=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.95,0.1),W2);p.position.set(x,0.45,S.deck[3]+S.stairL);g.add(p)}
+    const rail=(x0,z0,x1,z1)=>{SX2.seg(g,[x0,S.y+0.85,z0],[x1,S.y+0.85,z1],0.035,0x5a4a3a,4);const L2=Math.hypot(x1-x0,z1-z0),n2=Math.max(1,Math.round(L2/1.2));for(let k=0;k<=n2;k++){const t=k/n2,pp=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.85,0.07),W2);pp.position.set(x0+(x1-x0)*t,S.y+0.42,z0+(z1-z0)*t);g.add(pp)}};
+    const [dx0,dx1,dz0,dz1]=S.deck;rail(dx0,S.room[3],dx0,dz1);rail(dx1,S.room[3],dx1,dz1);if(S.doorX-swS/2>dx0)rail(dx0,dz1,S.doorX-swS/2,dz1);if(S.doorX+swS/2<dx1)rail(S.doorX+swS/2,dz1,dx1,dz1);shadowed(g)}
+  h.traverse(o=>{if(o.userData.leaf)o.visible=false});const dg=new THREE.Group();dm.updateMatrixWorld(true);dm.matrixWorld.decompose(dg.position,dg.quaternion,dg.scale);scene.add(dg);dg.userData.keep=true;
+  const dw=Math.max(dm.userData.door.w||1.2,gapH*2-0.06);makeDoor(dg,-dw/2,0.08,dw,'x',1,'Ajtó',dm.userData.door.h||2.25,dm.userData.door.y0||0);
+  const cx=(room.x0+room.x1)/2,cz=(room.z0+room.z1)/2,Rr=Math.hypot(room.x1-cx,room.z1-cz);wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);
+  (HOUSES_IN||(HOUSES_IN=[])).push({h,rooms,segs,best,sc,inv:inv.clone(),wx:wv.x,wz:wv.z,R:Rr*sc+1,zone:zoneOf(wv.x),shell:null,inn:false,stilt:true,style:S.style});return true}
 // a szoba: falak (lent lambéria), padló, bútorok a legnagyobb szobában; egyetlen összevont csoport
+const HMAT=(()=>{const C={};return c=>C[c]||(C[c]=new THREE.MeshLambertMaterial({color:new THREE.Color(c).convertSRGBToLinear(),flatShading:true}))})();
 function houseShell(I){const h=I.h,g=new THREE.Group();h.updateMatrixWorld(true);h.matrixWorld.decompose(g.position,g.quaternion,g.scale);scene.add(g);g.userData.keep=true;g.userData.occB=new THREE.Box3();
   let seed=Math.floor(I.wx*7)*73856093^Math.floor(I.wz*7)*19349663;const Rn=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
-  const B=(w,hh,d,c,x,y,z,ry=0)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),M(c));m.position.set(x,y,z);m.rotation.y=ry;g.add(m);return m};
-  const PL=[0xe0d4b4,0xd8c8a0,0xe8dcc0,0xc8b890][(Rn()*4)|0],WN=0x7a5434,FL=[0x7a5a3a,0x6a4a2e,0x8a6a44][(Rn()*3)|0];
-  for(const r of I.rooms){const H=Math.min(r.y1-r.y0,3.6),y0=r.y0;B(r.x1-r.x0,0.1,r.z1-r.z0,FL,(r.x0+r.x1)/2,y0+0.05,(r.z0+r.z1)/2);for(let k=1;k<(r.x1-r.x0)/0.8;k++)B(0.04,0.02,r.z1-r.z0-0.1,0x4a3020,r.x0+k*0.8,y0+0.11,(r.z0+r.z1)/2)}
-  for(const s of I.segs){const e=s.e,m=(s.a+s.b)/2,L=s.b-s.a,y0=s.r.y0,H=Math.min(s.r.y1-s.r.y0,2.7),WC=matHex(s.r.mat);const pos=e.ax==='z'?[m,e.v-e.n*0.15]:[e.v-e.n*0.15,m],w=e.ax==='z'?L:0.3,d=e.ax==='z'?0.3:L;
-    B(w,H,d,WC,pos[0],y0+H/2,pos[1]);const iw=e.ax==='z'?L:0.06,id=e.ax==='z'?0.06:L,io=e.ax==='z'?[0,-e.n*0.16]:[-e.n*0.16,0];B(iw,0.9,id,WN,pos[0]+io[0],y0+0.45,pos[1]+io[1]);B(iw,0.08,id,0x3a2414,pos[0]+io[0],y0+0.94,pos[1]+io[1])}
-  // berendezés a legnagyobb szobában: "elöl" az ajtóhoz legközelebbi fala, hátul a szemközti
+  const zn=zoneOf(I.wx),TH=I.style||h.userData.style||({0:'nadfa',1:'varrock',2:'havas',4:'kikoto',5:'sivatag',6:'vadasz',8:'tonk',9:'vadasz',10:'mocsar',11:'aldarin'}[zn])||'varrock',Z=HTHEME[TH]||HTHEME.varrock;
+  const B=(w,hh,d,c,x,y,z,ry=0,p=g)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),typeof c==='number'?HMAT(c):c);m.position.set(x,y,z);m.rotation.y=ry;p.add(m);return m};
+  const PL=Z.wall[(Rn()*Z.wall.length)|0],WN=Z.dark,FL=Z.fl;
+  for(const r of I.rooms){const y0=r.y0;B(r.x1-r.x0,0.1,r.z1-r.z0,FL,(r.x0+r.x1)/2,y0+0.05,(r.z0+r.z1)/2);for(let k=1;k<(r.x1-r.x0)/0.8;k++)B(0.04,0.02,r.z1-r.z0-0.1,shade(FL,0.7),r.x0+k*0.8,y0+0.11,(r.z0+r.z1)/2)}
+  for(const s of I.segs){const e=s.e,m=(s.a+s.b)/2,L=s.b-s.a,y0=s.r.y0,H=Math.min(s.r.y1-s.r.y0,2.7),WC=I.stilt?S2hex(s.r.mat):matHex(s.r.mat);const pos=e.ax==='z'?[m,e.v-e.n*0.15]:[e.v-e.n*0.15,m],w=e.ax==='z'?L:0.3,d=e.ax==='z'?0.3:L;
+    B(w,H,d,WC,pos[0],y0+H/2,pos[1]);const iw=e.ax==='z'?L:0.06,id=e.ax==='z'?0.06:L,io=e.ax==='z'?[0,-e.n*0.16]:[-e.n*0.16,0];B(iw,H-1.0,id,PL,pos[0]+io[0],y0+1.0+(H-1.0)/2,pos[1]+io[1]);B(iw,0.9,id,WN,pos[0]+io[0],y0+0.45,pos[1]+io[1]);B(iw,0.08,id,shade(WN,0.6),pos[0]+io[0],y0+0.94,pos[1]+io[1])}
+  // a legnagyobb szoba saját kerete: u a fal mentén (0..1), v az ajtós faltól befelé (0..1); a bútor "eleje" a bejárat felé néz
   const big=I.rooms.slice().sort((a,b)=>(b.x1-b.x0)*(b.z1-b.z0)-(a.x1-a.x0)*(a.z1-a.z0))[0],y=big.y0+0.1;const fe=I.best.r===big?I.best.e:(()=>{const e=I.best.e;return e.ax==='z'?{ax:'z',v:e.n>0?big.z1:big.z0,n:e.n}:{ax:'x',v:e.n>0?big.x1:big.x0,n:e.n}})();
-  const lo=fe.ax==='z'?big.x0:big.z0,hi=fe.ax==='z'?big.x1:big.z1,D=fe.ax==='z'?big.z1-big.z0:big.x1-big.x0,W=hi-lo;
-  const P=(u,v)=>fe.ax==='z'?[lo+u*W,fe.v-fe.n*v*D]:[fe.v-fe.n*v*D,lo+u*W];const face=fe.ax==='z'?(fe.n>0?0:Math.PI):(fe.n>0?Math.PI/2:-Math.PI/2);
-  const along=(fe.ax==='z')?0:Math.PI/2;
-  {const [x,z]=P(0.18,0.78);const bed=new THREE.Group();bed.position.set(x,y,z);bed.rotation.y=along+Math.PI/2;g.add(bed);const add=(w,hh,d,c,a,b2,cc)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),M(c));m.position.set(a,b2,cc);bed.add(m)};
-    add(1.0,0.35,2.0,WN,0,0.25,0);add(0.95,0.18,1.9,0xf0ece0,0,0.5,0);add(0.97,0.2,1.3,[0xa83a2a,0x3a5a9a,0x5a8a3a,0x8a5aa8][(Rn()*4)|0],0,0.55,0.3);add(0.6,0.15,0.35,0xffffff,0,0.62,-0.75);add(1.0,0.9,0.1,WN,0,0.6,-1.0)}
-  {const [x,z]=P(0.62,0.42);B(1.3,0.08,0.9,WN,x,y+0.78,z,along);for(const [a,b2] of[[-0.55,-0.35],[0.55,-0.35],[-0.55,0.35],[0.55,0.35]]){const c=Math.cos(along),s=Math.sin(along);B(0.08,0.75,0.08,0x4a3020,x+a*c+b2*s,y+0.38,z-a*s+b2*c)}
-    for(const sd of[-1,1]){const c=Math.cos(along),s=Math.sin(along),ox=sd*0.95;B(0.4,0.45,0.4,0x6a4a2a,x+ox*c,y+0.23,z-ox*s)}B(0.18,0.2,0.18,0xd8b040,x,y+0.92,z);B(0.3,0.06,0.3,0xe8e0d0,x+0.3,y+0.84,z+0.1)}
-  {const [x,z]=P(0.85,0.85);B(0.9,0.6,0.55,0x7a4a24,x,y+0.3,z,along);B(0.92,0.08,0.57,0xd0a030,x,y+0.45,z,along)}
-  {const [x,z]=P(0.5,0.5);B(Math.min(2.4,W*0.5),0.02,Math.min(1.6,D*0.4),[0x8a2a2a,0x2a4a7a,0x6a5a2a][(Rn()*3)|0],x,y+0.02,z,along)}
-  if(W*D>18){const [x,z]=P(0.5,0.96);B(1.6,1.5,0.5,0x8a847a,x,y+0.75,z,along);B(0.9,0.7,0.52,0x140a04,x,y+0.4,z,along);const f=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.5,6),new THREE.MeshBasicMaterial({color:0xff8a20}));f.position.set(x,y+0.3,z);g.add(f);f.userData.keep=true;B(1.9,0.12,0.6,0x6a645a,x,y+1.55,z,along)}
-  {const [x,z]=P(0.08,0.2);for(let i=0;i<2;i++){const br=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.7,10),M(0x7a4a24));br.position.set(x,y+0.35,z+i*0.0);g.add(br);break}}
-  {const [x,z]=P(0.97,0.45);B(0.35,1.5,1.2,WN,x,y+0.75,z,along+Math.PI/2);for(let k=0;k<3;k++)B(0.15,0.2,0.15,[0x8a3a2a,0x3a6a8a,0xd0a030][k],x,y+1.0+((k%2)*0.45),z+(k-1)*0.3)}
-  mergeStatic(g);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true}});return g}
+  const lo=fe.ax==='z'?big.x0:big.z0,hi=fe.ax==='z'?big.x1:big.z1,D=fe.ax==='z'?big.z1-big.z0:big.x1-big.x0,W=hi-lo,ud=Math.min(1,Math.max(0,(I.best.along-lo)/W)),flip=ud>0.5;
+  const P=(u,v)=>{if(flip)u=1-u;return fe.ax==='z'?[lo+u*W,fe.v-fe.n*v*D]:[fe.v-fe.n*v*D,lo+u*W]};const face=fe.ax==='z'?(fe.n>0?0:Math.PI):(fe.n>0?Math.PI/2:-Math.PI/2);
+  const it=(u,v,make,ry=0)=>{if(flip)ry=-ry;const [x,z]=P(u,v);const o=new THREE.Group();o.position.set(x,y,z);o.rotation.y=face+ry;o.userData.uv=[flip?1-u:u,v];g.add(o);make(o);return o},cols=[];
+  const col=(o,hw,hd)=>{const [u,v]=o.userData.uv,r=Math.max(hw,hd);if(Math.abs(u-ud)*W<1.05+r&&v*D-r<2.2)return;cols.push([o,hw,hd])};const sm=Math.min(W,D),small=W*D<14;
+  const V=['haloszoba','konyha','muhely','nappali'][(Rn()*4)|0];const HI=(fn,...a)=>(HITEM[TH]&&HITEM[TH][fn]||HITEM.varrock[fn])(B,Z,Rn,...a);
+  // fal melletti tárgyak: ry=0 -> háttal a hátsó falnak; oldalfalnál ±π/2
+  if(V==='haloszoba'){col(it(0.8,0.72,o=>HI('bed',o)),0.6,1.05);it(0.8,0.3,o=>HI('store',o));col(it(0.14,0.9,o=>HI('wall',o)),0.6,0.3);it(0.5,0.93,o=>HI('light',o,true));if(!small)it(0.45,0.5,o=>HI('rug',o,1.8,1.3));else it(0.45,0.5,o=>HI('rug',o,1.2,1.0))}
+  if(V==='konyha'){col(it(0.5,0.92,o=>HI('hearth',o)),0.9,0.45);col(it(0.72,0.42,o=>HI('table',o)),0.65,0.45);it(0.1,0.9,o=>HI('store',o));it(0.95,0.75,o=>HI('wall',o),-Math.PI/2);if(!small)it(0.3,0.55,o=>HI('light',o,false));else it(0.45,0.25,o=>HI('rug',o,1.1,0.8))}
+  if(V==='muhely'){col(it(0.62,0.9,o=>HI('craft',o)),0.9,0.4);it(0.1,0.88,o=>HI('store',o));col(it(0.85,0.42,o=>HI('special',o)),0.45,0.45);if(!small)it(0.4,0.5,o=>HI('light',o,false))}
+  if(V==='nappali'){col(it(0.18,0.88,o=>HI('wall',o)),0.6,0.3);col(it(0.6,0.5,o=>HI('table',o)),0.65,0.45);it(0.88,0.88,o=>HI('special',o));it(0.55,0.28,o=>HI('rug',o,small?1.3:2.0,small?0.9:1.2));if(!small)it(0.92,0.5,o=>HI('light',o,false))}
+  if(D>4&&W>4.5&&V!=='konyha')col(it(0.88,0.12,o=>HI('store',o)),0.4,0.4);
+  mergeStatic(g);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true}});
+  // ütközők a nagyobb bútorokra (világban), lakó a házak egyharmadában, meleg fény este
+  g.updateMatrixWorld(true);const v=new THREE.Vector3(),q=new THREE.Quaternion(),e=new THREE.Euler();for(const [o,hw,hd] of cols){o.getWorldPosition(v);o.getWorldQuaternion(q);e.setFromQuaternion(q,'YXZ');colAdd(v.x,v.z,hw*I.sc,hd*I.sc,e.y,'butor')}
+  const occupied=npcs.some(n=>{_hv.set(n.mesh.position.x,0,n.mesh.position.z).applyMatrix4(I.inv);return I.rooms.some(r=>_hv.x>r.x0&&_hv.x<r.x1&&_hv.z>r.z0&&_hv.z<r.z1)});
+  if(!occupied&&Rn()<0.4){const R=HRES[TH]||HRES.varrock;const [x,z]=P(0.42,0.62);v.set(x,y,z).applyMatrix4(h.matrixWorld);const vi=(Rn()*97)|0;
+    const look={skin:[0xe8c39e,0xd8a880,0xc89070,0xf0d0b0,0x8a5a3a][vi%5],hair:[0x5a3a1a,0x8a8a8a,0x2a1a0a,0xc8a050,0xa04a1a][(vi+2)%5],shirt:Z.cloth[vi%Z.cloth.length],sleeves:Z.cloth[(vi+1)%Z.cloth.length],pants:0x3a2a1a,boots:0x2a1a0a,hairStyle:vi%2?'long':undefined,beard:vi%3===0,hat:TH==='kikoto'&&vi%4===0?'bandana':TH==='sivatag'&&vi%3===1?'straw':undefined};
+    const o=npc(v.x,v.z,R[0][vi%R[0].length],[R[1][vi%R[1].length],R[1][(vi+1)%R[1].length]],look);o.mesh.position.y=v.y;g.getWorldQuaternion(q);e.setFromQuaternion(q,'YXZ');o.mesh.rotation.y=e.y+face;for(const k of['legL','legR','armL','armR'])o.mesh.userData[k].userData.keep=true;I.res=o}
+  {const [x,z]=P(0.5,0.5);v.set(x,y+2.2,z).applyMatrix4(h.matrixWorld);KL.add(v.x,v.y,v.z,Z.lamp||0xffb860,0.75,8,{on:()=>night>0.2&&g.visible})}
+  return g}
+function S2hex(mt){return mt&&mt.color?mt.color.clone().convertLinearToSRGB().getHex():0x6a5038}
+const shade=(c,k)=>{const f=v=>Math.min(255,Math.max(0,v*k))|0;return(f(c>>16&255)<<16)|(f(c>>8&255)<<8)|f(c&255)};
+// tájanként: padló, fa, falszín, textilek; a lakók neve és mondatai
+const HTHEME={varrock:{fl:0x7a5a3a,wood:0x7a5434,dark:0x4a3020,wall:[0xe8dcc0,0xe0d4b4,0xece2cc],cloth:[0xa83a2a,0x3a5a9a,0x5a8a3a,0x8a5aa8],rug:[0x8a2a2a,0x2a4a7a,0x6a5a2a]},
+  nadfa:{fl:0x8a6a44,wood:0x8a6a3a,dark:0x5a4020,wall:[0xe0c890,0xd8c08a,0xe8d4a0],cloth:[0xc8a040,0xa84a2a,0x3a7a6a,0xe06a3a],rug:[0xc8a050,0x8a5a2a,0xa86a2a]},
+  havas:{fl:0x6a5a4a,wood:0x6a4a2e,dark:0x3a2a1a,wall:[0xd8d0c4,0xc8beb0,0xe0d8cc],cloth:[0x8a2a2a,0x2a4a6a,0x5a5a6a,0xe8e8f0],rug:[0xe8e4dc,0xd8d0c0,0x9a8a7a],lamp:0xffa860},
+  kikoto:{fl:0x7a6a58,wood:0x6a5038,dark:0x3a3020,wall:[0xc8bca8,0xb8b0a0,0xd0c4ac],cloth:[0x2a4a7a,0xe8e0d0,0xa83a2a,0x3a6a6a],rug:[0x2a4a6a,0x6a5a3a,0x8a3a2a]},
+  sivatag:{fl:0xc8a878,wood:0x9a7048,dark:0x7a5a38,wall:[0xe8d0a8,0xf0dcb8,0xe0c494],cloth:[0xc84a2a,0xe0a030,0x3a6a9a,0x8a2a5a],rug:[0xa83a2a,0xd89030,0x2a5a8a],lamp:0xffc070},
+  vadasz:{fl:0x6a4a2e,wood:0x6a4a2a,dark:0x3a2a1a,wall:[0xb89a70,0xa88a60,0xc0a478],cloth:[0x5a7a3a,0x8a5a2a,0x6a3a1a,0x3a5a3a],rug:[0x8a6a4a,0x6a4a2a,0xa8885a]},
+  tonk:{fl:0x6a5030,wood:0x8a6a3a,dark:0x4a3a1a,wall:[0xc8b488,0xb8a478,0xd0bc90],cloth:[0x6aaa4a,0xd8c060,0xa86ad8,0x4a8ac8],rug:[0x5a8a3a,0x8aa040,0x6a5aa8],lamp:0xb0ffb0},
+  mocsar:{fl:0x3e3428,wood:0x4a3a28,dark:0x2a2018,wall:[0x6a6048,0x5a5440,0x726850],cloth:[0x4a5a3a,0x6a4a5a,0x5a5a30,0x3a4a4a],rug:[0x3a4a2a,0x5a4a3a,0x4a3a4a],lamp:0xd0ff90},
+  aldarin:{fl:0xd8ccb8,wood:0x8a6a4a,dark:0x5a4030,wall:[0xf4f0e8,0xece4d8,0xf0ece4],cloth:[0x3a6ab0,0xe8e0d0,0xb4553a,0xd8b040],rug:[0x3a6ab0,0xb4553a,0xd8b040],lamp:0xfff0c0}};
+HTHEME.aldarin2=HTHEME.aldarin;
+const HRES={varrock:[['Polgár','Háziasszony','Öreg bácsi','Varrónő'],['Szép napot, kalandor!','Kopogni illik!','A szomszéd megint hangoskodott.','Teát? Sajnos épp elfogyott.']],
+  nadfa:[['Falusi','Banánszedő','Halászné','Nagyanyó'],['Banánt? Van bőven!','A vulkán ma is morog.','Ne hozd be a homokot!','Esőre áll az idő, érzem a térdemben.']],
+  havas:[['Törpe','Favágó','Prémvadász','Kovácsné'],['Brr, csukd be az ajtót!','A kandalló a legjobb barát télen.','Láttál jetit? Én kettőt.','Forró leves? A fazékban van.']],
+  kikoto:[['Halász','Matróz','Révészné','Öreg tengerész'],['Hal szaga van? Az az otthon illata.','A háló megint szakadt.','Holnap kifutunk, ha a szél engedi.','Ezt a horgonyt a nagyapám hozta.']],
+  sivatag:[['Karavános','Takácsnő','Vízhordó','Datolyaárus'],['Az árnyék drágább az aranynál.','Ezt a szőnyeget három hónapig szőttem.','Vizet hoztál? Az a legjobb ajándék.','A homokvihar mindent betemet.']],
+  vadasz:[['Vadász','Szűcs','Íjkészítő','Erdőjáró'],['A legjobb bőröket én cserzem.','Csendben járj az erdőben.','Ma nyúl lesz vacsorára.','Ezt az agancsot magam szereztem.']],
+  tonk:[['Gnóm','Tündelány','Gyógyfüves','Gombász'],['Vigyázz, ne lépj a gombámra!','A fák mesélnek, ha figyelsz.','Ez a főzet még nem kész.','Itt minden nő, ha hagyod.']],
+  mocsar:[['Mocsárlakó','Javasasszony','Békavadász','Öreg révész'],['Ne igyál a mocsárvízből.','A ködben néha hangokat hallok.','Békacombot? Friss!','A lidércfény sosem vezet jó helyre.']],
+  aldarin:[['Felhőlakó','Csillagász','Tudós','Írnok'],['Innen fentről minden kicsi.','A teleszkópom a holdat figyeli.','A felhők sosem ugyanolyanok.','Csendet kérek, számolok.']]};
+// bútor-készletek: minden tárgy saját keretben (eleje +z, a bejárat felé), a padló y=0
+const HITEM=(()=>{const gl=c=>new THREE.MeshBasicMaterial({color:new THREE.Color(c).convertSRGBToLinear()}),cy=(o,r0,r1,h,c,x,y,z,s=10)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,h,s),typeof c==='number'?HMAT(c):c);m.position.set(x,y,z);o.add(m);return m},
+    sph=(o,r,c,x,y,z,sx=1,sy=1,sz=1)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,7,5),typeof c==='number'?HMAT(c):c);m.scale.set(sx,sy,sz);m.position.set(x,y,z);o.add(m);return m};
+  const base={
+    bed:(B,Z,Rn,o)=>{B(1.1,0.35,2.0,Z.wood,0,0.25,0,0,o);B(1.0,0.18,1.9,0xf0ece0,0,0.5,0,0,o);B(1.02,0.2,1.3,Z.cloth[(Rn()*Z.cloth.length)|0],0,0.55,0.3,0,o);B(0.6,0.14,0.35,0xffffff,0,0.64,-0.72,0,o);B(1.1,0.9,0.1,Z.dark,0,0.55,-1.0,0,o)},
+    store:(B,Z,Rn,o)=>{B(0.9,0.55,0.55,Z.wood,0,0.3,0,0,o);B(0.92,0.08,0.57,0xd0a030,0,0.45,0,0,o);B(0.12,0.16,0.05,0xd0a030,0,0.36,0.28,0,o)},
+    wall:(B,Z,Rn,o)=>{B(1.2,1.6,0.4,Z.wood,0,0.8,0,0,o);for(const yy of[0.55,1.05,1.5])B(1.1,0.05,0.36,Z.dark,0,yy,0.02,0,o);for(let k=0;k<4;k++){const c=Z.cloth[k%Z.cloth.length];cy(o,0.08,0.09,0.2,c,-0.4+k*0.27,1.18,0.05,8)}for(let k=0;k<3;k++){const p=cy(o,0.16,0.16,0.03,0xe8e0d0,-0.3+k*0.3,1.72,0.1,10);p.rotation.x=Math.PI/2}},
+    hearth:(B,Z,Rn,o)=>{B(1.7,1.5,0.6,0x8a847a,0,0.75,0,0,o);B(1.0,0.75,0.12,0x140a04,0,0.5,0.25,0,o);B(1.9,0.12,0.75,Z.dark,0,1.55,0.05,0,o);B(1.2,1.1,0.45,0x7a746a,0,2.15,-0.05,0,o);const f=new THREE.Mesh(new THREE.ConeGeometry(0.26,0.5,6),gl(0xff8a20));f.position.set(0,0.4,0.2);o.add(f);cy(o,0.2,0.16,0.26,0x2a2a2e,0.2,0.62,0.18,10)},
+    table:(B,Z,Rn,o)=>{B(1.3,0.08,0.9,Z.wood,0,0.8,0,0,o);for(const [a,b] of[[-1,-1],[1,-1],[-1,1],[1,1]])B(0.08,0.76,0.08,Z.dark,a*0.55,0.4,b*0.35,0,o);for(const e of[-1,1]){cy(o,0.2,0.18,0.08,Z.wood,e*0.95,0.46,0,8);cy(o,0.05,0.05,0.42,Z.dark,e*0.95,0.21,0,5)}B(0.3,0.14,0.18,0xc8903a,-0.25,0.92,0,0,o);cy(o,0.13,0.09,0.08,0xe8e0d0,0.3,0.88,0.05,10)},
+    craft:(B,Z,Rn,o)=>{B(2.0,0.1,0.8,Z.wood,0,0.88,0,0,o);for(const e of[-1,1])B(0.1,0.83,0.7,Z.dark,e*0.9,0.42,0,0,o);B(0.5,0.02,0.15,0xc8c8d0,-0.4,0.95,0.1,0.3,o);B(0.07,0.06,0.35,0x6a4a2a,0.3,0.95,0.15,0,o);B(0.15,0.1,0.1,0x5a5a62,0.3,0.97,0.0,0,o);B(1.8,0.08,0.08,Z.dark,0,1.9,-0.36,0,o);for(let k=0;k<4;k++)B(0.15,0.35,0.04,[0x8a8a90,0x6a4a2a,0xc8c8d0][k%3],-0.6+k*0.4,1.65,-0.34,0,o)},
+    special:(B,Z,Rn,o)=>{const sx=-0.05;B(0.6,0.6,0.6,Z.wood,sx,0.3,0,0,o);sph(o,0.25,0x3a6a9a,sx,0.85,0);B(0.4,0.08,0.4,0xd0a030,sx,0.62,0,0,o)},
+    light:(B,Z,Rn,o,onTable)=>{const y=onTable?0.0:0.0;B(0.45,0.6,0.45,Z.dark,0,0.3,0,0,o);cy(o,0.05,0.05,0.18,0xf0e8d0,0,0.69,0,6);const f=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.1,5),gl(0xffc040));f.position.set(0,0.83,0);o.add(f)},
+    rug:(B,Z,Rn,o,w,d)=>{const c=Z.rug[(Rn()*Z.rug.length)|0];B(w,0.02,d,c,0,0.03,0,0,o);B(w-0.3,0.025,d-0.3,shade(c,1.35),0,0.035,0,0,o);B(w-0.6,0.03,d-0.6,c,0,0.04,0,0,o)}};
+  const T={varrock:base,aldarin:Object.assign({},base,{special:(B,Z,Rn,o)=>{for(let k=0;k<3;k++){const l=B(0.04,1.3,0.04,0x6a4a2a,0,0.6,0,0,o);l.rotation.z=(k-1)*0.35;l.rotation.x=(k===1?0.35:-0.18)}const tb=cy(o,0.09,0.12,1.0,0xd8b040,0,1.35,0.15,10);tb.rotation.x=-1.0;cy(o,0.1,0.1,0.06,0x6a8ac8,0,1.62,0.55,10).rotation.x=-1.0},
+      wall:(B,Z,Rn,o)=>{B(1.3,2.0,0.4,Z.wood,0,1.0,0,0,o);for(const yy of[0.45,0.95,1.45])B(1.2,0.05,0.36,Z.dark,0,yy,0.02,0,o);for(const yy of[0.5,1.0,1.5])for(let k=0;k<6;k++)B(0.13,0.36,0.26,[0x3a6ab0,0xb4553a,0xd8b040,0x3a5a2a,0x6a1a1a][(k+yy*4|0)%5],-0.45+k*0.18,yy+0.2,0.04,0,o)}})};
+  T.nadfa=Object.assign({},base,{store:(B,Z,Rn,o)=>{cy(o,0.32,0.36,0.85,0x7a4a24,0,0.43,0,12);for(let k=0;k<5;k++){const b=sph(o,0.08,0xf0d040,-0.12+(k%3)*0.12,0.95,(k>2?0.08:-0.05),1,2.4,1);b.rotation.z=0.4}},
+    wall:(B,Z,Rn,o)=>{B(1.4,1.0,0.04,0xc8a050,0,1.4,0,0,o);for(let k=0;k<6;k++)B(1.4,0.05,0.05,0x8a6a2a,0,0.95+k*0.18,0.02,0,o);B(0.4,0.55,0.08,0xa84a2a,-0.75,1.6,0.06,0,o);B(0.3,0.08,0.09,0x111111,-0.75,1.66,0.1,0,o)},
+    hearth:(B,Z,Rn,o)=>{for(let k=0;k<8;k++){const a=k/8*6.283;sph(o,0.14,0x6a6a6a,Math.cos(a)*0.45,0.1,Math.sin(a)*0.45)}const f=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.5,6),gl(0xff8a20));f.position.set(0,0.3,0);o.add(f);for(const e of[-1,1]){const st=B(0.05,1.1,0.05,Z.dark,e*0.5,0.55,0,0,o);st.rotation.z=-e*0.25}B(1.1,0.05,0.05,Z.dark,0,1.05,0,0,o);cy(o,0.18,0.14,0.25,0x2a2a2e,0,0.75,0,10)}});
+  T.havas=Object.assign({},base,{bed:(B,Z,Rn,o)=>{base.bed(B,Z,Rn,o);B(1.2,0.08,1.5,0xe8e4dc,0,0.66,0.25,0.06,o);B(0.4,0.1,0.3,0xd8d0c0,0.5,0.68,0.9,0.4,o)},
+    wall:(B,Z,Rn,o)=>{B(1.6,0.2,0.2,Z.dark,0,1.9,0,0,o);for(const e of[-1,1]){const a=B(0.06,0.6,0.06,0xe8dcc0,e*0.25,2.15,0.05,0,o);a.rotation.z=e*0.6;const a2=B(0.05,0.35,0.05,0xe8dcc0,e*0.42,2.35,0.05,0,o);a2.rotation.z=e*0.2}for(let k=0;k<2;k++){const sk=B(0.12,1.8,0.05,0xa83a2a,-0.55+k*0.25,0.9,0.05,0,o);sk.rotation.z=0.08}
+      for(let i=0;i<8;i++){const l=cy(o,0.11,0.11,0.6,0x6a4a2a,0.25+(i%3)*0.2,0.12+((i/3)|0)*0.2,0.1,7);l.rotation.x=Math.PI/2}},
+    special:(B,Z,Rn,o)=>{cy(o,0.3,0.35,0.6,0x5a3a20,0,0.3,0,10);B(0.7,0.2,0.3,0x3a3a40,0,0.7,0,0,o);const hr=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.4,6),HMAT(0x3a3a40));hr.rotation.z=Math.PI/2;hr.position.set(0.5,0.7,0);o.add(hr);B(0.05,0.05,0.45,0x6a4a2a,-0.15,0.85,0.1,0.5,o)},
+    rug:(B,Z,Rn,o,w,d)=>{const r=sph(o,0.5,0xe8e4dc,0,0.03,0,w*0.9,0.04,d*0.9);sph(o,0.12,0xe0d8cc,w*0.45,0.05,0.1,1,0.4,1.4)}});
+  T.kikoto=Object.assign({},base,{bed:(B,Z,Rn,o)=>{for(const e of[-1,1]){B(0.1,1.6,0.1,Z.dark,0,0.8,e*1.0,0,o)}const hm=B(0.8,0.05,1.8,0xe8e0d0,0,0.9,0,0,o);hm.rotation.x=0.0;for(let k=0;k<4;k++)B(0.82,0.06,0.12,0x2a4a7a,0,0.92,-0.75+k*0.5,0,o);B(0.6,0.12,0.3,0xffffff,0,0.98,-0.65,0,o)},
+    store:(B,Z,Rn,o)=>{cy(o,0.35,0.4,0.9,0x7a4a24,0,0.45,0,12);B(0.8,0.06,0.06,0x3a3a3a,0,0.3,0.36,0,o);B(0.8,0.06,0.06,0x3a3a3a,0,0.7,0.36,0,o);for(let k=0;k<3;k++){const f=sph(o,0.07,0x8aa0b0,-0.12+k*0.12,0.95,0,1,0.5,2.5);f.rotation.y=k}},
+    wall:(B,Z,Rn,o)=>{B(1.6,1.3,0.03,0x5a6a5a,0,1.5,0,0,o);for(let k=0;k<7;k++)B(0.02,1.3,0.04,0x3a4a3a,-0.7+k*0.23,1.5,0.02,0,o);for(let k=0;k<5;k++)B(1.6,0.02,0.04,0x3a4a3a,0,1.0+k*0.25,0.02,0,o);for(let k=0;k<3;k++)sph(o,0.07,0xe8c040,-0.5+k*0.5,0.95,0.05);
+      const wh=new THREE.Mesh(new THREE.TorusGeometry(0.35,0.04,4,14),HMAT(0x6a4a2a));wh.position.set(0.95,1.4,0.05);o.add(wh);for(let k=0;k<4;k++){const sp=B(0.82,0.04,0.04,0x6a4a2a,0.95,1.4,0.05,0,o);sp.rotation.z=k*Math.PI/4}},
+    hearth:(B,Z,Rn,o)=>{cy(o,0.4,0.42,0.9,0x2a2a2e,0,0.45,0,12);B(0.3,0.25,0.06,gl(0xff8a20),0,0.35,0.4,0,o);cy(o,0.08,0.08,2.0,0x2a2a2e,0,1.9,-0.1,6);cy(o,0.18,0.14,0.2,0x3a3a3e,0,1.0,0,10)},
+    special:(B,Z,Rn,o)=>{B(0.12,1.1,0.12,0x3a3a40,0,0.65,0,0,o);B(0.9,0.12,0.12,0x3a3a40,0,1.1,0,0,o);const ar=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.07,5,12,Math.PI),HMAT(0x3a3a40));ar.rotation.z=Math.PI;ar.position.y=0.55;o.add(ar);const rg=new THREE.Mesh(new THREE.TorusGeometry(0.15,0.04,4,10),HMAT(0x3a3a40));rg.position.y=1.3;o.add(rg)},
+    light:(B,Z,Rn,o)=>{B(0.5,0.6,0.5,Z.dark,0,0.3,0,0,o);B(0.22,0.3,0.22,0x3a3a3a,0,0.75,0,0,o);B(0.16,0.22,0.16,gl(0xffd070),0,0.75,0,0,o)}});
+  T.sivatag=Object.assign({},base,{bed:(B,Z,Rn,o)=>{B(1.2,0.2,2.0,Z.cloth[(Rn()*4)|0],0,0.1,0,0,o);B(1.22,0.05,2.02,0xd8b040,0,0.2,0,0,o);for(let k=0;k<3;k++)sph(o,0.22,Z.cloth[k],-0.35+k*0.35,0.32,-0.75,1,0.6,0.8)},
+    store:(B,Z,Rn,o)=>{for(let k=0;k<3;k++){cy(o,0.18+k*0.03,0.12,0.5+k*0.15,0xb86a3a,-0.35+k*0.35,0.25+k*0.07,0,10);cy(o,0.08,0.1,0.12,0xb86a3a,-0.35+k*0.35,0.56+k*0.15,0,8)}},
+    wall:(B,Z,Rn,o)=>{B(1.5,1.8,0.04,0xa83a2a,0,1.2,0,0,o);B(1.2,1.5,0.045,0xd89030,0,1.2,0,0,o);B(0.8,1.0,0.05,0x2a5a8a,0,1.2,0,0,o);for(let k=0;k<6;k++)B(0.05,0.2,0.05,0xd8b040,-0.65+k*0.26,0.22,0.03,0,o)},
+    hearth:(B,Z,Rn,o)=>{sph(o,0.65,0xc88a5a,0,0.0,0,1,1.0,1);B(0.45,0.35,0.15,0x1a0a04,0,0.2,0.55,0,o);B(0.3,0.2,0.12,gl(0xff8a20),0,0.15,0.55,0,o);cy(o,0.1,0.12,0.5,0xb87a4a,0,0.85,-0.1,8)},
+    table:(B,Z,Rn,o)=>{cy(o,0.6,0.6,0.08,0x9a7048,0,0.42,0,14);cy(o,0.15,0.2,0.38,Z.dark,0,0.19,0,8);for(let k=0;k<4;k++){const a=k*Math.PI/2+0.4;sph(o,0.28,Z.cloth[k%4],Math.cos(a)*0.95,0.12,Math.sin(a)*0.95,1,0.4,1)}cy(o,0.06,0.1,0.25,0xd8b040,0.1,0.58,0,8);cy(o,0.12,0.12,0.04,0xd8b040,-0.2,0.48,0.1,10)},
+    special:(B,Z,Rn,o)=>{for(const e of[-1,1])B(0.08,1.4,0.08,Z.dark,e*0.5,0.7,0,0,o);B(1.1,0.08,0.08,Z.dark,0,1.38,0,0,o);B(1.1,0.08,0.08,Z.dark,0,0.3,0,0,o);for(let k=0;k<8;k++)B(0.05,1.0,0.02,Z.cloth[k%4],-0.4+k*0.115,0.85,0,0,o)},
+    light:(B,Z,Rn,o)=>{cy(o,0.15,0.18,0.15,0xd8b040,0,0.08,0,8);const f=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.12,5),gl(0xffc040));f.position.set(0.12,0.22,0);o.add(f)},
+    rug:(B,Z,Rn,o,w,d)=>{base.rug(B,Z,Rn,o,w,d);for(let k=0;k<5;k++)B(0.06,0.01,d,0xd8b040,-w/2+0.15+k*(w-0.3)/4,0.045,0,0,o)}});
+  T.vadasz=Object.assign({},base,{bed:(B,Z,Rn,o)=>{base.bed(B,Z,Rn,o);B(1.15,0.06,1.4,0x8a6a4a,0,0.66,0.25,0.1,o)},
+    wall:(B,Z,Rn,o)=>{const bw=new THREE.Mesh(new THREE.TorusGeometry(0.6,0.035,4,14,Math.PI),HMAT(0x6a4a2a));bw.rotation.z=-Math.PI/2;bw.position.set(-0.4,1.5,0.05);o.add(bw);B(0.015,1.2,0.015,0xe8e0d0,-0.4,1.5,0.05,0,o);
+      const pel=B(0.9,1.1,0.03,0x8a6a4a,0.45,1.4,0.02,0,o);for(const e of[-1,1]){const l=B(0.12,0.4,0.03,0x8a6a4a,0.45+e*0.48,1.75,0.02,0,o);l.rotation.z=e*0.6}B(0.3,0.2,0.04,0x6a4a2a,0.45,2.0,0.03,0,o)},
+    special:(B,Z,Rn,o)=>{for(const e of[-1,1])B(0.08,1.5,0.08,Z.dark,e*0.6,0.75,0,0,o);B(1.3,0.08,0.08,Z.dark,0,1.5,0,0,o);B(1.0,1.1,0.03,0xa8885a,0,0.95,0,0,o);for(let k=0;k<6;k++){const s=SX2.seg(o,[-0.5+k*0.2,1.5,0],[-0.5+k*0.2,1.45,0],0.01,0xc8b080,3)}},
+    rug:(B,Z,Rn,o,w,d)=>{const r=B(w*0.75,0.03,d*0.85,0x8a6a4a,0,0.03,0,0.1,o);for(const [a,b] of[[-1,-1],[1,-1],[-1,1],[1,1]]){const l=B(0.18,0.03,0.45,0x8a6a4a,a*w*0.42,0.03,b*d*0.42,a*b*0.5,o)}B(0.35,0.035,0.3,0x6a4a2a,0,0.035,-d*0.5,0,o)}});
+  T.tonk=Object.assign({},base,{bed:(B,Z,Rn,o)=>{B(1.1,0.3,2.0,0x6a5030,0,0.15,0,0,o);sph(o,0.55,0x5a9a3a,0,0.35,0.15,1,0.35,1.7);sph(o,0.3,0x7aba5a,0,0.42,-0.7,1,0.4,0.7);for(let k=0;k<3;k++)sph(o,0.06,[0xe04050,0xf0d040,0xa86ad8][k],-0.3+k*0.3,0.55,0.3+k*0.2)},
+    table:(B,Z,Rn,o)=>{cy(o,0.55,0.6,0.75,0x6a5030,0,0.38,0,12);cy(o,0.58,0.58,0.06,0x8a6a3a,0,0.78,0,12);for(const e of[-1,1])cy(o,0.25,0.28,0.45,0x6a5030,e*1.0,0.23,0,10);sph(o,0.12,0xd84a3a,0.2,0.85,0);cy(o,0.02,0.02,0.1,0xf0f0f0,0.2,0.8,0,4)},
+    hearth:(B,Z,Rn,o)=>{for(let k=0;k<5;k++){const m=sph(o,0.18+k*0.04,gl([0x90ffb0,0xb0ffc0,0x80e0ff][k%3]),-0.6+k*0.3,0.25+(k%2)*0.2,0,1,0.6,1);cy(o,0.04,0.05,0.25+(k%2)*0.2,0xe8e0c8,-0.6+k*0.3,0.12,0,5)}},
+    wall:(B,Z,Rn,o)=>{for(let k=0;k<7;k++){const v=B(0.06,1.4+(k%3)*0.3,0.04,0x3a7a2a,-0.75+k*0.25,1.6,0.02,0,o);v.rotation.z=(k%2-0.5)*0.15;for(let j=0;j<3;j++)sph(o,0.07,0x5aaa3a,-0.75+k*0.25,1.2+j*0.4,0.05,1,1,0.4)}},
+    special:(B,Z,Rn,o)=>{B(0.9,0.08,0.6,Z.wood,0,0.75,0,0,o);for(const [a,b] of[[-1,-1],[1,-1],[-1,1],[1,1]])B(0.06,0.72,0.06,Z.dark,a*0.38,0.36,b*0.24,0,o);for(let k=0;k<5;k++){cy(o,0.06,0.08,0.2,[0xd83a3a,0x3a8ad8,0x3ad85a,0xe0c040,0xb050d8][k],-0.3+k*0.15,0.89,0,8)}},
+    light:(B,Z,Rn,o)=>{cy(o,0.18,0.15,0.3,0x8a5a2a,0,0.15,0,8);for(let k=0;k<3;k++){sph(o,0.12,gl(0x90ffb0),-0.08+k*0.08,0.4+k*0.08,0,1,0.5,1);cy(o,0.02,0.03,0.12,0xe8e0c8,-0.08+k*0.08,0.32+k*0.08,0,4)}}});
+  T.mocsar=Object.assign({},base,{bed:(B,Z,Rn,o)=>{B(1.1,0.18,1.9,0xb8a048,0,0.09,0,0,o);B(1.0,0.06,1.2,0x4a5a3a,0,0.2,0.3,0.08,o)},
+    hearth:(B,Z,Rn,o)=>{for(let k=0;k<6;k++){const a=k/6*6.283;sph(o,0.14,0x4a4a44,Math.cos(a)*0.45,0.1,Math.sin(a)*0.45)}cy(o,0.42,0.32,0.55,0x2a2a2e,0,0.42,0,12);cy(o,0.38,0.38,0.04,gl(0x80e050),0,0.68,0,12);const f=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.3,6),gl(0xff8a20));f.position.set(0,0.12,0);o.add(f)},
+    wall:(B,Z,Rn,o)=>{B(1.4,0.06,0.06,Z.dark,0,2.0,0.05,0,o);for(let k=0;k<6;k++){const hb=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.45,5),HMAT([0x5a7a3a,0x7a8a40,0x6a5a3a][k%3]));hb.rotation.x=Math.PI;hb.position.set(-0.6+k*0.24,1.7,0.05);o.add(hb)}B(1.2,0.05,0.3,Z.wood,0,1.1,0.05,0,o);for(let k=0;k<2;k++){sph(o,0.12,0xe8e0c8,-0.3+k*0.6,1.25,0.05,1,0.9,1);B(0.08,0.06,0.02,0x111111,-0.33+k*0.6,1.27,0.15,0,o)}cy(o,0.07,0.07,0.18,gl(0xa0ff70),0,1.22,0.05,8)},
+    store:(B,Z,Rn,o)=>{for(let k=0;k<4;k++)cy(o,0.1+(k%2)*0.04,0.12,0.25+(k%3)*0.1,[0x5a6a4a,0x6a5a3a,0x4a4a3a][k%3],-0.3+k*0.2,0.15,0,8)},
+    light:(B,Z,Rn,o)=>{B(0.4,0.5,0.4,Z.dark,0,0.25,0,0,o);cy(o,0.1,0.1,0.22,gl(0xa0ff70),0,0.62,0,8)}});
+  T.aldarin2=T.aldarin;return T})();
 const _hv=new THREE.Vector3();
 function housesStep(){if(!HOUSES_IN)return;const zn=zoneOf(px);for(const I of HOUSES_IN){if(I.zone!==zn){if(I.inn){I.inn=false;I.h.visible=true;if(I.shell)I.shell.visible=false}continue}
+    if(!I.shell&&Math.abs(px-I.wx)<I.R+10&&Math.abs(pz-I.wz)<I.R+10){I.shell=houseShell(I);I.shell.visible=false}
     if(Math.abs(px-I.wx)>I.R+2||Math.abs(pz-I.wz)>I.R+2){if(I.inn){I.inn=false;I.h.visible=true;if(I.shell)I.shell.visible=false}continue}
     _hv.set(px,I.h.position.y,pz).applyMatrix4(I.inv);const inn=I.rooms.some(r=>_hv.x>r.x0+0.1&&_hv.x<r.x1-0.1&&_hv.z>r.z0+0.1&&_hv.z<r.z1-0.1);
     if(inn!==I.inn){I.inn=inn;if(inn&&!I.shell)I.shell=houseShell(I);I.h.visible=!inn;I.shell.visible=inn}}}
@@ -6115,8 +6234,16 @@ function colRegisterAll(){const t0=performance.now();let n=0;if(COL_PENDING)for(
   for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;if(!gLands[zn][k])continue;const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;if(cellBlocked(x,z))gLands[zn][k]=0}
   COL_STAT={rects:COLR?COLR.length:0,enter:nIn,ms:Math.round(performance.now()-t0)};return COL_STAT}
 var COL_STAT=null;
+var HFOOT=null;
+function hfootBuild(){HFOOT=new Map();const v=new THREE.Vector3(),add=(x,z,R,test)=>{for(let i=Math.floor((x-R)/16);i<=Math.floor((x+R)/16);i++)for(let j=Math.floor((z-R)/16);j<=Math.floor((z+R)/16);j++){const k=i*100003+j;let L=HFOOT.get(k);if(!L)HFOOT.set(k,L=[]);L.push(test)}};
+  for(const I of HOUSES_IN||[])add(I.wx,I.wz,I.R+1,(x,z)=>{v.set(x,0,z).applyMatrix4(I.inv);return I.rooms.some(r=>v.x>r.x0-0.3&&v.x<r.x1+0.3&&v.z>r.z0-0.3&&v.z<r.z1+0.3)});
+  for(const I of INTERIORS||[])add(I.x,I.z,Math.hypot(I.hw,I.hd)+1,(x,z)=>{const dx=x-I.x,dz=z-I.z,lx=dx*I.c-dz*I.s,lz=dx*I.s+dz*I.c;return Math.abs(lx)<I.hw+0.3&&Math.abs(lz)<I.hd+0.3})}
+function inHouseFoot(x,z){if(!HFOOT)return false;const L=HFOOT.get(Math.floor(x/16)*100003+Math.floor(z/16));return !!L&&L.some(f=>f(x,z))}
+const _hm=new THREE.Matrix4(),_hp=new THREE.Vector3(),_hz=new THREE.Matrix4().makeScale(0,0,0);
+function hideInHouses(im){if(!HFOOT||!im)return;let ch=false;const n=Math.max(im.userData.full||0,im.count);for(let i=0;i<n;i++){im.getMatrixAt(i,_hm);_hp.setFromMatrixPosition(_hm);if(inHouseFoot(_hp.x,_hp.z)){im.setMatrixAt(i,_hz);ch=true}}if(ch)im.instanceMatrix.needsUpdate=true}
 function cellBlocked(x,z){for(const a of[-1.3,0,1.3])for(const b of[-1.3,0,1.3])if(colHit(x+a,z+b,0.7))return true;return false}
 colRegisterAll();
+hfootBuild();scene.traverse(o=>{if(o.isInstancedMesh&&(o.userData.decor||o.userData.hideIn))hideInHouses(o)});
 const MERGE_STAT=kMergeWorld();
 // ---------- NYÍLT TENGER (13. zóna): valódi hajózás a szigetek kicsinyített mása között ----------
 // Közös világföldrajz (WGEO): a szigetek helye egy közös óceánon (tengeri koordináták, OX körül). Ugyanebből készül a
@@ -6236,7 +6363,7 @@ function occSet(o,on,op){const u=o.userData;
   for(const [m,orig,c] of u.occM){if(m.material!==c)m.material=c;c.opacity=op*(orig.opacity==null?1:orig.opacity);c.depthWrite=op>0.95}}
 function occFaded(m){for(let p=m;p;p=p.parent)if(p.userData&&p.userData.occF>0.4)return true;return false}
 function updateOcclusion(dt){const z=zoneOf(px);OCC.t+=dt;if(z!==OCC.zone||OCC.t>1){OCC.zone=z;OCC.t=0;OCC.list=occCandidates(z)}
-  const cam=camera.position,tgt=OCC.tgt.set(px,Math.max(height(px,pz),0.3)+1.2,pz),dir=OCC.dir.copy(tgt).sub(cam);const L=dir.length();dir.normalize();OCC.ray.set(cam,dir);
+  const cam=camera.position,tgt=OCC.tgt.set(px,player.position.y+1.2,pz),dir=OCC.dir.copy(tgt).sub(cam);const L=dir.length();dir.normalize();OCC.ray.set(cam,dir);
   const hit=OCC.hit;hit.clear();
   for(const o of OCC.list){if(!o.visible)continue;OCC.box.copy(o.userData.occB).expandByScalar(0.2);
     if(OCC.box.containsPoint(cam)){hit.add(o);continue}const p=OCC.ray.intersectBox(OCC.box,OCC.v);if(p&&cam.distanceTo(p)<L-0.6)hit.add(o)}
@@ -6315,7 +6442,7 @@ const CL_PROF={0:CL_GREEN,1:CL_GREEN,4:CL_GREEN,6:CL_GREEN,7:CL_GREEN,8:CL_GREEN
 const clOK={0:h=>h>1.6,1:h=>h>1.6,2:h=>h>1.8&&h<22,3:h=>h<5,4:h=>h>1.6,5:h=>h>1.8,6:h=>h>1.8,7:h=>h>1.6&&h<13,8:h=>h>1.6&&h<13,9:h=>h>1.6,10:h=>h>1.3&&h<13,11:h=>h>2};
 function clMat(k){return CLM[k]||mats[k]}
 function clInst(parent,geoK,matK,list,yo,full){if(!list.length)return;const im=new THREE.InstancedMesh(CLG[geoK],clMat(matK),list.length);const d=new THREE.Object3D();
-  list.forEach(([x,z,h,s,r,r2],i)=>{d.position.set(x,h+yo*s,z);d.rotation.set(full?r2:0,r,full?r2*0.7:0);d.scale.set(s,s,s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});im.frustumCulled=false;im.receiveShadow=true;parent.add(im)}
+  list.forEach(([x,z,h,s,r,r2],i)=>{d.position.set(x,h+yo*s,z);d.rotation.set(full?r2:0,r,full?r2*0.7:0);d.scale.set(s,s,s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});im.userData.hideIn=true;hideInHouses(im);im.frustumCulled=false;im.receiveShadow=true;parent.add(im)}
 // az ugyanabba a pontba eső dupla mintákat a stem/cap párhoz közös listából vesszük
 function clFill(parent,prof,n,pick){const pairs={};for(const [g,m,cnt,yo,[s0,s1],full,cl] of prof){const N=Math.round(cnt*n);let list;
     if(g==='cap'&&pairs.stem){list=pairs.stem.map(([x,z,h,s,r])=>[x,z,h,s,r,0])}else{list=[];for(let k=0;k<N*6&&list.length<N;k++){const p=pick();if(!p)continue;
