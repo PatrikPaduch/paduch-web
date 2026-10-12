@@ -711,8 +711,53 @@ function canopy(size,mat,y){
   return g;
 }
 const TREES={tolgy:{name:'Tölgy',log:'tolgyronk',lvl:15,xp:60,respawn:30000},nyir:{name:'Nyírfa',log:'nyirronk',lvl:10,xp:45,respawn:25000},juhar:{name:'Juharfa',log:'juharronk',lvl:25,xp:100,respawn:35000},fuz:{name:'Fűzfa',log:'fuzronk',lvl:30,xp:135,respawn:40000},tiszafa:{name:'Tiszafa',log:'tiszafaronk',lvl:45,xp:175,respawn:50000},baobab:{name:'Baobab',log:'baobabronk',lvl:35,xp:150,respawn:45000},magikus:{name:'Mágikus fa',log:'magikusronk',lvl:75,xp:250,respawn:80000},halott:{name:'Halott fa',log:'ronk',lvl:1,xp:25,respawn:20000}};
-function treeVar(x,z,kind){const T=TREES[kind];const g=new THREE.Group();let trunk;
-  if(kind==='tolgy'){trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.9,4.5,7),mats.trunk);trunk.position.y=2.25;g.add(trunk);g.add(canopy(8,mats.oakLeaf,3.5));for(let i=0;i<3;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.3,2.6,5),mats.trunk);b.position.set(Math.cos(i*2.1)*1,4.2,Math.sin(i*2.1)*1);b.rotation.z=Math.cos(i*2.1)*0.7;b.rotation.x=-Math.sin(i*2.1)*0.7;g.add(b)}}
+// új fa-modellek (a növény-katalógusból választva, v50): csúcsszínezett, élesen árnyalt gombócok, saját véletlen-sorozattal
+// (a világ rnd() sorozatát nem érintik). Fajtánként 3 sablon készül egyszer, a fák ezek klónjai: közös geometria és anyag.
+const TREEV=(()=>{let seed=1;const Rn=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  const lin=c=>new THREE.Color(c).convertSRGBToLinear(),MC={},flat=c=>MC[c]||(MC[c]=new THREE.MeshLambertMaterial({color:lin(c),flatShading:true}));
+  const vmat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),vmat2=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
+  function grad(g,cLo,cHi,y0,y1){const p=g.attributes.position,col=[];for(let i=0;i<p.count;i++){const c=lin(cLo).lerp(lin(cHi),clamp((p.getY(i)-y0)/(y1-y0||1),0,1));col.push(c.r,c.g,c.b)}g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g}
+  function blob(r,cLo,cHi,sy=1,det=1){const g=new THREE.IcosahedronGeometry(r,det),p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+(Rn()-0.5)*0.22;p.setXYZ(i,p.getX(i)*k,p.getY(i)*k*sy,p.getZ(i)*k)}return new THREE.Mesh(grad(g,cLo,cHi,-r*sy,r*sy),vmat)}
+  const at=(m,x,y,z)=>{m.position.set(x,y,z);return m};
+  const trunk=(g,r0,r1,h,c)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,h,7),flat(c));m.position.y=h/2;m.name='trunk';g.add(m);return m};
+  const limb=(g,y,a,len,r,c,tilt=0.9)=>{const b=new THREE.Mesh(new THREE.CylinderGeometry(r*0.55,r,len,5),flat(c));b.position.set(Math.cos(a)*len*0.4*Math.sin(tilt),y+len*0.45*Math.cos(tilt),Math.sin(a)*len*0.4*Math.sin(tilt));b.rotation.z=-Math.cos(a)*tilt;b.rotation.x=Math.sin(a)*tilt;g.add(b);
+    return[Math.cos(a)*len*Math.sin(tilt)*0.85,y+len*Math.cos(tilt)*0.9,Math.sin(a)*len*Math.sin(tilt)*0.85]};
+  const vine=(g,x,y,z,len,c=0x2e5a1e)=>{const v=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,len,3),flat(c));v.position.set(x,y-len/2,z);g.add(v);for(let i=0;i<3;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(0.12,4,3),flat(0x3a8a24));l.scale.set(1,0.4,1.6);l.position.set(x,y-len*(0.3+i*0.25),z+0.08);g.add(l)}};
+  // palacktörzs (baobab): alul vastag, középen hasas, felfelé elvékonyodik
+  const bottle=(r0,r1,h,cLo,cHi)=>{const pts=[];for(let i=0;i<=10;i++){const t=i/10;pts.push(new THREE.Vector2(r1+(r0-r1)*Math.pow(t,1.3)+Math.sin(t*Math.PI)*0.3,t*h))}const m=new THREE.Mesh(grad(new THREE.LatheGeometry(pts,12).toNonIndexed(),cLo,cHi,0,h),vmat);m.name='trunk';return m};
+  // bordás henger (kaktusz)
+  const rib=(r,h,n=16,k=0.82)=>{const geo=new THREE.CylinderGeometry(r,r*1.05,h,n,3),p=geo.attributes.position;for(let i=0;i<p.count;i++){const a=Math.atan2(p.getZ(i),p.getX(i)),f=(Math.round(a/(Math.PI*2)*n)%2)?k:1;p.setX(i,p.getX(i)*f);p.setZ(i,p.getZ(i)*f)}geo.computeVertexNormals();return geo};
+  const tier=(r0,r1,h,cLo,cHi,seg)=>new THREE.Mesh(grad(new THREE.CylinderGeometry(r0,r1,h,seg).toNonIndexed(),cLo,cHi,-h/2,h/2),vmat);
+  const B={
+    tolgy(g){trunk(g,0.55,0.85,4.2,0x6a4a2a);for(let i=0;i<3;i++)limb(g,3.2,i*2.1,2.2,0.3,0x6a4a2a);for(const [x,y,z,r] of [[0,6.2,0,2.6],[1.9,5.4,0.6,1.9],[-1.8,5.5,-0.4,2],[0.4,5.2,-1.9,1.8],[-0.6,5.3,1.8,1.8],[0.8,7.4,0.3,1.6]])g.add(at(blob(r,0x24501a,0x5a9a32,0.85),x,y,z))},
+    juhar(g){trunk(g,0.35,0.55,4,0x5a3e22);for(let i=0;i<2;i++)limb(g,3,i*3.1+0.5,1.8,0.22,0x5a3e22);for(const [x,y,z,r,a,b] of [[0,6,0,2.1,0x9a3a12,0xe88a2a],[1.3,5.3,0.4,1.5,0xa84a14,0xf0a030],[-1.2,5.2,-0.3,1.5,0x8a2a10,0xd8602a],[0.2,7.2,0.1,1.3,0xb85018,0xf8b840],[0.3,5.1,1.3,1.3,0x902e10,0xe0702a]])g.add(at(blob(r,a,b,0.95),x,y,z))},
+    tiszafa(g){trunk(g,0.75,1.15,3.2,0x5a3a20);for(const [y,r,sy] of [[3.6,3.4,0.5],[4.9,2.8,0.5],[6.0,2.1,0.55],[6.9,1.3,0.7]])g.add(at(blob(r,0x12280e,0x2e5a22,sy),0,y,0));for(let i=0;i<5;i++){const a=i*1.26;g.add(at(blob(1.3,0x12280e,0x2a5420,0.55),Math.cos(a)*2.4,3.9,Math.sin(a)*2.4))}},
+    magikus(g){trunk(g,0.4,0.65,4.4,0xb8b0c0);for(let i=0;i<3;i++)limb(g,3.4,i*2.1+0.3,1.9,0.22,0xb8b0c0);for(const [x,y,z,r] of [[0,6.3,0,2.2],[1.5,5.6,0.5,1.6],[-1.4,5.7,-0.4,1.6],[0.3,5.5,-1.5,1.5],[-0.3,5.5,1.5,1.5],[0.4,7.6,0.2,1.3]])g.add(at(blob(r,0x1a8a8a,0x8af0e8,0.9),x,y,z));
+      const sg=new THREE.OctahedronGeometry(0.12,0),m1=new THREE.MeshBasicMaterial({color:0xffffff}),m2=new THREE.MeshBasicMaterial({color:0xa0f8ff});for(let i=0;i<16;i++){const s=new THREE.Mesh(sg,i%2?m1:m2);s.position.set((Rn()-0.5)*5,4.5+Rn()*4,(Rn()-0.5)*5);g.add(s)}
+      const l=new THREE.PointLight(0x80f0e8,0.9,12);l.position.y=6;g.add(l)},
+    nyir(g){trunk(g,0.22,0.3,6,0xe8e8e0);for(let i=0;i<6;i++){const r=new THREE.Mesh(new THREE.BoxGeometry(0.46,0.1,0.1),flat(0x222222));r.position.set(0,0.8+i*0.9,0.24);r.rotation.y=i;g.add(r)}for(const [x,y,z,r] of [[0,6.2,0,1.5],[0.8,5.4,0.3,1.1],[-0.7,5.5,-0.2,1.1],[0,7.2,0,1]])g.add(at(blob(r,0x5a9a32,0xb8e070,1.1),x,y,z))},
+    fuz(g){trunk(g,0.55,0.9,4,0x5a4a32);const pos=[],col=[];for(let i=0;i<40;i++){const a=i/40*6.283+Rn()*0.1,r=2.2+Rn()*0.6,h=3+Rn()*1.5,x=Math.cos(a)*r,z=Math.sin(a)*r,w=0.18,c1=lin(0x8ac858),c2=lin(0x3e7a26);
+        for(const [q,c] of [[[x-w*Math.sin(a),5.2,z+w*Math.cos(a)],c1],[[x+w*Math.sin(a),5.2,z-w*Math.cos(a)],c1],[[x*1.08,5.2-h,z*1.08],c2]]){pos.push(...q);col.push(c.r,c.g,c.b)}}
+      const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));gg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));gg.computeVertexNormals();g.add(new THREE.Mesh(gg,vmat2));g.add(at(blob(2.4,0x4a8a2a,0x9ad060,0.45),0,5.4,0))},
+    halott(g){const t=trunk(g,0.28,0.6,4.5,0x2a2622);t.rotation.z=0.15;for(let i=0;i<5;i++){const e=limb(g,2.4+i*0.4,i*1.3,2.2,0.14,0x2a2622,1.1);vine(g,e[0],e[1],e[2],1+Rn(),0x5a6a3a)}},
+    baobab(g){g.add(bottle(0.8,2.0,6.2,0x6a5038,0xa88a6a));for(let i=0;i<7;i++){const a=i*0.9,e=limb(g,6,a,2.4+Rn(),0.3,0x9a7a5a,0.7+Rn()*0.4),l2=limb(g,e[1]-0.2,a+0.6,1.2,0.14,0x9a7a5a,0.6);g.add(at(blob(0.6,0x3a6a1a,0x7aa83a,0.6,0),e[0]+l2[0]*0.3,e[1]+0.3,e[2]+l2[2]*0.3))}},
+    dzsungel(g){trunk(g,0.42,0.7,7,0x5a4a2a);for(let i=0;i<4;i++){const r=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.6,4),flat(0x5a4a2a)),a=i*1.57;r.position.set(Math.cos(a)*0.55,0.6,Math.sin(a)*0.55);r.rotation.z=-Math.cos(a)*0.5;r.rotation.x=Math.sin(a)*0.5;g.add(r)}
+      for(const [y,r] of [[7.6,3],[8.4,2.1]])g.add(at(blob(r,0x1e5a14,0x4aa02a,0.35),0,y,0));for(let i=0;i<6;i++){const a=i*1.05;vine(g,Math.cos(a)*2.4,7.1,Math.sin(a)*2.4,2+Rn()*2)}},
+    fenyo(g){trunk(g,0.25,0.4,2,0x5a3e22);for(let i=0;i<7;i++){const c=tier(0.1,1.9-i*0.24,1.3,0x163a1a,0x2e5e2e,7);c.position.y=2+i*0.95;g.add(c);if(i%2===0){const sn=tier(0.05,(1.9-i*0.24)*0.6,0.25,0xe0e8f0,0xffffff,7);sn.position.y=2.4+i*0.95;g.add(sn)}}},
+    kaktusz(g){const m=flat(0x3a8a3a),b=new THREE.Mesh(rib(0.38,3.2),m);b.position.y=1.6;b.name='trunk';g.add(b);const cap=r=>new THREE.SphereGeometry(r,12,5,0,6.283,0,1.57),tp=new THREE.Mesh(cap(0.39),m);tp.position.y=3.2;g.add(tp);
+      for(const sx of[-1,1]){const k=sx>0,e=new THREE.Mesh(rib(0.22,0.7),m);e.rotation.z=Math.PI/2;e.position.set(sx*0.6,1.5+(k?0.4:0),0);g.add(e);const u=new THREE.Mesh(rib(0.22,1.1+(k?0.3:0)),m);u.position.set(sx*0.92,2.0+(k?0.55:0),0);g.add(u);const ut=new THREE.Mesh(cap(0.23),m);ut.position.set(sx*0.92,2.55+(k?0.7:0),0);g.add(ut)}}};
+  const cache={};
+  // a kontinens kitöltő fáinak lombja (példányosított háló): összevont gombócok, a tölgy és a tiszafa színeivel
+  function canGeo(dark){seed=dark?4242:2424;const pos=[],col=[];for(const [x,y,z,r] of [[0,2.2,0,2.2],[1.6,1.4,0.5,1.6],[-1.5,1.5,-0.4,1.7],[0.3,1.3,-1.6,1.5],[-0.5,1.4,1.5,1.5],[0.6,3.2,0.2,1.3]]){
+      const g=blob(r,dark?0x12280e:0x24501a,dark?0x2e5a22:0x5a9a32,dark?0.7:0.85).geometry.toNonIndexed(),P=g.attributes.position,C=g.attributes.color;for(let i=0;i<P.count;i++){pos.push(P.getX(i)+x,P.getY(i)+y,P.getZ(i)+z);col.push(C.getX(i),C.getY(i),C.getZ(i))}}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g}
+  return{vmat,canGeo,has:k=>!!B[k],
+    // v: 0..2 sablon; a hely alapján választ, ha nincs megadva
+    get(k,x,z){const R=kRng((Math.floor(x*7)*73856093)^(Math.floor(z*7)*19349663)),v=(R()*3)|0,key=k+v;if(!cache[key]){seed=(k.length*7919+v*104729+k.charCodeAt(0)*31)|0;const g=new THREE.Group();B[k](g);cache[key]=g}
+      const c=cache[key].clone();return{g:c,trunk:c.getObjectByName('trunk'),R}}}})();
+function treeVar(x,z,kind){const T=TREES[kind];let g=new THREE.Group();let trunk;
+  if(TREEV.has(kind)){const t=TREEV.get(kind,x,z);g=t.g;trunk=t.trunk}
+  else if(kind==='tolgy'){trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.9,4.5,7),mats.trunk);trunk.position.y=2.25;g.add(trunk);g.add(canopy(8,mats.oakLeaf,3.5));for(let i=0;i<3;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.3,2.6,5),mats.trunk);b.position.set(Math.cos(i*2.1)*1,4.2,Math.sin(i*2.1)*1);b.rotation.z=Math.cos(i*2.1)*0.7;b.rotation.x=-Math.sin(i*2.1)*0.7;g.add(b)}}
   else if(kind==='nyir'){trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.3,6,6),mats.birch);trunk.position.y=3;g.add(trunk);g.add(canopy(4.5,mats.birchLeaf,5));for(let i=0;i<4;i++){const r=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.12,0.1),M(0x222222));r.position.set(0,1+i*1.2,0.28);g.add(r)}}
   else if(kind==='juhar'){trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.6,4,6),mats.trunk);trunk.position.y=2;g.add(trunk);g.add(canopy(6.5,mats.mapleLeaf,3.2))}
   else if(kind==='fuz'){trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.8,4,6),mats.trunk);trunk.position.y=2;trunk.rotation.z=0.15;g.add(trunk);g.add(canopy(6,mats.willowLeaf,3.8));for(let i=0;i<6;i++){const a=i*1.05;const d=new THREE.Mesh(crossGeo(1.4,4.5,2),mats.willowLeaf);d.position.set(Math.cos(a)*2.8,2.6,Math.sin(a)*2.8);g.add(d)}}
@@ -727,10 +772,8 @@ function oreRock(x,z,kind){const O=ORES[kind];const m=new THREE.Mesh(new THREE.D
   interactables.push({mesh:m,type:'rock',name:O.name+'-ér',action:'Kibányászom',hit:m,skill:'mi',xp:O.xp,respawn:O.resp,ore:kind,lvl:O.lvl,mat:M(O.col),msg:O.msg})}
 function scatterZ(n,test,zx,fn,tries=4000){for(let i=0,k=0;i<n&&k<tries;k++){const x=(rnd()-0.5)*SIZE*0.9+zx,z=(rnd()-0.5)*SIZE*0.9;const h=height(x,z);if(test(x,z,h)){fn(x,z);i++}}}
 function jungleTree(x,z){
-  const g=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.75,5,7),mats.trunk);trunk.position.y=2.5;g.add(trunk);
-  for(let i=0;i<2;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.25,2.2,5),mats.trunk);b.position.set(i?0.8:-0.8,4.2,0.3);b.rotation.z=i?-0.7:0.7;g.add(b)}
-  g.add(canopy(6.5+rnd()*2,rnd()<0.4?mats.leafDark:mats.leaf,3.2));
+  rnd();rnd(); // a régi lombméret és lombszín véletlenszámai: a világ sorozata így változatlan marad
+  const {g,trunk}=TREEV.get('dzsungel',x,z);
   g.scale.setScalar(0.85+rnd()*0.5);g.rotation.y=rnd()*6.28;
   placeAt(g,x,z);shadowed(g);scene.add(g);
   interactables.push({mesh:g,type:'tree',name:'Dzsungelfa',action:'Kivágom',hit:trunk,skill:'wc',xp:40,respawn:30000});
@@ -954,8 +997,7 @@ campfire(ZX+6,12,true);
 // ---------- Zúzmara-fok (havas sziget) ----------
 const FX=2*ZX;const fl=x=>x-FX;
 mats.snowRoof=M(0xf0f4ff);mats.pine=M(0x2a5a30);mats.pine2=M(0x1f4a28);mats.ice=M(0xa0e0ff,{emissive:0x104060});
-function pineTree(x,z){const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.45,3,6),mats.trunk);trunk.position.y=1.5;g.add(trunk);
-  for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(2.4-i*0.6,2.6,7),i%2?mats.pine2:mats.pine);c.position.y=3+i*1.7;g.add(c);const sn=new THREE.Mesh(new THREE.ConeGeometry(2.4-i*0.6,0.5,7),mats.snowRoof);sn.position.y=4.1+i*1.7;g.add(sn)}
+function pineTree(x,z){const {g,trunk}=TREEV.get('fenyo',x,z);
   g.scale.setScalar(0.8+rnd()*0.6);g.rotation.y=rnd()*6.28;placeAt(g,x,z);shadowed(g);scene.add(g);
   interactables.push({mesh:g,type:'tree',name:'Fenyő',action:'Kivágom',hit:trunk,skill:'wc',xp:55,respawn:30000})}
 function iceRock(x,z){const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1.3,0),mats.ice);m.rotation.set(rnd()*3,rnd()*3,rnd()*3);m.scale.y=0.8;placeAt(m,x,z,0.4);shadowed(m);scene.add(m);
@@ -1137,7 +1179,7 @@ hiddenChest('kalozsziget',PX+96,-78,{coins:800,items:[['runa',20],['kapitanykard
 // ---------- Homokfok (sivatag) ----------
 const dl=x=>x-DX;
 mats.sandstone=M(0xd8b878);mats.sandstone2=M(0xc8a060);mats.cactus=M(0x3a8a3a);mats.mummy=M(0xd8ccb0);
-function cactus(x,z){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.35,2.6,7),mats.cactus);b.position.y=1.3;g.add(b);for(const sx of[-1,1]){const a=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.18,1,6),mats.cactus);a.position.set(sx*0.55,1.6,0);a.rotation.z=sx*1.3;g.add(a);const a2=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.8,6),mats.cactus);a2.position.set(sx*0.9,2.2,0);g.add(a2)}g.scale.setScalar(0.7+rnd()*0.6);placeAt(g,x,z);shadowed(g);scene.add(g)}
+function cactus(x,z){const {g,R}=TREEV.get('kaktusz',x,z);g.rotation.y=R()*6.28;g.scale.setScalar(0.6+rnd()*0.5);placeAt(g,x,z);shadowed(g);scene.add(g)}
 for(const [x,z,w,d,r] of[[44,16,6,5,0.2],[56,26,5,5,-0.3],[36,30,5,5,0.4],[50,38,4.5,4.5,0.1],[32,14,4.5,4.5,-0.5]])house(DX+x,z,w,d,r,{stone:true,flat:true,roof:mats.sandstone2});
 // bazár ponyvák
 for(const [x,z] of[[44,26],[50,20]]){const g=new THREE.Group();const top=new THREE.Mesh(new THREE.BoxGeometry(3,0.1,2.2),M(0xc83a3a));top.position.y=2.4;g.add(top);for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.4,5),mats.trunk);p.position.set(sx*1.4,1.2,sz*1);g.add(p)}const tb=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.8,1),mats.wood);tb.position.y=0.4;g.add(tb);placeAt(g,DX+x,z);shadowed(g);scene.add(g)}
@@ -1169,17 +1211,50 @@ function giantTree(x,z){const g=new THREE.Group();const trunk=new THREE.Mesh(new
   const plat=new THREE.Mesh(new THREE.BoxGeometry(5,0.3,5),mats.wood);plat.position.y=7;g.add(plat);const hut=new THREE.Mesh(new THREE.BoxGeometry(3,2.4,3),mats.wall);hut.position.y=8.4;g.add(hut);const rf=new THREE.Mesh(new THREE.ConeGeometry(2.6,1.6,4),mats.elfLeaf);rf.position.y=10.4;rf.rotation.y=Math.PI/4;g.add(rf);
   const l=new THREE.PointLight(0xfff0b0,0.8,12);l.position.set(0,8.6,2);g.add(l);
   g.rotation.y=rnd()*6.28;placeAt(g,x,z);shadowed(g);scene.add(g);interactables.push({mesh:g,type:'tree',name:'Óriásfa',action:'Kivágom',hit:trunk,skill:'wc',xp:120,respawn:60000,lvl:40})}
-function glowShroom(x,z){const g=new THREE.Group();for(let i=0;i<3;i++){const st=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,0.5,5),M(0xe8e8d8));st.position.set((i-1)*0.35,0.25,0);g.add(st);const cap=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.22,6),mats.glow);cap.position.set((i-1)*0.35,0.55,0);g.add(cap)}const l=new THREE.PointLight(0x80f0ff,0.5,5);l.position.y=0.8;g.add(l);placeAt(g,x,z);scene.add(g)}
+function glowShroom(x,z){const {g}=PLANTV.get('vilagito',x,z);placeAt(g,x,z);scene.add(g)}
 const herbs=[];
 const PLANTS={bogyo:{name:'Bogyóbokor',item:'bogyo',sk:'fa',xp:10,lvl:1},gomba:{name:'Gombák',item:'gomba',sk:'fa',xp:12,lvl:1},kaposzta:{name:'Káposztaföld',item:'kaposzta',sk:'fa',xp:8,lvl:1},hagyma:{name:'Hagymaföld',item:'hagyma',sk:'fa',xp:8,lvl:1},len:{name:'Len',item:'len',sk:'fa',xp:12,lvl:5},zsalya:{name:'Zsálya',item:'zsalya',sk:'hb',xp:18,lvl:5},levendula:{name:'Levendula',item:'levendula',sk:'hb',xp:30,lvl:15},mandragora:{name:'Mandragóra',item:'mandragora',sk:'hb',xp:55,lvl:30}};
-function plant(x,z,kind){const P=PLANTS[kind];const g=new THREE.Group();
-  if(kind==='bogyo'){const b=new THREE.Mesh(new THREE.SphereGeometry(0.9,6,5),mats.leafDark);b.position.y=0.7;b.scale.y=0.8;g.add(b);for(let i=0;i<6;i++){const d=new THREE.Mesh(new THREE.SphereGeometry(0.09,4,4),new THREE.MeshBasicMaterial({color:0x3030c0}));d.position.set(Math.cos(i*1.05)*0.7,0.8+Math.sin(i*2.3)*0.35,Math.sin(i*1.05)*0.7);g.add(d)}}
-  else if(kind==='gomba'){for(let i=0;i<3;i++){const st=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,0.45,5),M(0xe8e0d0));st.position.set((i-1)*0.4,0.22,(i%2)*0.3);g.add(st);const cap=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.25,6),M(0x8a5a2a));cap.position.set((i-1)*0.4,0.52,(i%2)*0.3);g.add(cap)}}
-  else if(kind==='kaposzta'||kind==='hagyma'){for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(kind==='kaposzta'?0.32:0.2,6,5),M(kind==='kaposzta'?0x6ab040:0xd8c080));c.position.set((i%2)*0.8-0.4,0.25,Math.floor(i/2)*0.8-0.4);g.add(c);if(kind==='hagyma'){const l=new THREE.Mesh(crossGeo(0.5,0.7,2),mats.tuft);l.position.set((i%2)*0.8-0.4,0.5,Math.floor(i/2)*0.8-0.4);g.add(l)}}}
-  else if(kind==='len'){const l=new THREE.Mesh(crossGeo(1.1,1.1,3),mats.flax);l.position.y=0.5;g.add(l)}
-  else{const col={zsalya:0x9ab8a0,levendula:0x9a70d8,mandragora:0x4a7a3a}[kind];const l=new THREE.Mesh(crossGeo(0.9,0.9,2),mats.tuft);l.position.y=0.4;g.add(l);for(let i=0;i<4;i++){const d=new THREE.Mesh(new THREE.SphereGeometry(0.1,4,4),new THREE.MeshBasicMaterial({color:col}));d.position.set(Math.cos(i*1.6)*0.3,0.6+i*0.1,Math.sin(i*1.6)*0.3);g.add(d)}}
-  placeAt(g,x,z);shadowed(g);scene.add(g);const o={mesh:g,type:'herb',name:P.name,action:'Leszedem',hit:g.children[0],item:P.item,sk:P.sk,xp:P.xp,lvl:P.lvl,kind};interactables.push(o);herbs.push(o)}
-function herb(x,z){const g=new THREE.Mesh(crossGeo(0.9,0.9,2),mats.flowerW);placeAt(g,x,z);scene.add(g);const o={mesh:g,type:'herb',name:'Gyógyfű',action:'Leszedem',hit:g};interactables.push(o);herbs.push(o)}
+// új növény-modellek (katalógusból választva, v50): sablonok egyszer épülnek, a növények ezek klónjai.
+// A 'hit' nevű rész a kattintható felület (apró szálas növényeknél láthatatlan doboz).
+const PLANTV=(()=>{let seed=7;const Rn=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  const lin=c=>new THREE.Color(c).convertSRGBToLinear(),MC={},flat=(c,ds)=>MC[c+(ds?'d':'')]||(MC[c+(ds?'d':'')]=new THREE.MeshLambertMaterial({color:lin(c),flatShading:true,side:ds?THREE.DoubleSide:THREE.FrontSide}));
+  const vmat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),hidden=new THREE.MeshBasicMaterial({visible:false});
+  function blob(r,cLo,cHi,sy=1,det=1){const g=new THREE.IcosahedronGeometry(r,det),p=g.attributes.position,col=[];for(let i=0;i<p.count;i++){const k=1+(Rn()-0.5)*0.22;p.setXYZ(i,p.getX(i)*k,p.getY(i)*k*sy,p.getZ(i)*k)}
+    for(let i=0;i<p.count;i++){const c=lin(cLo).lerp(lin(cHi),clamp((p.getY(i)+r*sy)/(2*r*sy),0,1));col.push(c.r,c.g,c.b)}g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return new THREE.Mesh(g,vmat)}
+  const at=(m,x,y,z)=>{m.position.set(x,y,z);return m},hit=m=>{m.name='hit';return m},box=(w,h,d)=>hit(at(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),hidden),0,h/2,0));
+  const clump=(g,n,c1,c2,len,w,spread,tilt=0.5)=>{const L=[];for(let i=0;i<n;i++){const a=i/n*6.283+Rn()*0.4,l=new THREE.Mesh(new THREE.SphereGeometry(0.5,6,4),flat(i%2?c1:c2));l.scale.set(w,len,w*0.35);l.position.set(Math.cos(a)*spread,len*0.4,Math.sin(a)*spread);l.rotation.set(Math.sin(a)*tilt,-a,-Math.cos(a)*tilt);g.add(l);L.push(l)}return L};
+  const B={
+    bogyo(g){[[0,0.7,0,0.85],[0.6,0.55,0.3,0.6],[-0.55,0.55,-0.2,0.62]].forEach(([x,y,z,r],i)=>{const b=at(blob(r,0x1a4a14,0x3e8a2a,0.8),x,y,z);if(!i)hit(b);g.add(b)});
+      const bg=new THREE.SphereGeometry(0.08,5,4);for(let i=0;i<14;i++){const a=Rn()*6.283,h=0.3+Rn()*0.9;g.add(at(new THREE.Mesh(bg,flat(i%3?0x3a2aa8:0x6a3ac8)),Math.cos(a)*0.85,h,Math.sin(a)*0.85))}},
+    gomba(g){g.add(box(1.3,0.75,0.9));const dg=new THREE.SphereGeometry(0.04,4,3);for(let i=0;i<3;i++){const x=(i-1)*0.45,z=(i%2)*0.3;g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.12,0.5,6),flat(0xf0ead8)),x,0.25,z));g.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.32,8,5,0,6.283,0,1.6),flat(0xd82a1a)),x,0.48,z));
+      for(let k=0;k<5;k++){const a=k*1.26;g.add(at(new THREE.Mesh(dg,flat(0xffffff)),x+Math.cos(a)*0.2,0.68,z+Math.sin(a)*0.2))}}},
+    kaposzta(g){g.add(box(1.7,0.5,1.7));for(let k=0;k<4;k++){const cx=(k%2)*0.9-0.45,cz=Math.floor(k/2)*0.9-0.45;g.add(at(blob(0.24,0x8ac860,0xc8f0a0,0.9,0),cx,0.26,cz));for(let i=0;i<6;i++){const a=i*1.05+k,l=new THREE.Mesh(new THREE.SphereGeometry(0.22,6,4,0,6.283,0,1.2),flat(i%2?0x4a9a3a:0x5aaa44));l.scale.set(1.1,0.5,0.75);l.position.set(cx+Math.cos(a)*0.2,0.18,cz+Math.sin(a)*0.2);l.rotation.set(Math.sin(a)*0.9,0,-Math.cos(a)*0.9);g.add(l)}}},
+    hagyma(g){g.add(box(1.4,0.9,1.4));const bg=new THREE.SphereGeometry(0.2,7,5),tg=new THREE.CylinderGeometry(0.025,0.04,0.9,4);for(let k=0;k<4;k++){const cx=(k%2)*0.8-0.4,cz=Math.floor(k/2)*0.8-0.4,b=at(new THREE.Mesh(bg,flat(0xd8b070)),cx,0.12,cz);b.scale.y=0.85;g.add(b);for(let i=0;i<4;i++){const t=at(new THREE.Mesh(tg,flat(0x5a9a3a)),cx+(i-1.5)*0.04,0.6,cz);t.rotation.z=(i-1.5)*0.25;g.add(t)}}},
+    len(g){g.add(box(0.9,1.1,0.9));const fg=new THREE.CircleGeometry(0.08,5);for(let i=0;i<12;i++){const a=Rn()*6.283,r=Rn()*0.4,h=0.8+Rn()*0.3;g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.018,h,3),flat(0x6a9a4a)),Math.cos(a)*r,h/2,Math.sin(a)*r));const f=at(new THREE.Mesh(fg,flat(0x6a9ae0,1)),Math.cos(a)*r,h+0.02,Math.sin(a)*r);f.rotation.x=-1.2;g.add(f)}},
+    zsalya(g){clump(g,9,0x8aa890,0x9ab8a0,0.9,0.35,0.18);g.add(box(0.7,0.9,0.7));spikes(g,3,0x8a6ac8)},
+    levendula(g){g.add(box(0.8,1.2,0.8));for(let i=0;i<14;i++){const a=Rn()*6.283,r=Rn()*0.3,h=0.7+Rn()*0.4;g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.02,h,3),flat(0x6a8a5a)),Math.cos(a)*r,h/2,Math.sin(a)*r));g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.05,0.28,5),flat(i%2?0x8a5ad0:0x9a6ae0)),Math.cos(a)*r,h+0.08,Math.sin(a)*r))}clump(g,6,0x7a9a7a,0x8aaa8a,0.4,0.18,0.12)},
+    mandragora(g){g.add(box(1,0.5,1));const L=clump(g,7,0x2a5a1a,0x3a7a24,0.35,0.7,0.35);L.forEach(c=>{c.rotation.x*=2.2;c.rotation.z*=2.2;c.position.y=0.12});g.add(at(blob(0.28,0x8a6a3a,0xc8a070,0.8,0),0,0.15,0));for(const sx of[-1,1])g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,0.02),flat(0x1a1008)),sx*0.08,0.26,0.25))},
+    gyogyfu(g){g.add(box(0.9,0.6,0.9));const lg=new THREE.CircleGeometry(0.08,6),fg=new THREE.SphereGeometry(0.07,5,4);for(let i=0;i<9;i++){const a=i*0.7,r=0.15+(i%3)*0.15;for(let k=0;k<3;k++){const l=at(new THREE.Mesh(lg,flat(0x4a9a3a,1)),Math.cos(a)*r+Math.cos(k*2.1)*0.07,0.25+(i%2)*0.1,Math.sin(a)*r+Math.sin(k*2.1)*0.07);l.rotation.x=-1.3;g.add(l)}}
+      for(let i=0;i<4;i++)g.add(at(new THREE.Mesh(fg,flat(0xffffff)),Math.cos(i*1.6)*0.3,0.45,Math.sin(i*1.6)*0.3))},
+    vilagito(g){for(let i=0;i<3;i++){g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,0.5,6),flat(0xe8e8d8)),(i-1)*0.35,0.25,0));g.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.26,8,5,0,6.283,0,1.5),new THREE.MeshBasicMaterial({color:0x80f0ff})),(i-1)*0.35,0.48,0))}const l=new THREE.PointLight(0x80f0ff,0.5,5);l.position.y=0.8;g.add(l)}};
+  function spikes(g,n,c){for(let i=0;i<n;i++){const a=i/n*6.283;g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.02,0.6,3),flat(0x6a8a6a)),Math.cos(a)*0.12,0.6,Math.sin(a)*0.12));g.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.05,0.28,5),flat(c)),Math.cos(a)*0.14,1.0,Math.sin(a)*0.14))}}
+  const cache={};
+  // sövényfal (labirintus): egy cella magja + a szabad oldalain és tetején lombgombócok, cellánként egyetlen hálóba (a nyitott oldalak szerint gyorsítótárazva)
+  const HC={};
+  function hedgeGeo(open,u,h){const key=open.join('')+u+'_'+h;if(HC[key])return HC[key];seed=1234+open.reduce((a,b,i)=>a+(b?1<<i:0),0)*977;const parts=[];const m4=new THREE.Matrix4(),core=new THREE.BoxGeometry(u*0.9,h*0.94,u*0.9).toNonIndexed(),cc=lin(0x1e4a16),cc2=[];for(let i=0;i<core.attributes.position.count;i++)cc2.push(cc.r,cc.g,cc.b);core.setAttribute('color',new THREE.Float32BufferAttribute(cc2,3));
+    const add=(geo,x,y,z)=>{const g=geo.clone();g.applyMatrix4(m4.makeTranslation(x,y,z));parts.push(g)};
+    const leaf=[0,1,2,3].map(()=>blob(u*0.225,0x1a4214,0x3e8a2a,0.9,0).geometry.toNonIndexed()),top=[0,1].map(()=>blob(u*0.25,0x2a5a1a,0x4e9a32,0.6,0).geometry.toNonIndexed());let q=0;
+    add(core,0,h*0.47,0);const half=u/2;
+    for(const [dx,dz,o] of [[1,0,open[0]],[-1,0,open[1]],[0,1,open[2]],[0,-1,open[3]]]){if(!o)continue;for(let k=0;k<6;k++){const s_=((k%2)-0.5)*u*0.55,v=Math.floor(k/2)*h*0.31+h*0.17;add(leaf[q++%4],dx*half+(dz?s_:0),v,dz*half+(dx?s_:0))}}
+    for(let k=0;k<4;k++)add(top[q++%2],((k%2)-0.5)*u*0.45,h*0.95,(Math.floor(k/2)-0.5)*u*0.45);
+    return HC[key]=mergeParts(parts)}
+  function mergeParts(parts){let n=0;for(const g of parts)n+=g.attributes.position.count;const P=new Float32Array(n*3),N=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;for(const g of parts){if(!g.attributes.normal)g.computeVertexNormals();P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);C.set(g.attributes.color.array,o*3);o+=g.attributes.position.count}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('normal',new THREE.BufferAttribute(N,3));g.setAttribute('color',new THREE.BufferAttribute(C,3));return g}
+  return{vmat,hedgeGeo,get(k,x,z){const R=kRng((Math.floor(x*7)*83492791)^(Math.floor(z*7)*19349663)),v=(R()*3)|0,key=k+v;if(!cache[key]){seed=(k.length*7919+v*104729+k.charCodeAt(0)*31)|0;const g=new THREE.Group();B[k](g);cache[key]=g}
+    const c=cache[key].clone();c.rotation.y=R()*6.28;return{g:c,hit:c.getObjectByName('hit')||c.children[0]}}}})();
+function plant(x,z,kind){const P=PLANTS[kind];const {g,hit}=PLANTV.get(kind,x,z);
+  placeAt(g,x,z);shadowed(g);scene.add(g);const o={mesh:g,type:'herb',name:P.name,action:'Leszedem',hit,item:P.item,sk:P.sk,xp:P.xp,lvl:P.lvl,kind};interactables.push(o);herbs.push(o)}
+function herb(x,z){const {g,hit}=PLANTV.get('gyogyfu',x,z);placeAt(g,x,z);shadowed(g);scene.add(g);const o={mesh:g,type:'herb',name:'Gyógyfű',action:'Leszedem',hit};interactables.push(o);herbs.push(o)}
 for(const [x,z,w,d,r] of[[-40,24,5,5,0.3],[-50,36,4.5,4.5,-0.2],[-30,40,4.5,4.5,0.5],[-46,14,5,5,0]])house(EX+x,z,w,d,r,{roof:mats.elfLeaf});
 const EDOCK=(function(){let z=60;while(height(EX+10,z)>0.3&&z<155)z+=1;dock(EX+10,z+8,22,0);return {x:EX+10,z}})();
 boat(DDOCK.x-3.2,DDOCK.z+16,6,'a Tündeerdőbe');boat(EDOCK.x+3.2,EDOCK.z+16,5,'Homokfokra');
@@ -1282,7 +1357,7 @@ instanced(crossGeo(1.6,1.3,2),mats.fern,160,gOK,{s:1.1,shadow:true,zx:GX});insta
 for(const [dx,dz] of[[0,0],[-16,10],[12,14]])giantTree(GX+GTOWN.x+dx,GTOWN.z+dz);
 for(const [dx,dz,r] of[[-10,-12,0.3],[8,-10,-0.4],[-18,-2,0.8],[16,2,0.2]])house(GX+GTOWN.x+dx,GTOWN.z+dz,3.6,3.6,r,{roof:mats.mapleLeaf});
 for(let i=0;i<6;i++)glowShroom(GX+GTOWN.x+Math.cos(i*1.05)*14,GTOWN.z+Math.sin(i*1.05)*14);
-(function maze(){const W=2*MAZE.n+1;for(let j=0;j<W;j++)for(let i=0;i<W;i++){if(MZ[j][i]!==1)continue;const m=new THREE.Mesh(new THREE.BoxGeometry(MAZE.u,6.2,MAZE.u),mats.hedge);m.position.set(GX+MAZE.x-mazeHalf+(i+0.5)*MAZE.u,7+3.1,MAZE.z-mazeHalf+(j+0.5)*MAZE.u);scene.add(m);m.receiveShadow=true}
+(function maze(){const W=2*MAZE.n+1;for(let j=0;j<W;j++)for(let i=0;i<W;i++){if(MZ[j][i]!==1)continue;const op=(a,b)=>a<0||b<0||a>=W||b>=W||MZ[b][a]!==1;const m=new THREE.Mesh(PLANTV.hedgeGeo([op(i+1,j),op(i-1,j),op(i,j+1),op(i,j-1)],MAZE.u,6.2),PLANTV.vmat);m.position.set(GX+MAZE.x-mazeHalf+(i+0.5)*MAZE.u,7,MAZE.z-mazeHalf+(j+0.5)*MAZE.u);scene.add(m);m.receiveShadow=true}
   const cx=GX+MAZE.x,cz=MAZE.z;const g=new THREE.Group();const box=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.9,1),mats.wood);box.position.y=0.45;g.add(box);const lid=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.2,1.1),M(0xd4a017));lid.position.y=1;g.add(lid);const l=new THREE.PointLight(0xffe080,0.8,8);l.position.y=2;g.add(l);placeAt(g,cx,cz);shadowed(g);scene.add(g);
   interactables.push({mesh:g,type:'mazechest',name:'Labirintus-láda',action:'Kinyitom',hit:box});
   for(const sx of[-1,1]){const p=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.18,3,5),mats.trunk);placeAt(p,cx+sx*3,cz+mazeHalf+2.5,1.5);scene.add(p)}})();
@@ -3963,7 +4038,7 @@ const NEWS_V=43,NEWS=['ÚJ: GRAFIKAI BEÁLLÍTÁSOK (⚙ gomb a jobb alsó sorba
 try{if(+(localStorage.getItem('karamja_news')||0)<NEWS_V){setTimeout(()=>{showDialog('Mi újság Karamján?','<div style="text-align:left;font-size:13px">'+NEWS.map(n=>'• '+n).join('<br>')+'</div>');localStorage.setItem('karamja_news',String(NEWS_V))},3500)}}catch(e){}
 // ---------- Koronaföld: darabok benépesítése, betöltés, titkok, animáció ----------
 function kRng(s){let a=s|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-const KGEO={trunk:new THREE.CylinderGeometry(0.4,0.65,4,6),can:crossGeo(6.5,5.5,3),tuft:crossGeo(0.9,0.9,2),flower:crossGeo(0.8,0.8,2),fern:crossGeo(1.6,1.3,2),reed:crossGeo(1.1,2.2,2),rock:new THREE.DodecahedronGeometry(1,0),crystal:new THREE.OctahedronGeometry(0.6,0),bush:crossGeo(2.2,1.9,3)};
+const KGEO={trunk:new THREE.CylinderGeometry(0.4,0.65,4,6),can:TREEV.canGeo(0),canD:TREEV.canGeo(1),tuft:crossGeo(0.9,0.9,2),flower:crossGeo(0.8,0.8,2),fern:crossGeo(1.6,1.3,2),reed:crossGeo(1.1,2.2,2),rock:new THREE.DodecahedronGeometry(1,0),crystal:new THREE.OctahedronGeometry(0.6,0),bush:crossGeo(2.2,1.9,3)};
 const KMAT={reed:amat(TEX.tuft,{color:0xa8c070}),ashTuft:amat(TEX.tuft,{color:0x8a8070}),snowTuft:amat(TEX.tuft,{color:0xb0b8a0})};
 function kRegW(x,z){const R=KR;return {sw:kW(Math.hypot(x-R.swamp.x,z-R.swamp.z),R.swamp.r,110),ash:kW(Math.hypot(x-R.ash.x,z-R.ash.z),R.ash.r,120),arc:kW(Math.hypot(x-R.arkan.x,z-R.arkan.z),150,110),fo:kW(Math.hypot(x-R.forest.x,z-R.forest.z),R.forest.r,110),fa:kW(Math.hypot(x-R.farm.x,z-R.farm.z),R.farm.r,110),mo:kW(Math.hypot(x-R.mount.x,z-R.mount.z),R.mount.r,150)}}
 function kInst(c,geo,mat,list,o={}){if(!list.length)return null;const im=new THREE.InstancedMesh(geo,mat,list.length);const d=new THREE.Object3D();
@@ -3994,7 +4069,7 @@ function kPopulate(c){const R=kRng(c.i*7919+c.j*104729+17);
   kInst(c,KGEO.tuft,mats.tuft,L.tuft);kInst(c,KGEO.tuft,KMAT.ashTuft,L.ashT);kInst(c,KGEO.tuft,KMAT.snowTuft,L.snowT);kInst(c,KGEO.flower,mats.flowerY,L.flower);kInst(c,KGEO.flower,mats.flowerP,L.flower2);
   kInst(c,KGEO.fern,mats.fern,L.fern,{shadow:true});kInst(c,KGEO.reed,KMAT.reed,L.reed);kInst(c,KGEO.rock,mats.rock,L.rock,{shadow:true,sy:0.7});kInst(c,KGEO.rock,mats.kAsh,L.ashrock,{shadow:true,sy:0.6});
   kInst(c,KGEO.crystal,mats.kCrystal,L.crystal,{sy:2.6});kInst(c,KGEO.bush,mats.leaf,L.bush,{shadow:true});
-  kInst(c,KGEO.trunk,mats.trunk,L.fill,{dy:2,shadow:true});kInst(c,KGEO.can,mats.oakLeaf,L.fill,{dy:2.6,shadow:true});kInst(c,KGEO.trunk,mats.trunk,L.fillD,{dy:2,shadow:true});kInst(c,KGEO.can,mats.yewLeaf,L.fillD,{dy:2.4,shadow:true});
+  kInst(c,KGEO.trunk,mats.trunk,L.fill,{dy:2,shadow:true});kInst(c,KGEO.can,TREEV.vmat,L.fill,{dy:2.6,shadow:true});kInst(c,KGEO.trunk,mats.trunk,L.fillD,{dy:2,shadow:true});kInst(c,KGEO.canD,TREEV.vmat,L.fillD,{dy:2.4,shadow:true});
 }
 // darab-betöltés: a 250 egységen belüli darabok látszanak; tickenként (0,25 mp) legfeljebb 1 lépés (terep vagy növényzet), ugráskor (hajó, portál) a közeli 130 egység azonnal
 KS.update=function(dt){if(zoneOf(px)!==12)return;
