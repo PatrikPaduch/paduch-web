@@ -179,7 +179,7 @@
   <div class="page" id="p-pr"><div id="qp">Imapontok: <b id="prpN">1</b>/<b id="prmN">1</b></div><div id="prayers"></div><div id="qp" style="margin-top:6px">Az imák fogyasztják az imapontot. Oltárnál (falu, Port Sarim) töltődik, csontot temetve nő az Ima-szinted.</div><div id="qp" style="margin-top:6px">Érzelmek (1-4 billentyű): <span class="emo" data-e="1">👋 Integetés</span> <span class="emo" data-e="2">💃 Tánc</span> <span class="emo" data-e="3">🙇 Meghajlás</span> <span class="emo" data-e="4">😂 Nevetés</span></div></div>
   <div class="page" id="p-q"><div id="daily"></div><div id="qp">Küldetéspontok: <b id="qpN">0</b></div><div id="qfilt"></div><div id="qlist"></div><div id="bosslog"></div><div id="qp" style="margin-top:8px">Elérések: <b id="achN">0</b></div><div id="achlist"></div><div id="qp" style="margin-top:8px">Vadászmegbízás: <b id="slayT">nincs</b></div></div>
   <div id="run">Futás: KI</div>
-  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="wikiBtn" title="Karamja Wiki: minden a szigetekről, szörnyekről, tárgyakról">📜</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
+  <div id="saveRow"><div id="fsBtn" title="Teljes képernyő">⛶</div><div id="gfxBtn" title="Grafikai beállítások (alacsony / közepes / magas / ultra)">⚙</div><div id="snd" title="Hang be/ki">🔊</div><div id="mus" title="Zene be/ki">🎵</div><div id="musList" title="Zenelista: válassz dalt">♫</div><div id="hsBtn" title="Ranglista">🏆</div><div id="wikiBtn" title="Karamja Wiki: minden a szigetekről, szörnyekről, tárgyakról">📜</div><div id="saveSt" title="Mentés, mentéskód, folytatás másik eszközön (Esc)">Mentés</div><div id="mapBtn">Térkép (M)</div><div id="resetBtn">Új játék</div></div>
 </div>
 <div id="chat"><div class="inner" id="chatInner"></div><div id="chatRow"><input id="chatIn" maxlength="120" placeholder="Enter: üzenet a többi játékosnak…" autocomplete="off"><span id="onlineN" title="Játékosok a világban">●</span></div></div>
 <div id="dialog"></div>
@@ -646,7 +646,7 @@ function buildTerrain(zx,paint){
 const terrain=buildTerrain(0,paintKaramja);const terrain2=buildTerrain(ZX,paintSarim);const terrain3=buildTerrain(2*ZX,paintFrost);const terrain4=buildTerrain(CX,paintCave);const terrain5=buildTerrain(PX,paintPirate);const terrain6=buildTerrain(DX,paintDesert);const terrain7=buildTerrain(EX,paintElf);const terrain8=buildTerrain(JX,paintJungle);const terrain9=buildTerrain(GX,paintGnome);const terrain10=buildTerrain(VX,paintValley);const terrain11=buildTerrain(HX,paintMarsh);const terrain12=buildTerrain(SX,paintSky);const terrains=[terrain,terrain2,terrain3,terrain4,terrain5,terrain6,terrain7,terrain8,terrain9,terrain10,terrain11,terrain12];
 // Koronaföld terepe 160x160-as darabokban: csak a játékos közelében épül fel és látszik (KS.update), a normálok a
 // magasságrácsból jönnek, így a darabok határán nincs varrat. A darabok csoportjai a 12. zóna csoportjában vannak.
-const KCH=160,KCNX=10,KCNZ=5,KSEG=80,KVIS=250;
+const KCH=160,KCNX=10,KCNZ=5,KSEG=80;let KVIS=250;
 const kTerrMat=new THREE.MeshLambertMaterial({vertexColors:true,map:TEX.ground});
 const KS={chunks:[],t:9,movers:null,def:[],ready:false};
 for(let j=0;j<KCNZ;j++)for(let i=0;i<KCNX;i++){const g=new THREE.Group();g.name='kch'+i+'_'+j;g.visible=false;KS.chunks.push({i,j,x0:-KHW+i*KCH,z0:-KHD+j*KCH,g,mesh:null,pop:false})}
@@ -849,7 +849,7 @@ function instanced(geo,mat,n,test,opts={}){
   const im=new THREE.InstancedMesh(geo,mat,n);im.userData.zone=zoneOf(opts.zx||0);const o=new THREE.Object3D();let c=0,tries=0;
   const zx=opts.zx||0;while(c<n&&tries<n*60){tries++;const x=(rnd()-0.5)*SIZE*0.92+zx,z=(rnd()-0.5)*SIZE*0.92;const h=height(x,z);if(!test(x,z,h))continue;
     o.position.set(x,h-0.05,z);o.rotation.set(0,rnd()*6.28,0);const s=(opts.s||1)*(0.7+rnd()*0.6);o.scale.set(s,s,s);o.updateMatrix();im.setMatrixAt(c++,o.matrix)}
-  im.count=c;im.receiveShadow=true;if(opts.shadow){im.castShadow=true;im.customDepthMaterial=mat.userData.depth}scene.add(im);return im;
+  im.count=c;im.userData.decor=true;im.userData.full=c;im.receiveShadow=true;if(opts.shadow){im.castShadow=true;im.customDepthMaterial=mat.userData.depth}scene.add(im);return im;
 }
 const grassOK=(x,z,h)=>h>2.2&&dVol(x,z)>VOLC.r*0.8&&!onPath(x,z);
 const jungleOK=(x,z,h)=>h>4.5&&dVol(x,z)>VOLC.r*0.9&&!onPath(x,z)&&!nearVillage(x,z)&&!nearPlant(x,z);
@@ -3530,6 +3530,7 @@ function updateDay(dt){
   fogC.copy(fogNight).lerp(fogDay,daylight);if(cave)fogC.setHex(0x050403);if(zoneOf(px)===10){fogC.setHex(0x3a4a3c).lerp(new THREE.Color(0x121a16),1-daylight*0.8);skyC.copy(fogC);scene.background.copy(skyC)}if(zoneOf(px)===11){fogC.lerp(new THREE.Color(0xe8f0ff),0.5*daylight)}{const W=cave?null:WX.fog();if(W){fogC.lerp(new THREE.Color(W.col),W.k*(0.5+0.5*daylight));skyC.lerp(new THREE.Color(W.col),W.k*0.7);scene.background.copy(skyC)}scene.fog.color.copy(fogC);scene.fog.near=cave?12:(W?Math.min(W.near,zoneOf(px)===10?25:999):(zoneOf(px)===10?25:110));scene.fog.far=cave?70:(W?Math.min(W.far,zoneOf(px)===10?110:999):(zoneOf(px)===10?110:240))}
   if(zoneOf(px)===12){scene.fog.far=Math.min(scene.fog.far,225);scene.fog.near=Math.min(scene.fog.near,95)}
   if(zoneOf(px)===13&&!WX.type()){scene.fog.far=420;scene.fog.near=170}
+  if(zoneOf(px)!==3){scene.fog.near*=GFX.p.fog;scene.fog.far*=GFX.p.fog}
   stars.material.opacity=night*0.9;stars.position.set(px,0,pz);shootingStars(dt,night);
   lavaLight.intensity=1.4+night*1.6+Math.sin(performance.now()/180)*0.4;
   const h=Math.floor(dayT*24),m=Math.floor((dayT*24-h)*60);
@@ -3739,7 +3740,7 @@ function animate(now){
   for(const f of flies){f.ph+=dt;f.mesh.position.set(f.cx+Math.sin(f.ph*0.7)*2.5,height(f.cx,f.cz)+1+Math.sin(f.ph*1.9)*0.5,f.cz+Math.cos(f.ph*0.5)*2.5);f.mesh.rotation.y=f.ph*0.6;const w=Math.sin(t*22+f.ph)*0.9;f.pl.rotation.z=w;f.pr.rotation.z=-w}
   for(const n of npcs){const d=Math.hypot(n.mesh.position.x-px,n.mesh.position.z-pz);if(d<6){n.mesh.rotation.y=Math.atan2(px-n.mesh.position.x,pz-n.mesh.position.z)}if(n.mark.visible)n.mark.position.y=(3.6+Math.sin(t*3)*0.15)/(n.mesh.scale.x||1)}
   if(window.musicStarted&&musicStarted()&&!SFX.isMuted()&&MUSIC.isOn())MUSIC.setZone(zoneOf(px));
-  updateZoneVis();KS.update(dt);kAnim(dt);oAnim(dt);WX.update(dt);MP.update(dt);updateOsrs(dt);raceTick(dt);plotT-=dt;if(plotT<=0){plotT=5;renderPlots();updateBarn()}torch.position.set(px,height(px,pz)+2.5,pz);
+  updateZoneVis();KS.update(dt);kAnim(dt);oAnim(dt);gfxTick();WX.update(dt);MP.update(dt);updateOsrs(dt);raceTick(dt);plotT-=dt;if(plotT<=0){plotT=5;renderPlots();updateBarn()}torch.position.set(px,height(px,pz)+2.5,pz);
   if(zoneOf(px)===5&&!dead){const safe=Math.hypot(px-DX-OASIS.x,pz-OASIS.z)<OASIS.r+10||Math.hypot(px-DX-DTOWN.x,pz-DTOWN.z)<DTOWN.r;heatT+=safe?0:dt;if(heatT>25){heatT=0;if(countItem('vizestomlo')){takeItem('vizestomlo');giveItem('urestomlo');chat('Kortyolsz a tömlőből a hőségben.')}else{hp=Math.max(0,hp-2);updateHp();splat(player.position,2);chat('A sivatagi hőség kimerít! Vizestömlő kell.','fight');if(hp<=0)die()}}}
   {const z6=zoneOf(px)===6;fireflies.visible=z6&&night>0.3;if(fireflies.visible){fireflies.material.opacity=night*0.9;const a=fireflies.geometry.attributes.position;for(let i=0;i<a.count;i++){a.setX(i,a.getX(i)+Math.sin(t*0.7+i)*dt*0.6);a.setY(i,a.getY(i)+Math.cos(t*0.9+i*0.3)*dt*0.4)}a.needsUpdate=true;fireflies.position.set(px,height(px,pz),pz)}}
   {const zn2=zoneOf(px)===2;snow.visible=zn2;if(zn2){const a=snow.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*2.5;if(y<0)y+=30;a.setY(i,y);a.setX(i,a.getX(i)+Math.sin(t+i)*dt*0.3)}a.needsUpdate=true;snow.position.set(px,height(px,pz),pz)}}
@@ -3940,7 +3941,7 @@ document.getElementById('onlineN').onclick=()=>MP.who();
 setTimeout(()=>MP.connect(),1500);
 // Mi újság: egyszer mutatjuk verziónként
 document.getElementById('voyBtn').onclick=()=>{if(!voyage)return;if(voyage.steer){const p=oNearestPort();if(p)oArrive(p.zone)}else oArrive(voyage.to)};
-const NEWS_V=42,NEWS=['ÚJ: VALÓDI HAJÓZÁS! A hajók most a nyílt tengeren viszik át a szigetek között: látod a szigeteket, delfineket, más hajókat. Az úszó hordókat kihalászhatod. ⏩ gombbal átugorhatod az utat.','Saját hajóval (Tobias) te kormányzol: kattints a vízre vagy a világtérképre, és bármelyik kikötőben kiköthetsz.','Új világtérkép: a szigetek a valódi helyükön, egy közös óceánon, a hajójáratokkal és az ösvényekkel.','Gyorsabb játék: a tárgyak összevonva, a szigeteken fele annyi rajzolás, telefonon is simább.','Koronaföld, a nagy kontinens: 9 táj, 19 küldetés, Mocsári Hidra, Kőkolosszus, titkok.'];
+const NEWS_V=43,NEWS=['ÚJ: GRAFIKAI BEÁLLÍTÁSOK (⚙ gomb a jobb alsó sorban): Alacsony, Közepes, Magas (az eddigi) és Ultra.','Ultra: nagy felbontású textúrák (talaj, lomb, kéreg, deszka, kő, nádtető), szélben hajladozó 3D fűszálak, virágok, avar, kavicsok, gallyak, gombák a földön, élesebb árnyékok. Erős gépre.','Alacsony: árnyék és aljnövényzet nélkül, gyenge gépre és telefonra.','Valódi hajózás a nyílt tengeren, földrajzi világtérkép, Koronaföld, a nagy kontinens.'];
 try{if(+(localStorage.getItem('karamja_news')||0)<NEWS_V){setTimeout(()=>{showDialog('Mi újság Karamján?','<div style="text-align:left;font-size:13px">'+NEWS.map(n=>'• '+n).join('<br>')+'</div>');localStorage.setItem('karamja_news',String(NEWS_V))},3500)}}catch(e){}
 // ---------- Koronaföld: darabok benépesítése, betöltés, titkok, animáció ----------
 function kRng(s){let a=s|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -3949,7 +3950,8 @@ const KMAT={reed:amat(TEX.tuft,{color:0xa8c070}),ashTuft:amat(TEX.tuft,{color:0x
 function kRegW(x,z){const R=KR;return {sw:kW(Math.hypot(x-R.swamp.x,z-R.swamp.z),R.swamp.r,110),ash:kW(Math.hypot(x-R.ash.x,z-R.ash.z),R.ash.r,120),arc:kW(Math.hypot(x-R.arkan.x,z-R.arkan.z),150,110),fo:kW(Math.hypot(x-R.forest.x,z-R.forest.z),R.forest.r,110),fa:kW(Math.hypot(x-R.farm.x,z-R.farm.z),R.farm.r,110),mo:kW(Math.hypot(x-R.mount.x,z-R.mount.z),R.mount.r,150)}}
 function kInst(c,geo,mat,list,o={}){if(!list.length)return null;const im=new THREE.InstancedMesh(geo,mat,list.length);const d=new THREE.Object3D();
   list.forEach(([x,z,y,s,r],i)=>{d.position.set(KX+x,y+(o.dy||0)*s,z);d.rotation.set(0,r,0);d.scale.set(s,s*(o.sy||1),s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});
-  im.frustumCulled=false;im.receiveShadow=true;if(o.shadow){im.castShadow=true;if(mat.userData.depth)im.customDepthMaterial=mat.userData.depth}c.g.add(im);return im}
+  im.frustumCulled=false;im.receiveShadow=true;if(o.shadow){im.castShadow=true;if(mat.userData.depth)im.customDepthMaterial=mat.userData.depth}
+  if([KGEO.tuft,KGEO.flower,KGEO.fern,KGEO.reed,KGEO.bush].includes(geo)){im.userData.decor=true;im.userData.full=list.length;if(GFX.p.grass<1){im.count=Math.floor(list.length*GFX.p.grass);im.visible=im.count>0}}c.g.add(im);return im}
 // egy darab (160x160) növényzete és erőforrásai: determinisztikus, a darab első közelítésekor készül
 function kPopulate(c){const R=kRng(c.i*7919+c.j*104729+17);
   const free=(x,z,h)=>h>0.9&&!kOnWall(x,z)&&!kTown(x,z)&&kRoadDist(x,z)>4&&kRiv(x,z)>9;
@@ -4157,6 +4159,94 @@ function updateOcclusion(dt){const z=zoneOf(px);OCC.t+=dt;if(z!==OCC.zone||OCC.t
     occSet(o,true,1-0.75*u.occF)}}
 let curVisZone=-1;function updateZoneVis(){const z=zoneOf(px);if(z===curVisZone)return;curVisZone=z;for(let i=0;i<zoneGroups.length;i++)zoneGroups[i].visible=i===z}
 updateZoneVis();
+// ---------- GRAFIKAI BEÁLLÍTÁSOK: alacsony / közepes / magas (a régi) / ultra ----------
+// Ultra: nagy felbontású textúrák (simított szűréssel), sűrű talajnövényzet és apró tárgyak (fűszál, avar, kavics, gally,
+// gomba, bokor, virág), élesebb árnyék. Az extrák csak Ultrán épülnek fel (zónánként/darabonként, lustán).
+const GFX={level:'high',P:{low:{name:'Alacsony',shadow:0,pr:1,fog:0.72,grass:0,kvis:190,hd:false,clutter:false},medium:{name:'Közepes',shadow:1024,pr:1,fog:0.86,grass:0.5,kvis:220,hd:false,clutter:false},
+  high:{name:'Magas',shadow:2048,pr:1.5,fog:1,grass:1,kvis:250,hd:false,clutter:false},ultra:{name:'Ultra',shadow:4096,pr:2,fog:1,grass:1,kvis:250,hd:true,clutter:true,cn:1.4}},clut:{},zone:-1};
+GFX.p=GFX.P.high;
+// --- nagy felbontású textúrák ---
+function hdCanvas(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);return c}
+const R_=Math.random,rr=(a,b)=>a+R_()*(b-a),gr=v=>`rgb(${v|0},${v|0},${v|0})`;
+const HDGEN={
+  ground:()=>hdCanvas(512,512,(c,w,h)=>{c.fillStyle='rgb(224,224,224)';c.fillRect(0,0,w,h);
+    for(let i=0;i<1800;i++){c.fillStyle=`rgba(${rr(140,200)|0},${rr(140,200)|0},${rr(140,200)|0},${rr(0.05,0.12)})`;c.beginPath();c.arc(R_()*w,R_()*h,rr(4,16),0,6.283);c.fill()}
+    for(let i=0;i<1400;i++){c.fillStyle=`rgba(255,255,255,${rr(0.05,0.14)})`;c.beginPath();c.arc(R_()*w,R_()*h,rr(3,10),0,6.283);c.fill()}
+    for(let i=0;i<9000;i++){const g=rr(140,240);c.fillStyle=gr(g);const s=R_()<0.7?1:2;c.fillRect(R_()*w,R_()*h,s,s)}
+    for(let i=0;i<2600;i++){const x=R_()*w,y=R_()*h,l=rr(3,9),a=rr(-0.5,0.5);c.strokeStyle=`rgba(${rr(110,170)|0},${rr(110,170)|0},${rr(110,170)|0},0.55)`;c.lineWidth=1;c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.sin(a)*l,y-Math.cos(a)*l);c.stroke()}
+    for(let i=0;i<500;i++){const x=R_()*w,y=R_()*h,r=rr(1.5,3.5);c.fillStyle=gr(rr(160,180));c.beginPath();c.ellipse(x+0.8,y+0.8,r,r*0.7,0,0,6.283);c.fill();c.fillStyle=gr(rr(225,250));c.beginPath();c.ellipse(x,y,r,r*0.7,0,0,6.283);c.fill()}}),
+  leaf:(dark)=>hdCanvas(256,256,(c,w,h)=>{c.clearRect(0,0,w,h);const pal=dark?['#1f5a18','#2a6a1e','#357a24','#3f8a2a','#245c1a']:['#2d6a1e','#3f8a2a','#4f9a30','#62ae3a','#78c048','#58a234'];
+    for(let i=0;i<260;i++){const x=rr(12,w-12),y=rr(12,h-12),a=R_()*6.283,rx=rr(7,15),ry=rx*rr(0.4,0.6);c.save();c.translate(x,y);c.rotate(a);c.fillStyle=pal[(R_()*pal.length)|0];c.beginPath();c.ellipse(0,0,rx,ry,0,0,6.283);c.fill();
+      c.strokeStyle=dark?'#143a0e':'#1e4a14';c.lineWidth=1.2;c.stroke();c.strokeStyle='rgba(255,255,220,0.35)';c.beginPath();c.moveTo(-rx*0.8,0);c.lineTo(rx*0.8,0);c.stroke();c.fillStyle='rgba(255,255,200,0.12)';c.beginPath();c.ellipse(-rx*0.2,-ry*0.3,rx*0.5,ry*0.4,0,0,6.283);c.fill();c.restore()}}),
+  bark:()=>hdCanvas(128,128,(c,w,h)=>{c.fillStyle='#5a3c1e';c.fillRect(0,0,w,h);for(let i=0;i<260;i++){c.strokeStyle=['#3e2812','#6e4c28','#4a3016','#7a5830','#33200e'][(R_()*5)|0];c.lineWidth=rr(1,3);const x=R_()*w;c.beginPath();c.moveTo(x,0);for(let y=0;y<=h;y+=16)c.lineTo(x+Math.sin(y*0.1+x)*2+rr(-1.5,1.5),y);c.stroke()}
+    for(let i=0;i<9;i++){const x=R_()*w,y=R_()*h;c.fillStyle='#2a1a0a';c.beginPath();c.ellipse(x,y,rr(3,6),rr(5,9),0,0,6.283);c.fill();c.strokeStyle='#7a5830';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y,rr(6,9),rr(8,12),0,0,6.283);c.stroke()}}),
+  plank:()=>hdCanvas(128,128,(c,w,h)=>{for(let p=0;p<4;p++){const base=['#7a5428','#8e6634','#96703a','#84602e'][p];c.fillStyle=base;c.fillRect(0,p*32,w,31);
+      for(let i=0;i<9;i++){const y=p*32+rr(2,30);c.strokeStyle=`rgba(60,36,14,${rr(0.3,0.7)})`;c.lineWidth=rr(0.6,1.4);c.beginPath();c.moveTo(0,y);for(let x=0;x<=w;x+=8)c.lineTo(x,y+Math.sin(x*0.05+i)*rr(0.5,1.6));c.stroke()}
+      c.fillStyle='rgba(255,230,180,0.12)';c.fillRect(0,p*32,w,3);c.fillStyle='#3a2410';c.fillRect(0,p*32+31,w,1);for(const x of[10,w-10]){c.fillStyle='#2a2a2a';c.fillRect(x,p*32+8,2,2);c.fillRect(x,p*32+22,2,2)}}}),
+  stone:()=>hdCanvas(128,128,(c,w,h)=>{c.fillStyle='#4a4a48';c.fillRect(0,0,w,h);for(let r=0;r<4;r++){const off=r%2?32:0;for(let i=-1;i<3;i++){const x=i*64+off+2,y=r*32+2,bw=60,bh=28,g=rr(120,160);c.fillStyle=gr(g);c.fillRect(x,y,bw,bh);
+      c.fillStyle='rgba(255,255,255,0.18)';c.fillRect(x,y,bw,3);c.fillRect(x,y,3,bh);c.fillStyle='rgba(0,0,0,0.22)';c.fillRect(x,y+bh-3,bw,3);c.fillRect(x+bw-3,y,3,bh);for(let k=0;k<40;k++){c.fillStyle=gr(g+rr(-30,30));c.fillRect(x+R_()*bw,y+R_()*bh,2,2)}}}}),
+  thatch:()=>hdCanvas(128,128,(c,w,h)=>{c.fillStyle='#a8823e';c.fillRect(0,0,w,h);for(let i=0;i<900;i++){c.strokeStyle=['#8a6a2a','#c09a4a','#6a4e1e','#d0aa58','#b89040'][(R_()*5)|0];c.lineWidth=rr(0.8,2);const y=R_()*h,x=R_()*w;c.beginPath();c.moveTo(x,y);c.lineTo(x+rr(10,26),y+rr(-2,2));c.stroke()}
+    for(let y=16;y<h;y+=32){c.fillStyle='rgba(60,40,10,0.35)';c.fillRect(0,y,w,2)}}),
+  tuft:()=>hdCanvas(128,128,(c,w,h)=>{c.clearRect(0,0,w,h);for(let i=0;i<46;i++){const x=rr(14,w-14);c.strokeStyle=['#4f9a30','#62ae3a','#78c048','#8ab040','#3f8a2a'][(R_()*5)|0];c.lineWidth=rr(1.5,3);c.beginPath();c.moveTo(x,h);c.quadraticCurveTo(x+rr(-20,20),h/2,x+rr(-26,26),rr(10,50));c.stroke()}})
+};
+const HDK={ground:()=>HDGEN.ground(),leaf:()=>HDGEN.leaf(false),leafDark:()=>HDGEN.leaf(true),bark:()=>HDGEN.bark(),plank:()=>HDGEN.plank(),stone:()=>HDGEN.stone(),thatch:()=>HDGEN.thatch(),tuft:()=>HDGEN.tuft()};
+function gfxTextures(on){const an=renderer.capabilities.getMaxAnisotropy?renderer.capabilities.getMaxAnisotropy():1;
+  for(const k in HDK){const t=TEX[k];if(!t)continue;const u=t._gfx||(t._gfx={});if(!u.lo)u.lo={img:t.image,mag:t.magFilter,min:t.minFilter,rep:t.repeat.clone(),an:t.anisotropy};
+    if(on){if(!u.hd)u.hd=HDK[k]();t.image=u.hd;t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.anisotropy=Math.min(8,an);if(k==='ground')t.repeat.set(SIZE/6,SIZE/6)}
+    else{t.image=u.lo.img;t.magFilter=u.lo.mag;t.minFilter=u.lo.min;t.repeat.copy(u.lo.rep);t.anisotropy=u.lo.an}t.needsUpdate=true}}
+// --- talajnövényzet és apró tárgyak (csak Ultrán) ---
+// fűcsomó: 7 háromszög-szál, a tövénél sötétebb, a hegyén világosabb (csúcsszínek); a normál felfelé néz, mint a talajé
+function clBlades(){const pos=[],col=[],nor=[];for(let i=0;i<7;i++){const a=i/7*6.283+Math.random()*0.6,r=0.04+Math.random()*0.12,h=0.32+Math.random()*0.38,w=0.03+Math.random()*0.02,ln=0.06+Math.random()*0.14;
+    const bx=Math.cos(a)*r,bz=Math.sin(a)*r,ox=-Math.sin(a)*w,oz=Math.cos(a)*w,tx=bx+Math.cos(a)*ln,tz=bz+Math.sin(a)*ln;pos.push(bx-ox,0,bz-oz,bx+ox,0,bz+oz,tx,h,tz);col.push(0.42,0.5,0.38,0.42,0.5,0.38,1.12,1.16,1.0);for(let k=0;k<3;k++)nor.push(0,1,0)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));return g}
+// avar: 4 kis lapos levélke őszi színekben
+function clLeaves(){const pos=[],col=[],nor=[];const pal=[[0.85,0.5,0.15],[0.75,0.3,0.1],[0.9,0.7,0.2],[0.55,0.4,0.15],[0.6,0.6,0.2]];for(let i=0;i<4;i++){const cx=(Math.random()-0.5)*0.5,cz=(Math.random()-0.5)*0.5,a=Math.random()*6.283,l=0.09+Math.random()*0.05,w=l*0.5,c=pal[(Math.random()*pal.length)|0];
+    const P=[[l,0],[0,w],[-l,0],[0,-w]].map(([u,v])=>[cx+Math.cos(a)*u-Math.sin(a)*v,cz+Math.sin(a)*u+Math.cos(a)*v]);for(const k of[0,1,2,0,2,3]){pos.push(P[k][0],0.01*i,P[k][1]);col.push(...c);nor.push(0,1,0)}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));return g}
+// szél: a példányosított fű és virág csúcsai a magasságukkal arányosan lengenek
+const GFXU={uTime:{value:0}};
+function clSway(m,amp=0.09){m.onBeforeCompile=sh=>{sh.uniforms.uTime=GFXU.uTime;sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;').replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat swp=instanceMatrix[3].x*0.31+instanceMatrix[3].z*0.27;float sw=(sin(uTime*1.8+swp)+0.4*sin(uTime*3.1+swp*1.7))*'+amp.toFixed(3)+'*max(position.y,0.0)*2.0;transformed.x+=sw;transformed.z+=sw*0.6;\n#endif')};return m}
+const clGrass=c=>clSway(new THREE.MeshLambertMaterial({vertexColors:true,color:c,side:THREE.DoubleSide}));
+const CLG={blade:clBlades(),litter:clLeaves(),pebble:new THREE.DodecahedronGeometry(0.16,0),twig:new THREE.CylinderGeometry(0.025,0.035,0.75,4).rotateZ(Math.PI/2),
+  cap:new THREE.ConeGeometry(0.15,0.12,6),stem:new THREE.CylinderGeometry(0.03,0.04,0.18,5),bush:crossGeo(1.3,1.0,3),flower:crossGeo(0.5,0.5,2),bone:new THREE.CylinderGeometry(0.04,0.05,0.55,4).rotateZ(Math.PI/2)};
+const CLM={blade:clGrass(0x6eae3e),bladeDry:clGrass(0xc8b070),bladeDark:clGrass(0x4a6a30),bladeSnow:clGrass(0xc8d0c8),bladeArc:clGrass(0x8a7ac8),
+  litter:new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}),litterDark:new THREE.MeshLambertMaterial({vertexColors:true,color:0x8a8a70,side:THREE.DoubleSide}),flowerY:clSway(amat(TEX.flowerY),0.06),flowerP:clSway(amat(TEX.flowerP),0.06),flowerW:clSway(amat(TEX.flowerW),0.06),pebble:M(0x8e8a84),pebbleDark:M(0x4a4642),twig:M(0x5a4028),cap:M(0xc83a2a),cap2:M(0xd8c8a8),stem:M(0xf0e8d8),bone:M(0xe8e0d0)};
+// zóna-profilok: [geometria, anyag, darab, y-eltolás, méret, teljes forgatás]
+const CL_GREEN=[['blade','blade',5400,0,[0.8,1.4]],['litter','litter',450,0.03,[0.8,1.3]],['pebble','pebble',300,0.04,[0.6,1.6],1],['twig','twig',260,0.05,[0.7,1.3]],['stem','stem',130,0.09,[0.8,1.3]],['cap','cap',130,0.22,[0.8,1.3]],['flower','flowerY',140,0,[0.8,1.2]],['flower','flowerP',120,0,[0.8,1.2]],['flower','flowerW',120,0,[0.8,1.2]]];
+const CL_PROF={0:CL_GREEN,1:CL_GREEN,4:CL_GREEN,6:CL_GREEN,7:CL_GREEN,8:CL_GREEN,9:CL_GREEN,11:CL_GREEN,
+  2:[['blade','bladeSnow',2200,0,[0.8,1.3]],['pebble','pebbleDark',500,0.04,[0.7,1.8],1],['twig','twig',160,0.05,[0.7,1.2]]],
+  3:[['pebble','pebbleDark',900,0.04,[0.6,2.2],1],['pebble','pebble',300,0.04,[0.6,1.6],1]],
+  5:[['blade','bladeDry',1600,0,[0.8,1.3]],['pebble','pebble',650,0.04,[0.6,1.8],1],['bone','bone',70,0.05,[0.8,1.3]]],
+  10:[['blade','bladeDark',4800,0,[0.8,1.4]],['stem','stem',260,0.09,[0.8,1.3]],['cap','cap2',260,0.22,[0.8,1.3]],['twig','twig',320,0.05,[0.7,1.3]],['litter','litterDark',300,0.03,[0.8,1.3]],['pebble','pebbleDark',200,0.04,[0.6,1.6],1]]};
+const clOK={0:h=>h>1.6,1:h=>h>1.6,2:h=>h>1.8&&h<22,3:h=>h<5,4:h=>h>1.6,5:h=>h>1.8,6:h=>h>1.8,7:h=>h>1.6&&h<13,8:h=>h>1.6&&h<13,9:h=>h>1.6,10:h=>h>1.3&&h<13,11:h=>h>2};
+function clMat(k){return CLM[k]||mats[k]}
+function clInst(parent,geoK,matK,list,yo,full){if(!list.length)return;const im=new THREE.InstancedMesh(CLG[geoK],clMat(matK),list.length);const d=new THREE.Object3D();
+  list.forEach(([x,z,h,s,r,r2],i)=>{d.position.set(x,h+yo*s,z);d.rotation.set(full?r2:0,r,full?r2*0.7:0);d.scale.set(s,s,s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});im.frustumCulled=false;im.receiveShadow=true;parent.add(im)}
+// az ugyanabba a pontba eső dupla mintákat a stem/cap párhoz közös listából vesszük
+function clFill(parent,prof,n,pick){const pairs={};for(const [g,m,cnt,yo,[s0,s1],full] of prof){const N=Math.round(cnt*n);let list;
+    if(g==='cap'&&pairs.stem){list=pairs.stem.map(([x,z,h,s,r])=>[x,z,h,s,r,0])}else{list=[];for(let k=0;k<N*6&&list.length<N;k++){const p=pick();if(p)list.push([p[0],p[1],p[2],rr(s0,s1),R_()*6.283,R_()*3])}}
+    if(g==='stem')pairs.stem=list;clInst(parent,g,m,list,yo,!!full)}}
+function gfxClutterZone(z){if(GFX.clut[z]||!CL_PROF[z])return;const g=new THREE.Group();g.name='clutter'+z;const zx=z*ZX,ok=clOK[z];
+  clFill(g,CL_PROF[z],GFX.p.cn||1,()=>{const x=(R_()-0.5)*SIZE*0.92+zx,zz=(R_()-0.5)*SIZE*0.92,h=height(x,zz);if(!ok(h)||pathDist(x,zz)<2.4||isWater(x,zz))return null;return [x,zz,h]});
+  zoneGroups[z].add(g);GFX.clut[z]=g}
+// a kontinens darabjaiban régiónként
+function gfxClutterChunk(c){if(c.clut)return;const g=new THREE.Group();const w0=kRegW(c.x0+KCH/2,c.z0+KCH/2);
+  const prof=w0.ash>0.5?[['pebble','pebbleDark',500,0.04,[0.7,2],1],['twig','twig',140,0.05,[0.7,1.2]],['blade','bladeDry',400,0,[0.8,1.2]]]:w0.sw>0.5?CL_PROF[10]:w0.mo>0.5?CL_PROF[2]:w0.arc>0.5?[['blade','bladeArc',3000,0,[0.8,1.3]],['flower','flowerP',260,0,[0.8,1.2]],['pebble','pebble',200,0.04,[0.6,1.5],1]]:CL_GREEN;
+  clFill(g,prof,0.3*(GFX.p.cn||1),()=>{const x=c.x0+R_()*KCH,z=c.z0+R_()*KCH,h=kH(x,z);if(h<1.1||kOnWall(x,z)||kRoadDist(x,z)<2.6)return null;return [KX+x,z,h]});c.g.add(g);c.clut=g}
+// a meglévő aljnövényzet sűrűsége (példányszám), az árnyék, a felbontás, a látótáv
+function gfxApply(level,quiet){const P=GFX.P[level]||GFX.P.high;const old=GFX.p;GFX.level=level;GFX.p=P;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,P.pr));resize();
+  const shOn=P.shadow>0,typ=P.shadow>=2048?THREE.PCFSoftShadowMap:THREE.PCFShadowMap;const shChange=renderer.shadowMap.enabled!==shOn||renderer.shadowMap.type!==typ;
+  renderer.shadowMap.enabled=shOn;renderer.shadowMap.type=typ;sun.castShadow=shOn;if(shOn&&sun.shadow.mapSize.x!==P.shadow){if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(P.shadow,P.shadow)}
+  if(shChange)scene.traverse(o=>{if(o.material){for(const m of(Array.isArray(o.material)?o.material:[o.material]))m.needsUpdate=true}});
+  scene.traverse(o=>{if(o.isInstancedMesh&&o.userData.decor){if(o.userData.full==null)o.userData.full=o.count;o.count=Math.floor(o.userData.full*P.grass);o.visible=o.count>0}});
+  KVIS=P.kvis;KS.prime=true;gfxTextures(P.hd);for(const k in GFX.clut)GFX.clut[k].visible=P.clutter;for(const c of KS.chunks)if(c.clut)c.clut.visible=P.clutter;GFX.zone=-1;
+  try{localStorage.setItem('karamja_gfx',level)}catch(e){}if(!quiet)chat(`Grafika: ${P.name}.`,'xp')}
+function gfxTick(){GFXU.uTime.value=t;if(!GFX.p.clutter)return;const z=zoneOf(px);if(z!==GFX.zone){GFX.zone=z;if(z!==12&&z!==13)gfxClutterZone(z)}if(z===12){let b=1;for(const c of KS.chunks)if(b>0&&c.pop&&c.g.visible&&!c.clut){gfxClutterChunk(c);b--}}}
+function gfxMenu(){const L=GFX.level;const d={low:'Nincs árnyék, nincs aljnövényzet, rövidebb látótáv. Gyenge gépre, telefonra.',medium:'Egyszerűbb árnyék, feleannyi fű, kicsit rövidebb látótáv.',high:'Az eddigi grafika.',ultra:'Nagy felbontású, simított textúrák, sűrű fű, avar, kavicsok, gallyak, gombák, bokrok és virágok a földön, élesebb árnyék. Erős gépre.'};
+  showDialog('Grafikai beállítások',`<div style="text-align:left;font-size:13px">Most: <b style="display:inline;color:#000">${GFX.P[L].name}</b>. A változás azonnal érvényes, és a játék megjegyzi.</div>`,['low','medium','high','ultra'].map(k=>({t:`${k===L?'✓ ':''}${GFX.P[k].name}: ${d[k]}`,f:()=>gfxApply(k)})).concat([{t:'Mégsem'}]))}
+document.getElementById('gfxBtn').onclick=gfxMenu;
+try{const L=localStorage.getItem('karamja_gfx');if(L&&GFX.P[L]&&L!=='high')gfxApply(L,true)}catch(e){}
 // teljes képernyő + service worker (gyorsabb újratöltés, telefonra kitehető)
 document.getElementById('fsBtn').onclick=()=>{const d=document.documentElement;if(!document.fullscreenElement){(d.requestFullscreen||d.webkitRequestFullscreen||function(){}).call(d)}else{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document)}};
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}
