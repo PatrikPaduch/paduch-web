@@ -735,18 +735,30 @@ function jungleTree(x,z){
   placeAt(g,x,z);shadowed(g);scene.add(g);
   interactables.push({mesh:g,type:'tree',name:'Dzsungelfa',action:'Kivágom',hit:trunk,skill:'wc',xp:40,respawn:30000});
 }
-function palmTree(x,z){
-  const g=new THREE.Group();
-  const lean=(rnd()-0.5)*0.6;const segs=5;let cx=0,cy=0;
-  let trunk;
-  for(let i=0;i<segs;i++){const s=new THREE.Mesh(new THREE.CylinderGeometry(0.22+0.02*(segs-i),0.3+0.03*(segs-i),1.6,6),mats.trunk);
-    s.position.set(cx,cy+0.8,0);s.rotation.z=lean*(i/segs);g.add(s);cx-=Math.sin(lean*(i/segs))*1.6;cy+=Math.cos(lean*(i/segs))*1.6;if(i===1)trunk=s}
-  const top=new THREE.Group();top.position.set(cx,cy,0);
-  for(let i=0;i<8;i++){const f=new THREE.Mesh(new THREE.PlaneGeometry(1.4,4.2),mats.frond);const piv=new THREE.Group();piv.rotation.y=i*Math.PI/4+rnd()*0.3;
-    f.position.set(0,-0.6,2.1);f.rotation.x=-Math.PI/2+0.75+rnd()*0.3;piv.add(f);top.add(piv)}
-  for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(0.28,5,4),M(0x6a4a1a));c.position.set((rnd()-0.5)*0.6,-0.3,(rnd()-0.5)*0.6);top.add(c)}
-  g.add(top);g.scale.setScalar(0.85+rnd()*0.45);g.rotation.y=rnd()*6.28;
-  placeAt(g,x,z);shadowed(g);scene.add(g);
+// pálma: a parton inkább OSRS-stílusú (tömör, ívelt, fogazott szélű levelek), beljebb RuneScape 2-stílusú (lecsüngő
+// levélkék). Nincs átlátszó textúra: csúcsszínezett, élesen árnyalt sokszögek; a levél-geometriák közösek (gyorsítótár).
+const PALM=(()=>{const lin=c=>new THREE.Color(c).convertSRGBToLinear();const flat=c=>new THREE.MeshLambertMaterial({color:lin(c),flatShading:true});
+  const vmat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
+  const geo=(pos,col)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g};
+  function frondA(L,W,droop){const pos=[],col=[],N=7,pts=[];for(let i=0;i<=N;i++){const t=i/N;pts.push([t*L,Math.sin(t*Math.PI*0.55)*0.9-t*t*droop,t])}
+    const cT=lin(0x4a9a2a),cE=lin(0x24601a),cP=lin(0x6ab838);
+    for(let i=0;i<N;i++){const [d0,h0,t0]=pts[i],[d1,h1,t1]=pts[i+1];const w0=W*Math.pow(1-t0,0.7)+0.04,w1=W*Math.pow(1-t1,0.7)+0.04,j0=i%2?0.55:1,j1=(i+1)%2?0.55:1;
+      const C0=[0,h0+0.06,d0],C1=[0,h1+0.06,d1],L0=[-w0*j0,h0-0.08*w0,d0],L1=[-w1*j1,h1-0.08*w1,d1],R0=[w0*j0,h0-0.08*w0,d0],R1=[w1*j1,h1-0.08*w1,d1];const cc=cT.clone().lerp(cP,t0),ce=cE.clone().lerp(cT,t0*0.5);
+      for(const [q,c] of[[C0,cc],[L0,ce],[C1,cc],[L0,ce],[L1,ce],[C1,cc],[C0,cc],[C1,cc],[R0,ce],[R0,ce],[C1,cc],[R1,ce]]){pos.push(...q);col.push(c.r,c.g,c.b)}}return geo(pos,col)}
+  function frondB(L,n,droop){const pos=[],col=[];const cA=lin(0x4a9a2a),cB=lin(0x2e7a1e),cR=lin(0x6a5a2a);const P=t=>[0,Math.sin(t*Math.PI*0.55)*0.8-t*t*droop,t*L];const tri=(a,b,c,k)=>{for(const q of[a,b,c]){pos.push(...q);col.push(k.r,k.g,k.b)}};
+    for(let i=0;i<10;i++){const a=P(i/10),b=P((i+1)/10);tri([a[0]-0.04,a[1],a[2]],[a[0]+0.04,a[1],a[2]],b,cR)}
+    for(let i=1;i<n;i++){const t=i/n,a=P(t),b=P(Math.min(1,t+0.07)),len=1.05*(1-t*0.55)+0.2;for(const sx of[-1,1])tri(a,b,[sx*len*0.95,a[1]-len*0.55,a[2]+len*0.25],(i+(sx>0?1:0))%2?cA:cB)}return geo(pos,col)}
+  const seg=[];for(let i=0;i<8;i++){const r=0.34-i*0.022;seg.push(new THREE.CylinderGeometry(r*0.92,r,0.8,7))}
+  return {vmat,ring:[flat(0x8a6a3a),flat(0x6a4e2a)],ringB:[flat(0x7a5a32),flat(0x5e4426)],nutMat:flat(0x5a3a18),nut:new THREE.SphereGeometry(0.24,6,5),seg,
+    A:[frondA(3.4,0.8,2.1),frondA(3.9,0.8,2.2),frondA(3.6,0.75,1.9)],Ain:frondA(2.2,0.6,0.6),B:[frondB(3.4,15,2.0),frondB(3.7,15,2.1),frondB(4.0,15,2.2)],Bup:frondB(1.6,7,0.2)}})();
+function palmTree(x,z){for(let i=0;i<25;i++)rnd(); // a régi pálma ennyi véletlenszámot vett el a világ sorozatából: így minden más a helyén marad
+  const R=kRng((Math.floor(x*7)*73856093)^(Math.floor(z*7)*19349663));const isB=height(x,z)<2.6?R()<0.25:R()<0.75;
+  const g=new THREE.Group();const segs=isB?8:7,lean=(0.25+R()*0.25)*(isB?1.25:1),mats_=isB?PALM.ringB:PALM.ring;let cx=0,cy=0,trunk;
+  for(let i=0;i<segs;i++){const a=lean*i/segs;const s=new THREE.Mesh(PALM.seg[i],mats_[i%2]);s.position.set(cx+Math.sin(a)*0.4,cy+Math.cos(a)*0.4,0);s.rotation.z=-a;g.add(s);if(i===1)trunk=s;cx+=Math.sin(a)*0.8;cy+=Math.cos(a)*0.8}
+  const fan=(list,n,tilt,dy=0)=>{for(let i=0;i<n;i++){const piv=new THREE.Group();piv.position.set(cx,cy+dy,0);piv.rotation.y=i/n*Math.PI*2+R()*0.3;const f=new THREE.Mesh(list[(R()*list.length)|0],PALM.vmat);f.rotation.x=tilt+R()*0.15;piv.add(f);g.add(piv)}};
+  if(isB){fan(PALM.B,12,0.1);fan([PALM.Bup],3,-0.9)}else{fan(PALM.A,10,0.1);fan([PALM.Ain],5,-0.5,0.15)}
+  for(let i=0;i<4;i++){const c=new THREE.Mesh(PALM.nut,PALM.nutMat);c.position.set(cx+Math.cos(i*1.6)*0.32,cy-0.25,Math.sin(i*1.6)*0.32);g.add(c)}
+  g.scale.setScalar(0.8+R()*0.35);g.rotation.y=R()*6.28;placeAt(g,x,z);shadowed(g);scene.add(g);
   interactables.push({mesh:g,type:'tree',name:'Pálmafa',action:'Kivágom',hit:trunk,skill:'wc',xp:25,respawn:25000});
 }
 function bananaTree(x,z){
@@ -4025,9 +4037,9 @@ function mergeStatic(root){root.updateMatrixWorld(true);const inv=new THREE.Matr
   walk(root);
   for(const b of B.values()){if(b.list.length<2)continue;let n=0;const parts=[];
     for(const c of b.list){m4.multiplyMatrices(inv,c.matrixWorld);const g=c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone();g.applyMatrix4(m4);if(!g.attributes.normal)g.computeVertexNormals();parts.push(g);n+=g.attributes.position.count}
-    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),uv=new Float32Array(n*2);let o=0;
-    for(const g of parts){const P=g.attributes.position.array,N=g.attributes.normal.array,U=g.attributes.uv?g.attributes.uv.array:null,cnt=g.attributes.position.count;pos.set(P,o*3);nor.set(N,o*3);if(U)uv.set(U,o*2);o+=cnt;g.dispose()}
-    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.computeBoundingSphere();
+    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),uv=new Float32Array(n*2),vc=b.mat.vertexColors?new Float32Array(n*3):null;let o=0;
+    for(const g of parts){const P=g.attributes.position.array,N=g.attributes.normal.array,U=g.attributes.uv?g.attributes.uv.array:null,C=g.attributes.color?g.attributes.color.array:null,cnt=g.attributes.position.count;pos.set(P,o*3);nor.set(N,o*3);if(U)uv.set(U,o*2);if(vc){if(C)vc.set(C,o*3);else vc.fill(1,o*3,(o+cnt)*3)}o+=cnt;g.dispose()}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));if(vc)geo.setAttribute('color',new THREE.BufferAttribute(vc,3));geo.computeBoundingSphere();
     const mm=new THREE.Mesh(geo,b.mat);mm.castShadow=b.cast;mm.receiveShadow=b.recv;if(b.mat.userData&&b.mat.userData.depth)mm.customDepthMaterial=b.mat.userData.depth;
     for(const c of b.list){map.set(c,mm);c.parent.remove(c)}root.add(mm)}
   const prune=o=>{for(const c of o.children.slice()){if(c.isGroup||c.type==='Object3D'){prune(c);if(!c.children.length&&!(c.userData&&c.userData.keep))o.remove(c)}}};if(map.size)prune(root);
