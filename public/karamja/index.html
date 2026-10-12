@@ -955,7 +955,140 @@ const chestObj=(function(){let cx=-46,cz=96,k=0;while(height(cx,cz)<0.7&&k<400){
 
 // ---------- Port Sarim ----------
 const sl=x=>x-ZX;
-function house(x,z,w,d,ry,o={}){
+// --- tájanként eltérő, OSRS-ihletésű házak (v54; mintalap: bestiarium/houses2.js) ---
+// HOUSE2[stílus](opt) -> Group (talpa y=0, bejárata +z). A house() a zóna alapján választ stílust és színeket.
+const HOUSE2=(()=>{
+  let seed = 1234; const Rn = () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 };
+  const lin = c => new THREE.Color(c).convertSRGBToLinear(), MC = {}, flat = c => MC[c] || (MC[c] = new THREE.MeshLambertMaterial({ color: lin(c), flatShading: true }));
+  const hex = c => '#' + c.toString(16).padStart(6, '0'), shade = (c, k) => { const r = Math.min(255, Math.max(0, ((c >> 16) & 255) * k)) | 0, g = Math.min(255, Math.max(0, ((c >> 8) & 255) * k)) | 0, b = Math.min(255, Math.max(0, (c & 255) * k)) | 0; return (r << 16) | (g << 8) | b };
+  // --- vászon-textúrák (1 csempe = U méter) ---
+  const TX = {}; function ctex(key, sz, draw) { if (TX[key]) return TX[key]; const c = document.createElement('canvas'); c.width = c.height = sz; const x = c.getContext('2d'); draw(x, sz); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return TX[key] = new THREE.MeshLambertMaterial({ map: t }) }
+  const noise = (x, s, c, n, a = 0.08) => { for (let i = 0; i < n; i++) { x.fillStyle = `rgba(${c},${Rn() * a})`; x.fillRect(Rn() * s, Rn() * s, 1 + Rn() * 3, 1 + Rn() * 3) } };
+  const T = {
+    // vakolat + gerendaváz (Varrock): 2 m-es mezők, minden második mezőben ferde merevítő
+    timber: (pl = 0xece2c8, tb = 0x5a3a20, k = '') => ctex('tb' + pl + tb + k, 256, (x, s) => { x.fillStyle = hex(pl); x.fillRect(0, 0, s, s); noise(x, s, '120,100,70', 900); x.fillStyle = hex(tb); const b = 14;
+      x.fillRect(0, 0, b, s); x.fillRect(s / 2, 0, b, s); x.fillRect(0, s / 2 - b / 2, s, b); x.fillRect(0, 0, s, b / 2); x.fillRect(0, s - b / 2, s, b / 2); x.strokeStyle = hex(tb); x.lineWidth = b; x.beginPath(); x.moveTo(b, s / 2); x.lineTo(s / 2, b); x.stroke(); x.beginPath(); x.moveTo(s / 2 + b, s / 2); x.lineTo(s, s); x.stroke();
+      x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(b, 0, 3, s); x.fillRect(s / 2 + b, 0, 3, s) }),
+    // cserép: a sorok a gerinccel párhuzamosak (u irányban váltakoznak), a cserepek v irányban eltolva
+    tiles: (c = 0xb0482e) => ctex('ti' + c, 128, (x, s) => { const cw = 21, th = 16; for (let i = 0; i * cw < s + cw; i++) for (let j = -1; j * th < s + th; j++) { const yy = j * th + (i % 2) * th / 2, g = x.createLinearGradient(i * cw, 0, i * cw + cw, 0); g.addColorStop(0, hex(shade(c, 0.62))); g.addColorStop(0.35, hex(shade(c, 1.12))); g.addColorStop(1, hex(shade(c, 0.85)));
+      x.fillStyle = g; x.fillRect(i * cw, yy, cw, th); x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(i * cw, yy + th - 2, cw, 2) } noise(x, s, '0,0,0', 300) }),
+    // nád: rétegek u irányban, szalmaszálak a lejtő mentén, a réteg alja sötétebb
+    thatch: (c = 0xc8a458) => ctex('th' + c, 128, (x, s) => { x.fillStyle = hex(c); x.fillRect(0, 0, s, s); for (let i = 0; i < 1600; i++) { const px = Rn() * s, py = Rn() * s; x.strokeStyle = hex(shade(c, 0.6 + Rn() * 0.7)); x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + 6 + Rn() * 10, py + (Rn() - 0.5) * 2); x.stroke() }
+      for (let i = 0; i < 4; i++) { const g = x.createLinearGradient(i * 32, 0, i * 32 + 32, 0); g.addColorStop(0, 'rgba(255,240,200,0.18)'); g.addColorStop(0.8, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(40,25,5,0.45)'); x.fillStyle = g; x.fillRect(i * 32, 0, 32, s) } }),
+    stone: (c = 0x9a948a) => ctex('st' + c, 128, (x, s) => { x.fillStyle = hex(shade(c, 0.55)); x.fillRect(0, 0, s, s); let y = 0; while (y < s) { const h = 14 + Rn() * 10; let xx = -Rn() * 20; while (xx < s) { const w = 18 + Rn() * 22; x.fillStyle = hex(shade(c, 0.85 + Rn() * 0.3)); x.fillRect(xx + 1.5, y + 1.5, w - 3, h - 3); x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(xx + 1.5, y + 1.5, w - 3, 2); xx += w } y += h } noise(x, s, '0,0,0', 400) }),
+    stucco: (c = 0xe8d8b8) => ctex('su' + c, 128, (x, s) => { x.fillStyle = hex(c); x.fillRect(0, 0, s, s); noise(x, s, '150,120,80', 1400, 0.1); noise(x, s, '255,255,255', 500, 0.12) }),
+    planks: (c = 0x7a5a3a, k = '') => ctex('pl' + c + k, 128, (x, s) => { for (let i = 0; i < 8; i++) { x.fillStyle = hex(shade(c, 0.82 + Rn() * 0.3)); x.fillRect(i * 16, 0, 16, s); x.fillStyle = 'rgba(0,0,0,0.4)'; x.fillRect(i * 16, 0, 2, s); for (let k2 = 0; k2 < 6; k2++) { x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(i * 16 + 4 + Rn() * 8, Rn() * s, 1, 10 + Rn() * 30) } x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(i * 16, Rn() * s, 16, 2) } }),
+    bark: (c = 0x7a5a38) => ctex('ba' + c, 128, (x, s) => { x.fillStyle = hex(c); x.fillRect(0, 0, s, s); for (let i = 0; i < 70; i++) { x.fillStyle = hex(shade(c, 0.55 + Rn() * 0.6)); const xx = Rn() * s; x.fillRect(xx, 0, 2 + Rn() * 4, s) } noise(x, s, '0,0,0', 500, 0.2) }),
+    sand: (c = 0xd8b880) => ctex('sa' + c, 128, (x, s) => { x.fillStyle = hex(shade(c, 0.8)); x.fillRect(0, 0, s, s); for (let r = 0; r < 4; r++) for (let i = -1; i < 3; i++) { const xx = i * 64 + (r % 2) * 32; x.fillStyle = hex(shade(c, 0.95 + Rn() * 0.12)); x.fillRect(xx + 2, r * 32 + 2, 60, 28) } noise(x, s, '120,80,40', 600, 0.1) }),
+    snow: () => ctex('sn', 64, (x, s) => { x.fillStyle = '#f2f6fa'; x.fillRect(0, 0, s, s); noise(x, s, '150,170,200', 300, 0.12) }) };
+  // doboz méretarányos UV-val (1 csempe = U méter)
+  function B(g, w, h, d, m, X, Y, Z, U = 2) { const geo = new THREE.BoxGeometry(w, h, d); const mat = typeof m === 'number' ? flat(m) : m;
+    if (mat.map) { const uv = geo.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]]; for (let f = 0; f < 6; f++)for (let i = 0; i < 4; i++) { const k = f * 4 + i; uv.setXY(k, uv.getX(k) * dims[f][0] / U, uv.getY(k) * dims[f][1] / U) } }
+    const o = new THREE.Mesh(geo, mat); o.position.set(X, Y, Z); g.add(o); return o }
+  const C = (g, r0, r1, h, m, X, Y, Z, seg = 8) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg), typeof m === 'number' ? flat(m) : m); o.position.set(X, Y, Z); g.add(o); return o };
+  const S = (g, r, c, X, Y, Z, sy = 1) => { const o = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), flat(c)); o.scale.y = sy; o.position.set(X, Y, Z); g.add(o); return o };
+  const sub = (g, X, Y, Z, ry = 0) => { const p = new THREE.Group(); p.position.set(X, Y, Z); p.rotation.y = ry; g.add(p); return p };
+  // nyeregtető: gerinc a z tengely mentén; vastag lapok túlnyúlással, oromfal (U-léptékű UV), gerincléc
+  function gable(g, w, d, y0, rh, roofM, wallM, oh = 0.6, th = 0.3) { const a = Math.atan2(rh, w / 2), L = (w / 2 + oh) / Math.cos(a);
+    for (const s of [-1, 1]) { const sl = B(g, L, th, d + oh * 2, roofM, 0, 0, 0, 1.6); sl.rotation.z = -s * a; sl.position.set(s * (w / 2 + oh) / 2, y0 + rh - Math.tan(a) * (w / 2 + oh) / 2 + th / 2 / Math.cos(a), 0) }
+    const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, rh); sh.closePath(); const wm = typeof wallM === 'number' ? flat(wallM) : wallM;
+    for (const s of [-1, 1]) { const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: false }); const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++)uv.setXY(i, uv.getX(i) / 2, uv.getY(i) / 2); const m = new THREE.Mesh(geo, wm); m.position.set(0, y0, s > 0 ? d / 2 - 0.2 : -d / 2); g.add(m) }
+    const r = B(g, 0.32, 0.32, d + oh * 2 + 0.1, 0x4a3020, 0, y0 + rh + 0.18, 0); r.rotation.z = Math.PI / 4 }
+  function win(g, X, Y, Z, ry, o = {}) { const p = sub(g, X, Y, Z, ry), fr = o.frame || 0x3a2614, w = o.w || 1.0, h = o.h || 1.2;
+    B(p, w + 0.2, h + 0.2, 0.14, fr, 0, 0, 0.03); B(p, w, h, 0.1, o.glass || 0xb8d0dc, 0, 0, 0.06); B(p, 0.07, h, 0.14, fr, 0, 0, 0.09); B(p, w, 0.07, 0.14, fr, 0, 0, 0.09); if (h > 1) B(p, w, 0.05, 0.14, fr, 0, h / 4, 0.09);
+    if (o.arch) { const a = new THREE.Mesh(new THREE.CircleGeometry(w / 2 + 0.1, 12, 0, Math.PI), flat(fr)); a.position.set(0, h / 2 + 0.08, 0.1); p.add(a); const a2 = new THREE.Mesh(new THREE.CircleGeometry(w / 2 - 0.02, 12, 0, Math.PI), flat(o.glass || 0xb8d0dc)); a2.position.set(0, h / 2 + 0.08, 0.13); p.add(a2) }
+    if (o.sill !== false) B(p, w + 0.4, 0.1, 0.3, o.sillC || fr, 0, -h / 2 - 0.12, 0.12); if (o.shut) for (const s of [-1, 1]) B(p, w / 2, h + 0.1, 0.08, o.shut, s * (w * 0.75 + 0.12), 0, 0.06);
+    if (o.flowers) { B(p, w + 0.2, 0.3, 0.32, 0x6a4a2a, 0, -h / 2 - 0.3, 0.24); for (let i = 0; i < 5; i++) S(p, 0.13, i % 2 ? o.flowers : 0x3a8a2a, -w / 2 + 0.1 + i * w / 4.5, -h / 2 - 0.08, 0.26, 0.8) } return p }
+  function door(g, X, Z, ry, o = {}) { const p = sub(g, X, 0, Z, ry), fr = o.frame || 0x3a2614, y0 = o.y0 || 0;
+    B(p, 1.5, 2.5, 0.16, fr, 0, y0 + 1.25, 0.02); B(p, 1.2, 2.25, 0.14, o.door || 0x6a4424, 0, y0 + 1.12, 0.08); for (let i = -1; i <= 1; i++) B(p, 0.05, 2.2, 0.16, 0x3a2414, i * 0.32, y0 + 1.12, 0.1);
+    S(p, 0.07, 0xd8b040, 0.4, y0 + 1.15, 0.2); if (o.arch) { const a = new THREE.Mesh(new THREE.CircleGeometry(0.75, 14, 0, Math.PI), flat(fr)); a.position.set(0, y0 + 2.48, 0.1); p.add(a); const a2 = new THREE.Mesh(new THREE.CircleGeometry(0.6, 14, 0, Math.PI), flat(o.door || 0x6a4424)); a2.position.set(0, y0 + 2.25, 0.16); p.add(a2) }
+    if (o.step !== false) B(p, 1.8, 0.2, 0.7, o.stepC || 0x8a8478, 0, y0 + 0.1, 0.4); return p }
+  const chimney = (g, X, Y, Z, h, m) => { B(g, 0.9, h, 0.9, m, X, Y + h / 2, Z, 1); B(g, 1.05, 0.22, 1.05, 0x5a5650, X, Y + h, Z) };
+  const pot = (g, X, Y, Z, plant = 0x3a8a2a, fl) => { C(g, 0.28, 0.2, 0.45, 0xb05a32, X, Y + 0.22, Z, 8); S(g, 0.36, plant, X, Y + 0.65, Z, 0.9); if (fl) for (let i = 0; i < 3; i++) S(g, 0.08, fl, X + Math.cos(i * 2.1) * 0.25, Y + 0.85, Z + Math.sin(i * 2.1) * 0.25) };
+  const H2 = {
+    // 1. Varrock-típusú L alakú favázas ház, piros cseréptető, keresztező szárny (Port Sarim, Koronaföld falvai)
+    varrock(o = {}) { const g = new THREE.Group(), wall = o.stoneWalls ? T.stone(0x9a948a) : T.timber(o.plaster || 0xece2c8, 0x5a3a20), roof = T.tiles(o.roof || 0xb0482e), st = T.stone();
+      B(g, 8.4, 0.6, 6.4, st, 0, 0.3, 0, 1.5); B(g, 8, 3.8, 6, wall, 0, 2.5, 0); const m = sub(g, 0, 0, 0, Math.PI / 2); gable(m, 6, 8, 4.4, 2.8, roof, wall);
+      B(g, 4.4, 0.6, 4.2, st, 2, 0.3, 4.9, 1.5); B(g, 4, 3.8, 4, wall, 2, 2.5, 4.9); gable(sub(g, 2, 0, 4.9), 4, 4, 4.4, 2.2, roof, wall, 0.5);
+      door(g, 2, 6.92, 0); win(g, -2.4, 2.4, 3.02, 0, { shut: 0x2a5a8a }); win(g, -0.2, 2.4, 3.02, 0, {}); win(g, 4.02, 2.4, 4.9, Math.PI / 2, { flowers: 0xe04050 }); win(g, -4.02, 2.4, 0, -Math.PI / 2, { shut: 0x2a5a8a }); win(g, 2, 5.5, 6.92, 0, { w: 0.8, h: 0.9 });
+      chimney(g, -2.6, 4.4, -1.4, 3.6, st); return g },
+    // 2. RS3-szerű nádtetős favázas ház: sötét gerendák, vastag réteges nádtető, tetőablak (falvak, Búzavölgy)
+    nadfa(o = {}) { const g = new THREE.Group(), wall = T.timber(0xd8c8a0, 0x33241a, 'd'), th = T.thatch(o.thatch || 0xc8a458), st = T.stone(0x8a8478);
+      B(g, 8.4, 0.9, 6.4, st, 0, 0.45, 0, 1.5); B(g, 8, 3.2, 6, wall, 0, 2.5, 0); const m = sub(g, 0, 0, 0, Math.PI / 2); gable(m, 6, 8, 4.1, 3.4, th, wall, 1.0, 0.6);
+      const dm = sub(g, 1.5, 0, 2.2); B(dm, 1.8, 1.5, 2.2, wall, 0, 5.0, 0); gable(dm, 1.8, 2.2, 5.75, 1.0, th, wall, 0.35, 0.35); win(dm, 0, 5.0, 1.12, 0, { w: 0.8, h: 0.9, sill: false });
+      door(g, -1.8, 3.02, 0, { y0: 0.9, stepC: 0x7a7468 }); B(g, 1.8, 0.45, 0.8, st, -1.8, 0.22, 3.5, 1); win(g, 1.6, 2.6, 3.02, 0, { flowers: 0xf0d040 }); win(g, -4.02, 2.6, -1, -Math.PI / 2, {}); win(g, 4.02, 2.6, 1, Math.PI / 2, {});
+      chimney(g, 3.0, 4.0, -1.5, 4.4, st); return g },
+    // 3. Aldarin / Varlamore: kétszintes stukkós ház terrakotta sávokkal, lapos tető mellvéddel és tetőkerttel, íves ablakok, erkély
+    aldarin(o = {}) { const g = new THREE.Group(), wall = T.stucco(o.wall || 0xe8d4b0), band = o.band || 0xb4553a, tile = T.tiles(0xb85a36);
+      B(g, 7, 6.4, 6, wall, 0, 3.2, 0); for (const y of [0.25, 3.15, 6.25]) B(g, 7.2, 0.3, 6.2, band, 0, y, 0); B(g, 7.2, 0.12, 6.2, 0xf0e4c8, 0, 6.45, 0);
+      for (let i = 0; i < 14; i++) { const t = i / 13; B(g, 0.45, 0.55, 0.45, wall, -3.4 + t * 6.8, 6.75, 2.85); B(g, 0.45, 0.55, 0.45, wall, -3.4 + t * 6.8, 6.75, -2.85) } for (let i = 0; i < 11; i++) { const t = i / 10; B(g, 0.45, 0.55, 0.45, wall, 3.4, 6.75, -2.6 + t * 5.2); B(g, 0.45, 0.55, 0.45, wall, -3.4, 6.75, -2.6 + t * 5.2) }
+      B(g, 6.6, 0.1, 5.6, tile, 0, 6.5, 0, 1.6); pot(g, -2.4, 6.5, 1.8, 0x3a7a2a, 0xe04050); pot(g, 2.2, 6.5, -1.6, 0x4a8a2a); pot(g, 2.4, 6.5, 1.9, 0x2e6a24, 0xf0d040); S(g, 0.7, 0x3a7a2a, -2.2, 7.0, -1.8, 1.2);
+      B(g, 4.2, 3.4, 4.2, wall, 5.6, 1.7, 0.6); B(g, 4.4, 0.3, 4.4, band, 5.6, 0.25, 0.6); B(g, 4.4, 0.3, 4.4, band, 5.6, 3.35, 0.6); for (let i = 0; i < 8; i++) B(g, 0.4, 0.5, 0.4, wall, 3.7 + i * 0.54, 3.75, 2.6); pot(g, 6.4, 3.5, 1.4, 0x3a7a2a, 0xe08030); pot(g, 5.0, 3.5, -0.6, 0x2e6a24);
+      door(g, -1.2, 3.02, 0, { arch: true, door: 0x5a3418, frame: 0x9a5a3a }); win(g, 1.8, 1.7, 3.02, 0, { arch: true, w: 0.9, h: 1.3, frame: 0x8a5a3a }); win(g, 5.6, 1.7, 2.72, 0, { arch: true, w: 0.9, h: 1.3, frame: 0x8a5a3a });
+      for (const xx of [-2.2, 0, 2.2]) win(g, xx, 4.7, 3.02, 0, { arch: true, w: 0.8, h: 1.2, frame: 0x8a5a3a, shut: 0x3a6a8a }); win(g, -3.52, 4.7, 0, -Math.PI / 2, { arch: true, w: 0.8, h: 1.2, frame: 0x8a5a3a });
+      B(g, 2.6, 0.18, 1.0, 0xe8dcc0, 0, 3.6, 3.5); for (let i = 0; i < 7; i++) C(g, 0.06, 0.06, 0.7, 0xe8dcc0, -1.15 + i * 0.38, 4.0, 3.95, 5); B(g, 2.6, 0.12, 0.12, 0xe8dcc0, 0, 4.38, 3.95); return g },
+    // 4. Varlamore vadászkunyhó: deszkafal, vastag mohás-leveles kerek tető, cölöpkerítés (Smaragd-völgy, Tündeerdő, Dzsungel)
+    vadasz(o = {}) { const g = new THREE.Group(), pl = T.planks(0x7a5a38), log = T.bark(0x6a4a2a);
+      B(g, 5, 2.8, 5, pl, 0, 1.4, 0, 1.6); for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) C(g, 0.22, 0.25, 3.2, log, sx * 2.5, 1.6, sz * 2.5, 7);
+      const moss = [0x3a5a20, 0x4a6a28, 0x2e4a1a, 0x5a7a30]; for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, r = i ? 2.6 : 0; S(g, i ? 1.8 : 2.6, moss[i % 4], Math.cos(a) * r, i ? 3.3 : 4.0, Math.sin(a) * r, 0.55) } for (let i = 0; i < 6; i++) S(g, 0.6, 0x6a8a3a, (Rn() - 0.5) * 4, 4.4 + Rn() * 0.6, (Rn() - 0.5) * 4, 0.6);
+      door(g, 0, 2.52, 0, { door: 0x4a3018, step: false }); win(g, 2.52, 1.6, 0, Math.PI / 2, { w: 0.7, h: 0.7, sill: false });
+      for (let i = 0; i < 16; i++) { const a = -0.6 + i / 15 * 4.4, r = 5.2; const p = C(g, 0.12, 0.14, 1.8 + Rn() * 0.4, log, Math.cos(a) * r, 0.9, Math.sin(a) * r - 0.5, 6); const tip = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.35, 6), flat(0x5a3a20)); tip.position.set(p.position.x, 1.95, p.position.z); g.add(tip) }
+      for (let i = 0; i < 4; i++) S(g, 0.5, 0x3a6a24, -3 + i * 0.6, 0.35, 3.4, 0.7); return g },
+    // 5. Tönkház: óriás fatönkbe vájt lakás gyökerekkel, íves ajtó, kerek ablakok, tetején kilátó és lombkorona (Tündeerdő, Gnómváros)
+    tonk(o = {}) { const g = new THREE.Group(), bk = T.bark(0x8a6a44), pl = T.planks(0x9a7a4a, 'b');
+      C(g, 2.9, 3.4, 6.5, bk, 0, 3.25, 0, 14); for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + 0.3, r = new THREE.Mesh(new THREE.ConeGeometry(0.9, 2.6, 6), bk); r.position.set(Math.cos(a) * 3.3, 0.7, Math.sin(a) * 3.3); r.rotation.z = -Math.cos(a) * 1.0; r.rotation.x = Math.sin(a) * 1.0; g.add(r) }
+      door(g, 0, 3.15, 0, { arch: true, door: 0x5a3a1e, frame: 0x4a3018, step: false }); for (const a of [0.9, -0.9]) { const w = sub(g, Math.sin(a) * 3.05, 3.4, Math.cos(a) * 3.05, a); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.2, 12), flat(0x4a3018)); r.rotation.x = Math.PI / 2; w.add(r); const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 12), flat(0xf0d890)); gl.rotation.x = Math.PI / 2; w.add(gl) }
+      C(g, 3.8, 3.8, 0.3, pl, 0, 6.6, 0, 16); for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283; C(g, 0.06, 0.06, 0.9, 0x5a3a20, Math.cos(a) * 3.7, 7.2, Math.sin(a) * 3.7, 5) } const rail = new THREE.Mesh(new THREE.TorusGeometry(3.7, 0.06, 4, 24), flat(0x5a3a20)); rail.rotation.x = Math.PI / 2; rail.position.y = 7.65; g.add(rail);
+      C(g, 0.5, 0.7, 4, bk, -1.2, 8.6, -1.0, 8); for (const [xx, yy, zz, r] of [[-1.2, 11, -1, 3], [0.8, 10.4, 0, 2.2], [-2.6, 10.3, 0.2, 2], [-0.5, 12.2, -1.5, 1.8]]) S(g, r, [0x3a6a24, 0x4a7a2a, 0x2e5a1e, 0x5a8a30][(Rn() * 4) | 0], xx, yy, zz, 0.75);
+      S(g, 0.35, 0xb08a5a, 1.6, 7.1, 1.6, 1); S(g, 0.2, 0xffd060, 2.4, 1.6, 2.6); C(g, 0.05, 0.05, 1.6, 0x2a2a2a, 2.4, 0.8, 2.6, 4); return g },
+    // 6. Sivatagi homokkőház: lapos tető, kis felépítmény kupolával, csíkos ponyva, lépcső a tetőre (Homokfok)
+    sivatag(o = {}) { const g = new THREE.Group(), sa = T.sand(0xd8b880), sa2 = T.sand(0xe0c490);
+      B(g, 7, 3.8, 6, sa, 0, 1.9, 0); B(g, 7.3, 0.35, 6.3, 0xc8a070, 0, 3.9, 0); for (let i = 0; i < 9; i++) B(g, 0.5, 0.5, 0.3, 0xd0a878, -3.3 + i * 0.83, 4.3, 3.0);
+      B(g, 3.2, 2.4, 3.2, sa2, -1.6, 5.2, -1.2); B(g, 3.4, 0.25, 3.4, 0xc8a070, -1.6, 6.45, -1.2); const dm = new THREE.Mesh(new THREE.SphereGeometry(1.3, 14, 8, 0, 6.283, 0, Math.PI / 2), flat(0x3a7ab0)); dm.position.set(-1.6, 6.55, -1.2); g.add(dm); C(g, 0.06, 0.06, 0.8, 0xf0c020, -1.6, 8.2, -1.2, 5);
+      door(g, 1.4, 3.02, 0, { arch: true, door: 0x6a3a1a, frame: 0xb08a5a, stepC: 0xc8a070 }); win(g, -1.8, 2.2, 3.02, 0, { arch: true, w: 0.8, h: 1.1, frame: 0x7a5a3a, glass: 0x2a2a3a }); win(g, -1.6, 5.3, 0.42, 0, { arch: true, w: 0.6, h: 0.8, frame: 0x7a5a3a, glass: 0x2a2a3a, sill: false });
+      for (let i = 0; i < 6; i++) { const a = B(g, 0.5, 0.06, 1.8, i % 2 ? 0xf0e8d0 : 0x3a6ab0, 0.15 + i * 0.5, 3.0, 3.9); a.rotation.x = 0.3 } for (const sx of [0, 2.8]) C(g, 0.05, 0.05, 2.7, 0x6a4a2a, sx, 1.35, 4.7, 4);
+      for (let i = 0; i < 7; i++) B(g, 1.1, 0.55 * (i + 1), 0.55, sa2, 3.5 + 0.55, 0.275 * (i + 1), 2.6 - i * 0.55); pot(g, -3.9, 0, 2.6, 0x4a7a2a); C(g, 0.4, 0.35, 0.9, 0xb06a3a, -3.9, 0.45, 1.6, 10); return g },
+    // 7. Havas gerendaház: rönkfal, hóval fedett tető, jégcsapok, hóbuckák (Zúzmara-fok)
+    havas(o = {}) { const g = new THREE.Group(), log = T.bark(0x7a5030), sn = T.snow(), H = 3.0;
+      B(g, 6.6, 0.4, 5.6, T.stone(0x8a8a90), 0, 0.2, 0, 1.5); for (let i = 0; i < 7; i++) { const y = 0.6 + i * 0.42; for (const s of [-1, 1]) { const a = C(g, 0.22, 0.22, 7.2, log, 0, y, s * 2.6, 7); a.rotation.z = Math.PI / 2; const b = C(g, 0.22, 0.22, 6.0, log, s * 3.1, y + 0.2, 0, 7); b.rotation.x = Math.PI / 2 } }
+      B(g, 6, H, 5, 0x5a3a20, 0, 0.4 + H / 2, 0); const roof = T.planks(0x4a3020, 'r'); gable(g, 6.2, 5.2, 0.4 + H, 2.6, roof, log, 0.7, 0.3); gable(sub(g, 0, 0.32, 0), 6.2, 5.2, 0.4 + H, 2.6, sn, log, 0.75, 0.2);
+      for (let i = 0; i < 9; i++) { const ic = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.5 + Rn() * 0.4, 5), flat(0xd8ecff)); ic.rotation.x = Math.PI; ic.position.set(-3.6 + i * 0.9, 3.0, 2.95 + 0.6); g.add(ic) }
+      door(g, -1.2, 2.82, 0, { door: 0x4a3018, stepC: 0xe8eef4 }); win(g, 1.4, 2.0, 2.82, 0, { frame: 0x3a2414, glass: 0xf0d890, flowers: 0xe8eef4 }); chimney(g, 2.0, 3.4, -1.0, 3.6, T.stone(0x7a7a80));
+      for (const [xx, zz, r] of [[-3.6, 2.4, 0.9], [3.4, -2.0, 1.1], [2.8, 3.0, 0.7]]) S(g, r, 0xf2f6fa, xx, 0.1, zz, 0.45); return g },
+    // 8. Kikötői cölöpház: viharvert deszkák cölöpökön, féltető, kötél, hordók, háló (Port Sarim, Koponya-öböl)
+    kikoto(o = {}) { const g = new THREE.Group(), pl = T.planks(0x7a6a58, 'w'), dk = T.planks(0x6a5038, 'd');
+      for (const [sx, sz] of [[-3, -2.5], [0, -2.5], [3, -2.5], [-3, 2.5], [0, 2.5], [3, 2.5], [-3, 4.5], [3, 4.5]]) C(g, 0.2, 0.22, 2.0, 0x4a3a2a, sx, 1.0, sz, 7);
+      B(g, 7, 0.25, 7.4, dk, 0, 2.1, 1.0, 1.6); B(g, 6, 3.0, 5, pl, 0, 3.7, 0, 1.6); const r = B(g, 7, 0.22, 6.4, T.planks(0x5a4a3a, 'r'), 0, 5.6, 0.2, 1.6); r.rotation.x = 0.28;
+      door(g, -1.4, 2.52, 0, { y0: 2.2, door: 0x5a4030, step: false }); win(g, 1.4, 3.9, 2.52, 0, { frame: 0x4a3a2a, shut: 0x2a6a7a });
+      for (let i = 0; i < 2; i++) C(g, 0.38, 0.33, 0.9, 0x7a4a24, 2.4 - i * 0.85, 2.7, 3.8, 10); const rope = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.1, 5, 12), flat(0xc8b080)); rope.rotation.x = Math.PI / 2; rope.position.set(-2.6, 2.3, 3.8); g.add(rope);
+      const net = B(g, 2.2, 1.6, 0.04, 0x5a6a5a, 3.02, 3.8, 0); net.rotation.y = Math.PI / 2; for (let i = 0; i < 5; i++) { B(g, 0.05, 2.0, 0.05, 0x4a3a2a, -2.8 + i * 0.4, 1.2, 4.6) } return g },
+    // 9. Mocsári cölöpkunyhó: ferde sötét deszkák, meredek mohás nádtető, lógó moha, lámpás (Holtláp)
+    mocsar(o = {}) { const g = new THREE.Group(), pl = T.planks(0x3e3428, 'm'), th = T.thatch(0x5a5a30);
+      for (const [sx, sz] of [[-2.2, -2], [2.2, -2], [-2.2, 2], [2.2, 2], [0, 3.5]]) { const p = C(g, 0.16, 0.2, 1.8, 0x2a2420, sx, 0.9, sz, 6); p.rotation.z = (Rn() - 0.5) * 0.12 }
+      const body = sub(g, 0, 0, 0); body.rotation.z = 0.04; B(body, 5, 0.2, 5.4, pl, 0, 1.9, 0.6, 1.6); B(body, 4.4, 2.6, 4, pl, 0, 3.3, 0, 1.6); gable(body, 4.4, 4, 4.6, 3.2, th, pl, 0.6, 0.45);
+      door(body, -0.8, 2.02, 0, { y0: 2.0, door: 0x2a2218, step: false }); win(body, 1.2, 3.4, 2.02, 0, { w: 0.7, h: 0.7, glass: 0xd8c060, frame: 0x2a2218, sill: false });
+      for (let i = 0; i < 10; i++) { const m = B(g, 0.06, 0.6 + Rn() * 0.8, 0.06, 0x4a5a2a, -2.6 + i * 0.58, 4.4, 2.75); m.position.y -= m.geometry.parameters.height / 2 }
+      C(g, 0.06, 0.06, 2.6, 0x2a2420, 2.8, 1.3, 3.4, 4); const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.3), new THREE.MeshBasicMaterial({ color: 0xffd060 })); l.position.set(2.8, 2.4, 3.6); g.add(l); return g } };
+  return H2})();
+function houseStyle(x,z,w,d,o){const zn=zoneOf(x),h=(hash(Math.floor(x*3)+17,Math.floor(z*3)+5)*1000)|0;if(w>=12)return null;
+  if(o.style)return o.style;if(o.sign===0x5a8a3a)return 'vadasz';
+  switch(zn){case 1:return o.bars?'varrock':o.roof&&o.roof===mats.roofR?'nadfa':['varrock','nadfa','varrock'][h%3];case 2:return 'havas';case 4:return 'kikoto';case 5:return 'sivatag';
+    case 6:return h%2?'tonk':'vadasz';case 8:return 'tonk';case 9:return 'vadasz';case 10:return o.stone?'varrock':'mocsar';case 11:return 'aldarin';
+    case 12:return o.stone?['aldarin','varrock','aldarin'][h%3]:['varrock','nadfa','kikoto','nadfa'][h%4];default:return null}}
+function house(x,z,w,d,ry,o={}){const st=houseStyle(x,z,w,d,o);if(!st)return houseOld(x,z,w,d,ry,o);
+  const h=hash(Math.floor(x*5)+3,Math.floor(z*5)+11),pick=a=>a[(h*a.length*7.31|0)%a.length],zn=zoneOf(x),p={};
+  const rf=!o.roof?null:o.roof===mats.roofP?0x7a4a9a:o.roof===mats.roofB?0x3a3a44:o.roof===mats.roofDark?0x4a3a30:o.roof===mats.roofR?0xa83a2a:null;
+  if(st==='varrock'){p.plaster=pick([0xece2c8,0xf2eadc,0xe2d4b4,0xe8dcc8]);p.roof=rf||pick([0xb0482e,0x9a3e2a,0xc0603a,0x8a4a3a]);if(o.bars||(o.stone&&zn===10)){p.stoneWalls=true;p.roof=zn===10?0x3a3640:0x5a5a64}}
+  if(st==='nadfa')p.thatch=pick([0xc8a458,0xb89048,0xd2b06a,0xa88a48]);
+  if(st==='aldarin'){if(zn===11){p.wall=0xf4f4f0;p.band=0x3a6ab0}else{p.wall=pick([0xe8d4b0,0xf0e0c8,0xe0c8a0]);p.band=pick([0xb4553a,0x9a4a3a,0x3a6a9a])}}
+  const inner=HOUSE2[st](p),bb=new THREE.Box3().setFromObject(inner),c=bb.getCenter(new THREE.Vector3()),sz=bb.getSize(new THREE.Vector3());inner.position.set(-c.x,0,-c.z); // (tükrözni nem szabad: az összevonás után a lapok kifordulnának)
+  const g=new THREE.Group();g.add(inner);
+  // cégtábla: oszlop + tábla a bejárat előtt jobbra
+  if(o.sign){const fz=sz.z/2+0.6,fx=sz.x/2-0.8,post=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,3.2,5),M(0x4a3020));post.position.set(fx,1.6,fz);g.add(post);const arm=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.1,0.1),M(0x4a3020));arm.position.set(fx-0.6,3.1,fz);g.add(arm);
+    const bd=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.75,0.08),M(o.sign));bd.position.set(fx-0.75,2.55,fz);g.add(bd)}
+  const s=clamp(Math.min(w*1.3/sz.x,d*1.3/sz.z),0.62,1.1);g.scale.setScalar(s);
+  g.rotation.y=ry;placeAt(g,x,z);shadowed(g);scene.add(g);huts.push(g);return g}
+function houseOld(x,z,w,d,ry,o={}){
   const g=new THREE.Group();const B=(bw,bh,bd,mat,bx,by,bz)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd),mat);m.position.set(bx,by,bz);g.add(m);return m};
   B(w,3.2,d,o.stone?mats.stone:mats.wall,0,1.6,0);
   if(o.flat){B(w+0.3,0.3,d+0.3,o.roof||mats.stone,0,3.35,0);B(w+0.3,0.5,0.25,o.roof||mats.stone,0,3.75,d/2);B(w+0.3,0.5,0.25,o.roof||mats.stone,0,3.75,-d/2);B(0.25,0.5,d+0.3,o.roof||mats.stone,w/2,3.75,0);B(0.25,0.5,d+0.3,o.roof||mats.stone,-w/2,3.75,0)}
