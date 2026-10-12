@@ -825,7 +825,7 @@ function hut(x,z,ry=0){
   const g=new THREE.Group();
   const wall=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.8,3,10),mats.wall);wall.position.y=1.5;g.add(wall);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(3.9,2.8,10),mats.roof);roof.position.y=4.3;g.add(roof);
-  const door=new THREE.Mesh(new THREE.BoxGeometry(1.1,2,0.3),mats.roofDark);door.position.set(0,1,2.7);g.add(door);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.1,2,0.3),mats.roofDark);door.position.set(0,1,2.7);g.add(door);door.userData.leaf=1;{const mk=new THREE.Group();mk.position.set(0,0,2.75);mk.userData.door={y0:0,w:1.1,h:2.0};g.add(mk)}
   const win=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.7,0.8),mats.roofDark);win.position.set(2.65,1.9,0);g.add(win);
   g.rotation.y=ry;placeAt(g,x,z);shadowed(g);scene.add(g);huts.push(g);
 }
@@ -1000,8 +1000,8 @@ const HOUSE2=(()=>{
     if (o.sill !== false) B(p, w + 0.4, 0.1, 0.3, o.sillC || fr, 0, -h / 2 - 0.12, 0.12); if (o.shut) for (const s of [-1, 1]) B(p, w / 2, h + 0.1, 0.08, o.shut, s * (w * 0.75 + 0.12), 0, 0.06);
     if (o.flowers) { B(p, w + 0.2, 0.3, 0.32, 0x6a4a2a, 0, -h / 2 - 0.3, 0.24); for (let i = 0; i < 5; i++) S(p, 0.13, i % 2 ? o.flowers : 0x3a8a2a, -w / 2 + 0.1 + i * w / 4.5, -h / 2 - 0.08, 0.26, 0.8) } return p }
   function door(g, X, Z, ry, o = {}) { const p = sub(g, X, 0, Z, ry), fr = o.frame || 0x3a2614, y0 = o.y0 || 0;
-    B(p, 1.5, 2.5, 0.16, fr, 0, y0 + 1.25, 0.02); B(p, 1.2, 2.25, 0.14, o.door || 0x6a4424, 0, y0 + 1.12, 0.08); for (let i = -1; i <= 1; i++) B(p, 0.05, 2.2, 0.16, 0x3a2414, i * 0.32, y0 + 1.12, 0.1);
-    S(p, 0.07, 0xd8b040, 0.4, y0 + 1.15, 0.2); if (o.arch) { const a = new THREE.Mesh(new THREE.CircleGeometry(0.75, 14, 0, Math.PI), flat(fr)); a.position.set(0, y0 + 2.48, 0.1); p.add(a); const a2 = new THREE.Mesh(new THREE.CircleGeometry(0.6, 14, 0, Math.PI), flat(o.door || 0x6a4424)); a2.position.set(0, y0 + 2.25, 0.16); p.add(a2) }
+    B(p, 1.5, 2.5, 0.16, fr, 0, y0 + 1.25, 0.02); const n0 = p.children.length; B(p, 1.2, 2.25, 0.14, o.door || 0x6a4424, 0, y0 + 1.12, 0.08); for (let i = -1; i <= 1; i++) B(p, 0.05, 2.2, 0.16, 0x3a2414, i * 0.32, y0 + 1.12, 0.1);
+    S(p, 0.07, 0xd8b040, 0.4, y0 + 1.15, 0.2); for (let k = n0; k < p.children.length; k++) p.children[k].userData.leaf = 1; p.userData.door = { y0, w: 1.2, h: 2.25 }; if (o.arch) { const a = new THREE.Mesh(new THREE.CircleGeometry(0.75, 14, 0, Math.PI), flat(fr)); a.position.set(0, y0 + 2.48, 0.1); p.add(a); const a2 = new THREE.Mesh(new THREE.CircleGeometry(0.6, 14, 0, Math.PI), flat(o.door || 0x6a4424)); a2.position.set(0, y0 + 2.25, 0.16); p.add(a2); a2.userData.leaf = 1; p.userData.door.h = 2.4 }
     if (o.step !== false) B(p, 1.8, 0.2, 0.7, o.stepC || 0x8a8478, 0, y0 + 0.1, 0.4); return p }
   const chimney = (g, X, Y, Z, h, m) => { B(g, 0.9, h, 0.9, m, X, Y + h / 2, Z, 1); B(g, 1.05, 0.22, 1.05, 0x5a5650, X, Y + h, Z) };
   const pot = (g, X, Y, Z, plant = 0x3a8a2a, fl) => { C(g, 0.28, 0.2, 0.45, 0xb05a32, X, Y + 0.22, Z, 8); S(g, 0.36, plant, X, Y + 0.65, Z, 0.9); if (fl) for (let i = 0; i < 3; i++) S(g, 0.08, fl, X + Math.cos(i * 2.1) * 0.25, Y + 0.85, Z + Math.sin(i * 2.1) * 0.25) };
@@ -1093,7 +1093,7 @@ function houseOld(x,z,w,d,ry,o={}){
   B(w,3.2,d,o.stone?mats.stone:mats.wall,0,1.6,0);
   if(o.flat){B(w+0.3,0.3,d+0.3,o.roof||mats.stone,0,3.35,0);B(w+0.3,0.5,0.25,o.roof||mats.stone,0,3.75,d/2);B(w+0.3,0.5,0.25,o.roof||mats.stone,0,3.75,-d/2);B(0.25,0.5,d+0.3,o.roof||mats.stone,w/2,3.75,0);B(0.25,0.5,d+0.3,o.roof||mats.stone,-w/2,3.75,0)}
   else{const mx=Math.max(w,d);const roof=new THREE.Mesh(new THREE.ConeGeometry(mx*0.78,2.4,4),o.roof||mats.roof);roof.position.y=4.4;roof.rotation.y=Math.PI/4;roof.scale.set(w/mx,1,d/mx);g.add(roof)}
-  B(1.1,2.1,0.2,mats.roofDark,0,1.05,d/2+0.05);B(0.9,0.8,0.2,M(0x2a3a5a),-w/3,2,d/2+0.05);B(0.9,0.8,0.2,M(0x2a3a5a),w/3,2,d/2+0.05);
+  {const dl=B(1.1,2.1,0.2,mats.roofDark,0,1.05,d/2+0.05);dl.userData.leaf=1;const mk=new THREE.Group();mk.position.set(0,0,d/2);mk.userData.door={y0:0,w:1.1,h:2.1};g.add(mk)}B(0.9,0.8,0.2,M(0x2a3a5a),-w/3,2,d/2+0.05);B(0.9,0.8,0.2,M(0x2a3a5a),w/3,2,d/2+0.05);
   if(o.bars){for(let i=-2;i<=2;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.2,4),M(0x333338));b.position.set(w/2+0.08,2,i*0.35);g.add(b)}B(0.1,1.3,2,M(0x111118),w/2+0.02,2,0)}
   if(o.sign){B(1.6,0.6,0.1,M(o.sign),0,3.1,d/2+0.12)}
   g.rotation.y=ry;placeAt(g,x,z);shadowed(g);scene.add(g);huts.push(g);return g;
@@ -3396,7 +3396,7 @@ const GC=4,GN=Math.floor(SIZE/GC);const gLands=[0,1,2,3,4,5,6,7,8,9,10,11].map((
 for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;gLands[zn][j*GN+i]=(height(x,z)>0.5&&(zn!==3||height(x,z)<6)&&(![7,8,10].includes(zn)||height(x,z)<13))||onDock(x,z)?1:0}
 // Koronaföld útkereső rácsa (400x200, 4 egységes cellák) és kupacos A*; a nagy térképen a lineáris nyílt lista lassú lenne
 const KGW=400,KGH=200;let KGL=null;
-function kGL(){if(KGL)return KGL;KGL=new Uint8Array(KGW*KGH);for(let j=0;j<KGH;j++)for(let i=0;i<KGW;i++){const x=(i+0.5)*4-KHW,z=(j+0.5)*4-KHD,h=contHeight(x,z);KGL[j*KGW+i]=(h>0.5&&!kOnWall(x,z))||onDock(x+KX,z)?1:0;if(KGL[j*KGW+i]&&COLG&&colHit(x+KX,z,0.8))KGL[j*KGW+i]=0}return KGL}
+function kGL(){if(KGL)return KGL;KGL=new Uint8Array(KGW*KGH);for(let j=0;j<KGH;j++)for(let i=0;i<KGW;i++){const x=(i+0.5)*4-KHW,z=(j+0.5)*4-KHD,h=contHeight(x,z);KGL[j*KGW+i]=(h>0.5&&!kOnWall(x,z))||onDock(x+KX,z)?1:0;if(KGL[j*KGW+i]&&COLG&&cellBlocked(x+KX,z))KGL[j*KGW+i]=0}return KGL}
 function astarK(ax,az,bx,bz){const L=kGL(),W=KGW,N=KGW*KGH;const gi=(x,z)=>clamp(Math.floor((x-KX+KHW)/4),0,W-1)+clamp(Math.floor((z+KHD)/4),0,KGH-1)*W;
   const S=gi(ax,az),T=gi(bx,bz);if(!L[T])return null;const ti=T%W,tj=(T/W)|0;const g=new Float32Array(N).fill(1e9),from=new Int32Array(N).fill(-1),closed=new Uint8Array(N);
   const hn=[],hf=[];const push=(n,f)=>{let i=hn.length;hn.push(n);hf.push(f);while(i>0){const p=(i-1)>>1;if(hf[p]<=hf[i])break;[hn[p],hn[i]]=[hn[i],hn[p]];[hf[p],hf[i]]=[hf[i],hf[p]];i=p}};
@@ -5336,7 +5336,7 @@ function animate(now){
   const cy=Math.max(height(px,pz),0.3)+1.5;
   const cx=px+Math.sin(camYaw)*Math.cos(camPitch)*camDist,cz=pz+Math.cos(camYaw)*Math.cos(camPitch)*camDist,ch=cy+Math.sin(camPitch)*camDist;
   camera.position.set(cx,Math.max(ch,height(cx,cz)+1.5),cz);camera.lookAt(px,cy,pz);
-  updateOcclusion(dt);
+  housesStep();updateOcclusion(dt);
   {const h=height(px,pz);SFX.update(dt,zoneOf(px)===3?0:clamp(1-(h-0.3)/4,0,1),zoneOf(px)===3?0.8:clamp(1-(dVol(px,pz)-12)/30,0,1),clamp((h-4)/4,0,1),night)}
   renderer.render(scene,camera);drawMinimap();drawHpbars();
 }
@@ -5646,26 +5646,83 @@ function astarFine(ax,az,bx,bz){const pad=24,x0=Math.floor(Math.min(ax,bx)-pad),
   out.reached=end===T;return out}
 // --- ajtók: kattintásra nyílnak/csukódnak; csukva útban vannak ---
 var DOORS; // (var: a város és a kocsma korábban épül, mint ez a modul)
-function makeDoor(parent,hx,hz,len,axis,swing,name){const piv=new THREE.Group();piv.position.set(hx,0,hz);parent.add(piv);piv.userData.keep=true;
-  const dm=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.16:len,2.9,axis==='z'?len:0.16),M(0x5a3a1e));dm.position.set(axis==='z'?0:len/2,1.45,axis==='z'?len/2:0);piv.add(dm);
-  for(let i=0;i<2;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.2:len*0.9,0.12,axis==='z'?len*0.9:0.2),M(0x2a2a2a));b.position.set(dm.position.x,0.7+i*1.5,dm.position.z);piv.add(b)}
-  const kn=new THREE.Mesh(new THREE.SphereGeometry(0.07,5,4),M(0xd0a030));kn.position.set(axis==='z'?0.12:len*0.85,1.4,axis==='z'?len*0.85:0.12);piv.add(kn);dm.userData.nocol=true;
+function makeDoor(parent,hx,hz,len,axis,swing,name,dh=2.9,dy=0){const piv=new THREE.Group();piv.position.set(hx,0,hz);parent.add(piv);piv.userData.keep=true;
+  const dm=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.16:len,dh,axis==='z'?len:0.16),M(0x5a3a1e));dm.position.set(axis==='z'?0:len/2,dy+dh/2,axis==='z'?len/2:0);piv.add(dm);
+  for(let i=0;i<2;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.2:len*0.9,0.12,axis==='z'?len*0.9:0.2),M(0x2a2a2a));b.position.set(dm.position.x,dy+dh*(0.24+i*0.52),dm.position.z);piv.add(b)}
+  const kn=new THREE.Mesh(new THREE.SphereGeometry(0.07,5,4),M(0xd0a030));kn.position.set(axis==='z'?0.12:len*0.85,dy+dh*0.48,axis==='z'?len*0.85:0.12);piv.add(kn);dm.userData.nocol=true;
   const o={mesh:piv,type:'door',name:name||'Ajtó',action:'Kinyitom',hit:dm,open:false,swing,piv,rect:null};
   o.init=()=>{parent.updateMatrixWorld(true);const c=new THREE.Vector3();dm.getWorldPosition(c);const q=new THREE.Quaternion();dm.getWorldQuaternion(q);const e=new THREE.Euler().setFromQuaternion(q,'YXZ');
-    o.rect=colAdd(c.x,c.z,axis==='z'?0.3:len/2,axis==='z'?len/2:0.3,e.y,'ajto');o.wp=c.clone()};interactables.push(o);(DOORS||(DOORS=[])).push(o);return o}
+    const ws=new THREE.Vector3();dm.getWorldScale(ws);o.rect=colAdd(c.x,c.z,axis==='z'?0.3:len/2*ws.x,axis==='z'?len/2*ws.x:0.3,e.y,'ajto');o.wp=c.clone()};interactables.push(o);(DOORS||(DOORS=[])).push(o);return o}
 function doorToggle(o){o.open=!o.open;o.piv.rotation.y=o.open?o.swing*Math.PI/2:0;if(o.rect)o.rect.on=!o.open;o.action=o.open?'Becsukom':'Kinyitom';SFX.play('pickup');chat(o.open?'Kinyitod az ajtót.':'Becsukod az ajtót.')}
 // --- belső terek: ha a karakter bent van, az emelet és a tető eltűnik ---
 var INTERIORS;function interiorsStep(){if(INTERIORS)for(const I of INTERIORS){const dx=px-I.x,dz=pz-I.z,lx=dx*I.c-dz*I.s,lz=dx*I.s+dz*I.c,inn=Math.abs(lx)<I.hw&&Math.abs(lz)<I.hd;if(inn!==I.inn){I.inn=inn;for(const u of I.upper)u.visible=!inn}}}
 function interiorAdd(g,upper,hw,hd){g.updateMatrixWorld(true);const c=new THREE.Vector3();g.getWorldPosition(c);const q=new THREE.Quaternion();g.getWorldQuaternion(q);const e=new THREE.Euler().setFromQuaternion(q,'YXZ');(INTERIORS||(INTERIORS=[])).push({x:c.x,z:c.z,hw,hd,c:Math.cos(e.y),s:Math.sin(e.y),upper:[].concat(upper),inn:false})}
 // --- bejegyzés: minden épület (házak, kunyhók, egyedi épületek, Koronavár, kocsma) ---
+// ===== Bejárható házak (v60): minden ajtós ház alaprajzából belső falak (ajtónyílással), kattintható ajtó, és a házba lépve
+// a külső eltűnik, helyette a berendezett szoba látszik (lustán épül, ha odaérsz). =====
+var HOUSES_IN;
+function localBoxes(g,minH=1.5){g.updateMatrixWorld(true);const inv=new THREE.Matrix4().copy(g.matrixWorld).invert(),out=[],sv=new THREE.Vector3();g.getWorldScale(sv);const sc=sv.x,b=new THREE.Box3(),m4=new THREE.Matrix4();
+  g.traverse(m=>{if(!m.isMesh||!m.geometry||m.userData.nocol||m.userData.leaf||m.material&&m.material.visible===false)return;for(let p=m;p&&p!==g;p=p.parent)if(p.userData.nocol||p.visible===false)return;
+    if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();m4.multiplyMatrices(inv,m.matrixWorld);b.copy(m.geometry.boundingBox).applyMatrix4(m4);
+    if((b.max.y-b.min.y)*sc<minH||b.min.y*sc>1.2||(b.max.x-b.min.x)*sc<0.25||(b.max.z-b.min.z)*sc<0.25)return;out.push({x0:b.min.x,x1:b.max.x,z0:b.min.z,z1:b.max.z,y0:b.min.y,y1:b.max.y,mat:m.material})});return {out,sc,inv}}
+function matHex(mt){if(!mt)return 0xd8ccb0;if(mt.map&&mt.map.image&&mt.map.image.getContext){try{const c=document.createElement('canvas');c.width=c.height=1;const x=c.getContext('2d');x.drawImage(mt.map.image,0,0,1,1);const d=x.getImageData(0,0,1,1).data;return new THREE.Color(d[0]/255,d[1]/255,d[2]/255).getHex()}catch(e){}}if(mt.color){const c=mt.color.clone();if(mt.vertexColors)return 0xc8b8a0;return c.convertLinearToSRGB().getHex()}return 0xd8ccb0}
+function houseEnter(h){let dm=null;h.traverse(o=>{if(!dm&&o.userData.door)dm=o});if(!dm)return false;const {out,sc,inv}=localBoxes(h);
+  const rooms=out.filter(b=>(b.x1-b.x0)*sc>2.4&&(b.z1-b.z0)*sc>2.4);if(!rooms.length)return false;
+  const dp=new THREE.Vector3();dm.getWorldPosition(dp);const dl=dp.clone().applyMatrix4(inv);const dq=new THREE.Quaternion();dm.getWorldQuaternion(dq);const hq=new THREE.Quaternion();h.getWorldQuaternion(hq);
+  const nrm=new THREE.Vector3(0,0,1).applyQuaternion(dq).applyQuaternion(hq.clone().invert());
+  const edges=r=>[{ax:'z',v:r.z1,n:1,lo:r.x0,hi:r.x1},{ax:'z',v:r.z0,n:-1,lo:r.x0,hi:r.x1},{ax:'x',v:r.x1,n:1,lo:r.z0,hi:r.z1},{ax:'x',v:r.x0,n:-1,lo:r.z0,hi:r.z1}];
+  let best=null;for(const r of rooms)for(const e of edges(r)){const dist=Math.abs((e.ax==='z'?dl.z:dl.x)-e.v),along=e.ax==='z'?dl.x:dl.z;if(along<e.lo-0.3||along>e.hi+0.3)continue;const dot=e.ax==='z'?e.n*nrm.z:e.n*nrm.x;if(dot<0.5)continue;if(!best||dist<best.dist)best={r,e,dist,along}}
+  if(!best||best.dist*sc>1.6)return false;const gapH=(dm.userData.door.w||1.2)/2+0.12;
+  const inRoom=(x,z,skip)=>rooms.some(r=>r!==skip&&x>r.x0-0.02&&x<r.x1+0.02&&z>r.z0-0.02&&z<r.z1+0.02);const segs=[];const T=0.15;
+  for(const r of rooms)for(const e of edges(r)){let cur=null;for(let a=e.lo;a<e.hi-1e-6;a+=0.25){const t=Math.min(a+0.25,e.hi),mid=(a+t)/2,ox=e.ax==='z'?mid:e.v+e.n*0.2,oz=e.ax==='z'?e.v+e.n*0.2:mid;
+      const gap=best.r===r&&best.e.ax===e.ax&&best.e.v===e.v&&Math.abs(mid-best.along)<gapH;if(!gap&&!inRoom(ox,oz,r)){if(cur&&Math.abs(cur.b-a)<1e-6)cur.b=t;else{cur={e,a,b:t,r};segs.push(cur)}}else cur=null}}
+  // falak és a nem-szoba akadályok (kémény, pillér) a világban
+  const rot=new THREE.Euler().setFromQuaternion(hq,'YXZ').y,wv=new THREE.Vector3();
+  const addLocal=(cx,cz,hw,hd,tag)=>{wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);colAdd(wv.x,wv.z,hw*sc,hd*sc,rot,tag)};
+  for(const s of segs){const e=s.e,m=(s.a+s.b)/2,hl=(s.b-s.a)/2;if(e.ax==='z')addLocal(m,e.v-e.n*T,hl,T,'fal');else addLocal(e.v-e.n*T,m,T,hl,'fal')}
+  for(const b of out)if(!rooms.includes(b))addLocal((b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2,(b.z1-b.z0)/2,'haz');
+  // az eredeti festett ajtólap eltűnik, helyette nyitható ajtó (a ház mellett, hogy bentről is látszódjon)
+  h.traverse(o=>{if(o.userData.leaf)o.visible=false});const dg=new THREE.Group();dm.updateMatrixWorld(true);dm.matrixWorld.decompose(dg.position,dg.quaternion,dg.scale);scene.add(dg);dg.userData.keep=true;
+  const y0=dm.userData.door.y0||0,dw=dm.userData.door.w||1.2;makeDoor(dg,-dw/2,0.08,dw,'x',1,'Ajtó',dm.userData.door.h||2.25,y0);
+  let cx=0,cz=0,R=0;for(const r of rooms){cx+=(r.x0+r.x1)/2/rooms.length;cz+=(r.z0+r.z1)/2/rooms.length}for(const r of rooms)R=Math.max(R,Math.hypot(r.x1-cx,r.z1-cz),Math.hypot(r.x0-cx,r.z0-cz));wv.set(cx,0,cz).applyMatrix4(h.matrixWorld);
+  (HOUSES_IN||(HOUSES_IN=[])).push({h,rooms,segs,best,sc,inv:inv.clone(),wx:wv.x,wz:wv.z,R:R*sc+1,zone:zoneOf(wv.x),shell:null,inn:false});return true}
+// a szoba: falak (lent lambéria), padló, bútorok a legnagyobb szobában; egyetlen összevont csoport
+function houseShell(I){const h=I.h,g=new THREE.Group();h.updateMatrixWorld(true);h.matrixWorld.decompose(g.position,g.quaternion,g.scale);scene.add(g);g.userData.keep=true;g.userData.occB=new THREE.Box3();
+  let seed=Math.floor(I.wx*7)*73856093^Math.floor(I.wz*7)*19349663;const Rn=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  const B=(w,hh,d,c,x,y,z,ry=0)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),M(c));m.position.set(x,y,z);m.rotation.y=ry;g.add(m);return m};
+  const PL=[0xe0d4b4,0xd8c8a0,0xe8dcc0,0xc8b890][(Rn()*4)|0],WN=0x7a5434,FL=[0x7a5a3a,0x6a4a2e,0x8a6a44][(Rn()*3)|0];
+  for(const r of I.rooms){const H=Math.min(r.y1-r.y0,3.6),y0=r.y0;B(r.x1-r.x0,0.1,r.z1-r.z0,FL,(r.x0+r.x1)/2,y0+0.05,(r.z0+r.z1)/2);for(let k=1;k<(r.x1-r.x0)/0.8;k++)B(0.04,0.02,r.z1-r.z0-0.1,0x4a3020,r.x0+k*0.8,y0+0.11,(r.z0+r.z1)/2)}
+  for(const s of I.segs){const e=s.e,m=(s.a+s.b)/2,L=s.b-s.a,y0=s.r.y0,H=Math.min(s.r.y1-s.r.y0,2.7),WC=matHex(s.r.mat);const pos=e.ax==='z'?[m,e.v-e.n*0.15]:[e.v-e.n*0.15,m],w=e.ax==='z'?L:0.3,d=e.ax==='z'?0.3:L;
+    B(w,H,d,WC,pos[0],y0+H/2,pos[1]);const iw=e.ax==='z'?L:0.06,id=e.ax==='z'?0.06:L,io=e.ax==='z'?[0,-e.n*0.16]:[-e.n*0.16,0];B(iw,0.9,id,WN,pos[0]+io[0],y0+0.45,pos[1]+io[1]);B(iw,0.08,id,0x3a2414,pos[0]+io[0],y0+0.94,pos[1]+io[1])}
+  // berendezés a legnagyobb szobában: "elöl" az ajtóhoz legközelebbi fala, hátul a szemközti
+  const big=I.rooms.slice().sort((a,b)=>(b.x1-b.x0)*(b.z1-b.z0)-(a.x1-a.x0)*(a.z1-a.z0))[0],y=big.y0+0.1;const fe=I.best.r===big?I.best.e:(()=>{const e=I.best.e;return e.ax==='z'?{ax:'z',v:e.n>0?big.z1:big.z0,n:e.n}:{ax:'x',v:e.n>0?big.x1:big.x0,n:e.n}})();
+  const lo=fe.ax==='z'?big.x0:big.z0,hi=fe.ax==='z'?big.x1:big.z1,D=fe.ax==='z'?big.z1-big.z0:big.x1-big.x0,W=hi-lo;
+  const P=(u,v)=>fe.ax==='z'?[lo+u*W,fe.v-fe.n*v*D]:[fe.v-fe.n*v*D,lo+u*W];const face=fe.ax==='z'?(fe.n>0?0:Math.PI):(fe.n>0?Math.PI/2:-Math.PI/2);
+  const along=(fe.ax==='z')?0:Math.PI/2;
+  {const [x,z]=P(0.18,0.78);const bed=new THREE.Group();bed.position.set(x,y,z);bed.rotation.y=along+Math.PI/2;g.add(bed);const add=(w,hh,d,c,a,b2,cc)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),M(c));m.position.set(a,b2,cc);bed.add(m)};
+    add(1.0,0.35,2.0,WN,0,0.25,0);add(0.95,0.18,1.9,0xf0ece0,0,0.5,0);add(0.97,0.2,1.3,[0xa83a2a,0x3a5a9a,0x5a8a3a,0x8a5aa8][(Rn()*4)|0],0,0.55,0.3);add(0.6,0.15,0.35,0xffffff,0,0.62,-0.75);add(1.0,0.9,0.1,WN,0,0.6,-1.0)}
+  {const [x,z]=P(0.62,0.42);B(1.3,0.08,0.9,WN,x,y+0.78,z,along);for(const [a,b2] of[[-0.55,-0.35],[0.55,-0.35],[-0.55,0.35],[0.55,0.35]]){const c=Math.cos(along),s=Math.sin(along);B(0.08,0.75,0.08,0x4a3020,x+a*c+b2*s,y+0.38,z-a*s+b2*c)}
+    for(const sd of[-1,1]){const c=Math.cos(along),s=Math.sin(along),ox=sd*0.95;B(0.4,0.45,0.4,0x6a4a2a,x+ox*c,y+0.23,z-ox*s)}B(0.18,0.2,0.18,0xd8b040,x,y+0.92,z);B(0.3,0.06,0.3,0xe8e0d0,x+0.3,y+0.84,z+0.1)}
+  {const [x,z]=P(0.85,0.85);B(0.9,0.6,0.55,0x7a4a24,x,y+0.3,z,along);B(0.92,0.08,0.57,0xd0a030,x,y+0.45,z,along)}
+  {const [x,z]=P(0.5,0.5);B(Math.min(2.4,W*0.5),0.02,Math.min(1.6,D*0.4),[0x8a2a2a,0x2a4a7a,0x6a5a2a][(Rn()*3)|0],x,y+0.02,z,along)}
+  if(W*D>18){const [x,z]=P(0.5,0.96);B(1.6,1.5,0.5,0x8a847a,x,y+0.75,z,along);B(0.9,0.7,0.52,0x140a04,x,y+0.4,z,along);const f=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.5,6),new THREE.MeshBasicMaterial({color:0xff8a20}));f.position.set(x,y+0.3,z);g.add(f);f.userData.keep=true;B(1.9,0.12,0.6,0x6a645a,x,y+1.55,z,along)}
+  {const [x,z]=P(0.08,0.2);for(let i=0;i<2;i++){const br=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.7,10),M(0x7a4a24));br.position.set(x,y+0.35,z+i*0.0);g.add(br);break}}
+  {const [x,z]=P(0.97,0.45);B(0.35,1.5,1.2,WN,x,y+0.75,z,along+Math.PI/2);for(let k=0;k<3;k++)B(0.15,0.2,0.15,[0x8a3a2a,0x3a6a8a,0xd0a030][k],x,y+1.0+((k%2)*0.45),z+(k-1)*0.3)}
+  mergeStatic(g);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true}});return g}
+const _hv=new THREE.Vector3();
+function housesStep(){if(!HOUSES_IN)return;const zn=zoneOf(px);for(const I of HOUSES_IN){if(I.zone!==zn){if(I.inn){I.inn=false;I.h.visible=true;if(I.shell)I.shell.visible=false}continue}
+    if(Math.abs(px-I.wx)>I.R+2||Math.abs(pz-I.wz)>I.R+2){if(I.inn){I.inn=false;I.h.visible=true;if(I.shell)I.shell.visible=false}continue}
+    _hv.set(px,I.h.position.y,pz).applyMatrix4(I.inv);const inn=I.rooms.some(r=>_hv.x>r.x0+0.1&&_hv.x<r.x1-0.1&&_hv.z>r.z0+0.1&&_hv.z<r.z1-0.1);
+    if(inn!==I.inn){I.inn=inn;if(inn&&!I.shell)I.shell=houseShell(I);I.h.visible=!inn;I.shell.visible=inn}}}
 function colRegisterAll(){const t0=performance.now();let n=0;const seen=new Set();const reg=(g,tag)=>{if(!g||seen.has(g))return;seen.add(g);n+=colFromGroup(g,tag)};
-  for(const h of huts)reg(h,'haz');for(const o of KCITY_OBJS)reg(o,'varos');if(typeof KTAV!=='undefined')reg(KTAV.g,'kocsma');if(DOORS)for(const d of DOORS)d.init();
+  let nIn=0;for(const h of huts){if(!seen.has(h)&&houseEnter(h)){seen.add(h);nIn++}else reg(h,'haz')}for(const o of KCITY_OBJS)reg(o,'varos');if(typeof KTAV!=='undefined')reg(KTAV.g,'kocsma');if(DOORS)for(const d of DOORS)d.init();
   // ami épületen belül maradt (NPC, stand, érc), annak az épületrésze átjárható marad, hogy elérhető legyen
   {const v=new THREE.Vector3();for(const o of interactables){if(o.type==='monster'||o.type==='door'||o.walk||!o.mesh)continue;o.mesh.getWorldPosition(v);let r;while((r=colHit(v.x,v.z,0.2))){r.on=false;r.tag+='-nyitott';r.by=o.name}}}
   // a durva (4 egységes) rácsokon is lezárjuk az épületek alját, hogy a távoli útvonalak se vezessenek rajtuk át
-  for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;if(!gLands[zn][k])continue;const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;if(colHit(x,z,0.8))gLands[zn][k]=0}
-  COL_STAT={rects:COLR?COLR.length:0,ms:Math.round(performance.now()-t0)};return COL_STAT}
+  for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;if(!gLands[zn][k])continue;const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;if(cellBlocked(x,z))gLands[zn][k]=0}
+  COL_STAT={rects:COLR?COLR.length:0,enter:nIn,ms:Math.round(performance.now()-t0)};return COL_STAT}
 var COL_STAT=null;
+function cellBlocked(x,z){for(const a of[-1.3,0,1.3])for(const b of[-1.3,0,1.3])if(colHit(x+a,z+b,0.7))return true;return false}
 colRegisterAll();
 const MERGE_STAT=kMergeWorld();
 // ---------- NYÍLT TENGER (13. zóna): valódi hajózás a szigetek kicsinyített mása között ----------
