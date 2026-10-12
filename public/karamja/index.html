@@ -543,7 +543,7 @@ function buildTerrain(zx,paint){
   geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
   const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,map:TEX.ground}));m.position.x=zx;m.receiveShadow=true;scene.add(m);return m;
 }
-const terrain=buildTerrain(0,paintKaramja);const terrain2=buildTerrain(ZX,paintSarim);const terrain3=buildTerrain(2*ZX,paintFrost);const terrain4=buildTerrain(CX,paintCave);const terrain5=buildTerrain(PX,paintPirate);const terrain6=buildTerrain(DX,paintDesert);const terrain7=buildTerrain(EX,paintElf);const terrain8=buildTerrain(JX,paintJungle);const terrain9=buildTerrain(GX,paintGnome);const terrain10=buildTerrain(VX,paintValley);const terrain11=buildTerrain(HX,paintMarsh);const terrain12=buildTerrain(SX,paintSky);const terrains=[terrain,terrain2,terrain3,terrain4,terrain5,terrain6,terrain7];
+const terrain=buildTerrain(0,paintKaramja);const terrain2=buildTerrain(ZX,paintSarim);const terrain3=buildTerrain(2*ZX,paintFrost);const terrain4=buildTerrain(CX,paintCave);const terrain5=buildTerrain(PX,paintPirate);const terrain6=buildTerrain(DX,paintDesert);const terrain7=buildTerrain(EX,paintElf);const terrain8=buildTerrain(JX,paintJungle);const terrain9=buildTerrain(GX,paintGnome);const terrain10=buildTerrain(VX,paintValley);const terrain11=buildTerrain(HX,paintMarsh);const terrain12=buildTerrain(SX,paintSky);const terrains=[terrain,terrain2,terrain3,terrain4,terrain5,terrain6,terrain7,terrain8,terrain9,terrain10,terrain11,terrain12];
 
 // víz, láva
 const water=new THREE.Mesh(new THREE.PlaneGeometry(7200,2000,1,1),new THREE.MeshLambertMaterial({map:TEX.water,transparent:true,opacity:0.86}));
