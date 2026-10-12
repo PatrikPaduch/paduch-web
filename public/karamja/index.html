@@ -3037,13 +3037,18 @@ function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.ca
     g.updateMatrixWorld(true);for(const c of chim){const v=new THREE.Vector3(0,1.6,0);c.localToWorld(v);KCITY_CHIM.push(v)}return g};
   for(const s of[-1,1]){rowHouse(s*32.8,-8,0,4);rowHouse(s*32.8,20,Math.PI,4);rowHouse(s*32.8,44.6,0,4);rowHouse(s*44.6,-14,s<0?Math.PI/2:-Math.PI/2,3)}
   rowHouse(-10,-20.5,Math.PI/2,2);rowHouse(-34,-45,0,2);rowHouse(34,-45,0,2);
-  // ===== kőtemplom harangtoronnyal (bejárat a főutca felé) =====
-  {const ch=root(C.x-12,C.z+28);ch.position.x=KX+C.x-12;ch.position.z=C.z+28;B(ch,9,7,15,ST,0,3.5,0);const RFc=tTiles(shade(P.tower,0.8)),a=Math.atan2(5,4.5),Ls=5.3/Math.cos(a);for(const s of[-1,1]){const r=B(ch,Ls,0.3,16,RFc,s*2.65,7+5-Math.tan(a)*2.65+0.15,0,1.6);r.rotation.z=-s*a}
-    const sh=new THREE.Shape();sh.moveTo(-4.5,0);sh.lineTo(4.5,0);sh.lineTo(0,5);sh.closePath();for(const e of[-1,1]){const gg=new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false});const uv=gg.attributes.uv;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)/2,uv.getY(k)/2);const m=new THREE.Mesh(gg,ST);m.position.set(0,7,e>0?7.2:-7.5);ch.add(m)}
-    B(ch,4,15,4,ST,0,7.5,-8.5);B(ch,4.6,0.5,4.6,ST2,0,15.2,-8.5);const sp=new THREE.Mesh(new THREE.ConeGeometry(3.4,7,4),RFc);sp.rotation.y=Math.PI/4;sp.position.set(0,19,-8.5);ch.add(sp);B(ch,1.4,1.8,0.2,0x0e0c0a,0,12.5,-6.45);B(ch,0.1,1.6,0.1,P.trim,0,22.8,-8.5);B(ch,0.9,0.1,0.1,P.trim,0,23.1,-8.5);
-    B(ch,2.4,3.6,0.3,0x3a2414,0,1.8,-10.55);const ar=new THREE.Mesh(new THREE.CircleGeometry(1.2,12,0,Math.PI),flat(0x3a2414));ar.position.set(0,3.6,-10.5);ch.add(ar);
+  // ===== kőtemplom harangtoronnyal: bejárható (ajtó a torony északi oldalán, a tér felől) =====
+  {const ch=root(C.x-12,C.z+28);ch.position.x=KX+C.x-12;ch.position.z=C.z+28;ch.userData.occB=new THREE.Box3();const up=new THREE.Group();ch.add(up);up.userData.keep=true;const RFc=tTiles(shade(P.tower,0.8)),Wc=9,L=15,t=0.6;
+    B(ch,t,7,L,ST,-Wc/2+t/2,3.5,0);B(ch,t,7,L,ST,Wc/2-t/2,3.5,0);B(ch,Wc,7,t,ST,0,3.5,L/2-t/2);for(const s of[-1,1])B(ch,(Wc-2.2)/2,7,t,ST,s*(Wc/2-(Wc-2.2)/4),3.5,-L/2+t/2);B(ch,2.2,2.6,t,ST,0,5.7,-L/2+t/2);
+    B(ch,Wc-1,0.12,L-1,0x6a5a48,0,0.08,0);B(ch,3,0.12,6,0x8a1a1a,0,0.15,-1);for(let i=0;i<5;i++)for(const s of[-1,1]){B(ch,2.6,0.12,0.6,0x6a4a2a,s*2.3,0.65,-5+i*2);B(ch,2.6,0.7,0.1,0x5a3a20,s*2.3,0.95,-5+i*2-0.3);for(const e of[-1,1])B(ch,0.1,0.6,0.6,0x5a3a20,s*2.3+e*1.2,0.3,-5+i*2)}
+    for(const s of[-1,1])for(let i=0;i<3;i++){B(ch,0.15,0.8,0.15,0x8a7a6a,s*1.6,0.4,4.6+i*0.01);}
+    const a=Math.atan2(5,4.5),Ls=5.3/Math.cos(a);for(const s of[-1,1]){const r=B(up,Ls,0.3,16,RFc,s*2.65,7+5-Math.tan(a)*2.65+0.15,0,1.6);r.rotation.z=-s*a}
+    const sh=new THREE.Shape();sh.moveTo(-4.5,0);sh.lineTo(4.5,0);sh.lineTo(0,5);sh.closePath();for(const e of[-1,1]){const gg=new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false});const uv=gg.attributes.uv;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)/2,uv.getY(k)/2);const m=new THREE.Mesh(gg,ST);m.position.set(0,7,e>0?7.2:-7.5);up.add(m)}
+    for(const s of[-1,1])B(ch,0.5,7,3,ST,s*1.75,3.5,-9);for(const s of[-1,1])B(ch,0.9,7,0.5,ST,s*1.55,3.5,-10.25);B(ch,2.2,2.8,0.5,ST,0,5.6,-10.25);B(ch,3,0.12,3,0x6a5a48,0,0.08,-9);
+    B(up,4,8,4,ST,0,11,-8.5);B(up,4.6,0.5,4.6,ST2,0,15.2,-8.5);const sp=new THREE.Mesh(new THREE.ConeGeometry(3.4,7,4),RFc);sp.rotation.y=Math.PI/4;sp.position.set(0,19,-8.5);up.add(sp);B(up,1.4,1.8,0.2,0x0e0c0a,0,12.5,-10.55);B(up,0.1,1.6,0.1,P.trim,0,22.8,-8.5);B(up,0.9,0.1,0.1,P.trim,0,23.1,-8.5);
     for(const s of[-1,1])for(let i=-2;i<=2;i++){B(ch,0.15,2.4,0.9,0x6a8ac8,s*4.55,3.6,i*2.6);const ar2=new THREE.Mesh(new THREE.CircleGeometry(0.45,10,0,Math.PI),flat(0x6a8ac8));ar2.position.set(s*4.6,4.8,i*2.6);ar2.rotation.y=s*Math.PI/2;ch.add(ar2)}
-    for(const z of[-6,6])for(const s of[-1,1])B(ch,1,6,1,ST2,s*4.9,3,z)}
+    for(const z of[-6,6])for(const s of[-1,1])B(ch,1,6,1,ST2,s*4.9,3,z);
+    makeDoor(ch,-1.1,-10.25,2.2,'x',-1,'Templomajtó');interiorAdd(ch,up,Wc/2,10.6);KL.add(KX+C.x-12,4,C.z+30,0xffd8a0,0.8,12)}
   // ===== kút a téren, a királynő szobrával =====
   const ft=root(C.x,C.z+6);Cy(ft,5,5.4,1.2,ST,0,0.6,0,18);const wv=new THREE.Mesh(new THREE.CylinderGeometry(4.6,4.6,0.2,18),water.material);wv.position.y=1.05;ft.add(wv);Cy(ft,0.8,1,3.4,ST2,0,2.6,0,10);
   const sg=humanoid({skin:0xc8c4bc,hair:0xc8c4bc,shirt:0xc8c4bc,sleeves:0xc8c4bc,pants:0xc8c4bc,boots:0xc8c4bc,hairStyle:'long'});sg.position.y=4.2;sg.scale.setScalar(1.2);sg.userData.armR.rotation.x=-2.4;ft.add(sg);Cy(ft,0.42,0.42,0.3,P.trim,0,7.3,0,8);
@@ -3054,7 +3059,7 @@ function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.ca
   buildCapital(KCITY_STYLE);
   // templom, bank, standok (a régi helyükön, a piactér szélén)
   altar(KX+C.x-12,C.z+33);bankObj(KX+C.x+12,C.z-16);
-  stall(KX+C.x-15,C.z-4,'Ékszer stand','gyongy',30,60,0xe0e0f0);stall(KX+C.x+15,C.z-4,'Fűszeres stand','zsalya',20,40,0x6a9a50);stall(KX+C.x-15,C.z+16,'Pékség stand','kenyer',8,22,0xd8a050);stall(KX+C.x+15,C.z+16,'Prémes stand','rokabor',38,75,0xc87030);
+  stall(KX+C.x-15,C.z-4,'Ékszer stand','gyongy',30,60,0xe0e0f0);stall(KX+C.x+15,C.z-4,'Fűszeres stand','zsalya',20,40,0x6a9a50);stall(KX+C.x-15,C.z-12,'Pékség stand','kenyer',8,22,0xd8a050);stall(KX+C.x+15,C.z+16,'Prémes stand','rokabor',38,75,0xc87030);
 })();
 // --- Koronavár élete (v57): sétáló városlakók az utcahálózaton, kapuőrök, falon járőrözők, kiabáló árusok, lantos,
 // galambok a téren, este kigyúló ablakok és kéményfüst. Csak a város közelében fut (cityAnim a kAnim-ból). ---
@@ -3064,7 +3069,7 @@ const KLIFE=(function(){const C=KR.cap,OX=KX+C.x,OZ=C.z,W=(lx,lz)=>[OX+lx,OZ+lz]
   const P=[];for(let k=0;k<8;k++){const a=k/8*6.283;P.push(node(Math.cos(a)*12.5,6+Math.sin(a)*12.5))}for(let k=0;k<8;k++)link(P[k],P[(k+1)%8]);
   const chain=(from,pts)=>{let a=from;for(const [x,z] of pts){const b=node(x,z);link(a,b);a=b}return a};
   const e3=chain(P[0],[[24,6],[38,6],[52,6]]),w3=chain(P[4],[[-24,6],[-38,6],[-52,6]]),s3=chain(P[2],[[0,24],[0,38],[0,52]]);chain(P[6],[[0,-17],[0,-27]]);
-  const sw=chain(s3,[[-26,52],[-52,52]]);link(sw,w3);const se=chain(s3,[[26,52],[52,52]]);link(se,e3);chain(w3,[[-52,-24],[-52,-52],[-30,-52]]);chain(e3,[[52,-24],[52,-52],[30,-52]]);
+  const sw=chain(s3,[[-26,52],[-48,50]]);link(sw,w3);const se=chain(s3,[[26,52],[48,50]]);link(se,e3);chain(w3,[[-52,-24],[-48,-48],[-30,-52]]);chain(e3,[[52,-24],[48,-48],[30,-52]]);
   // fejfeletti felirat (OSRS-sárga szöveg)
   const SP=[];function say(o,txt){if(o.sp){o.mesh.remove(o.sp);o.sp.material.map.dispose()}const cv=document.createElement('canvas');cv.width=512;cv.height=64;const x=cv.getContext('2d');x.font='bold 30px Trebuchet MS';x.textAlign='center';x.lineWidth=5;x.strokeStyle='#000';x.strokeText(txt,256,42);x.fillStyle='#ffff00';x.fillText(txt,256,42);
     const t=new THREE.CanvasTexture(cv);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));s.scale.set(11,1.4,1);s.position.y=3.4/(o.mesh.scale.x||1);s.renderOrder=999;o.mesh.add(s);o.sp=s;o.spT=4.5}
@@ -3094,7 +3099,7 @@ const KLIFE=(function(){const C=KR.cap,OX=KX+C.x,OZ=C.z,W=(lx,lz)=>[OX+lx,OZ+lz]
   // járőrök a fal tetején (nem kattinthatók): oda-vissza egy falszakaszon
   const WC=C.w+0.75,wallY=8-3+11.7+0.3;const patrols=[];for(const [x0,z0,x1,z1] of[[-46,WC,-12,WC],[12,-WC,46,-WC],[-WC,-46,-WC,-12],[WC,12,WC,46]]){const g=humanoid(guardLook);dress(g);slim(null,g);g.userData.keep=true;scene.add(g);g.position.set(OX+x0,wallY,OZ+z0);patrols.push({g,a:[OX+x0,OZ+z0],b:[OX+x1,OZ+z1],t:R(),dir:1,ph:R()*6})}
   // árusok a standok mögött, kiabálnak, ha közel jársz
-  const SC=[[-15,-4,'Ékszerész Vilma',['Gyöngyök a Halászrévi öbölből!','Csillogó ékszer, olcsón!','Nézd csak meg közelebbről!']],[15,-4,'Fűszeres Ali',['Zsálya, levendula, mandragóra!','Fűszert a levesbe!','Távoli földek illata!']],[-15,16,'Pék Margit',['Friss cipó! Ropogós cipó!','Meleg kenyér, most sült!','Mézeskalács a gyerekeknek!']],[15,16,'Szűcs Bence',['Rókabőr, medvebőr, bunda!','Télre készülsz? Nálam a prém!','Puha bunda, jó áron!']]];
+  const SC=[[-15,-4,'Ékszerész Vilma',['Gyöngyök a Halászrévi öbölből!','Csillogó ékszer, olcsón!','Nézd csak meg közelebbről!']],[15,-4,'Fűszeres Ali',['Zsálya, levendula, mandragóra!','Fűszert a levesbe!','Távoli földek illata!']],[-15,-12,'Pék Margit',['Friss cipó! Ropogós cipó!','Meleg kenyér, most sült!','Mézeskalács a gyerekeknek!']],[15,16,'Szűcs Bence',['Rókabőr, medvebőr, bunda!','Télre készülsz? Nálam a prém!','Puha bunda, jó áron!']]];
   for(const [x,z,name,calls] of SC){const ox=x+Math.sign(x)*1.8,oz=z+(z<0?-0.6:0.6);const o=npc(...W(ox,oz),name,[calls[0],calls[1]],{skin:pick(skins),hair:pick(hairs),shirt:pick(shirts),sleeves:pick(shirts),pants:pick(pants),boots:0x2a1a0a,hairStyle:R()<0.5?'long':undefined});o.mesh.rotation.y=Math.atan2(-Math.sign(x),0);slim(o,o.mesh);o.calls=calls;o.callT=3+R()*8;sellers.push(o)}
   // lantos a kútnál
   const bard=npc(...W(5.8,10.5),'Lantos Lóránt',['Egy dalt a hősnek? ♪','Ezt a balladát a Kőkolosszusról írtam.','A királynő kedvenc dala ez.'],{skin:0xe8c39e,hair:0x8a4a1a,shirt:0x2a6a3a,sleeves:0xd0a030,pants:0x5a3a6a,boots:0x3a2a1a,hat:'straw'});
@@ -3168,7 +3173,8 @@ const KTAV=(function(){const C=KR.cap,cx=12,cz=35,Wd=11,Ln=18,OX=KX+C.x+cx,OZ=C.
     const vol=inside?1:clamp(1-(d-6)/34,0,1);MUSIC.tavern(vol,inside);if(d>60)return;
     fire.scale.set(1+Math.sin(t*13)*0.12,1+Math.sin(t*9+1)*0.2,1);if(fid.bow)fid.bow.rotation.z=Math.sin(t*10)*0.45;for(let i=0;i<2;i++)drm.arms[i].rotation.x=-1.1+Math.max(0,Math.sin(t*12+i*Math.PI))*0.5;
     for(const o of people){o.toast-=dt;const u=o.mesh.userData;if(o.toast<0){u.armR.rotation.x=-2.2;if(o.toast<-1.2){u.armR.rotation.x=0;o.toast=5+Math.random()*9}}}}
-  return {step,x:OX,z:OZ}})();
+  const door=makeDoor(g,-Wd/2+0.3,-1.4,2.8,'z',1,'Kocsmaajtó');
+  return {step,x:OX,z:OZ,g}})();
 // a kripta lejárata a palota mellett (a szellemkövek titka)
 const kCrypt=(function(){const g=new THREE.Group();kB(g,4,0.4,4,mats.kStoneDark,0,0.2,0);const d=kB(g,2.4,2.8,0.4,M(0x0a0806),0,1.6,-1.2);kB(g,3.2,0.6,0.6,mats.stone,0,3.2,-1.2);for(const sx of[-1,1])kB(g,0.6,3.2,0.6,mats.stone,sx*1.5,1.6,-1.2);
   const runes=[];for(let i=0;i<4;i++){const r=kB(g,0.3,0.3,0.1,mats.kRune,-0.9+i*0.6,2.6,-0.98);runes.push(r)}
@@ -3390,7 +3396,7 @@ const GC=4,GN=Math.floor(SIZE/GC);const gLands=[0,1,2,3,4,5,6,7,8,9,10,11].map((
 for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;gLands[zn][j*GN+i]=(height(x,z)>0.5&&(zn!==3||height(x,z)<6)&&(![7,8,10].includes(zn)||height(x,z)<13))||onDock(x,z)?1:0}
 // Koronaföld útkereső rácsa (400x200, 4 egységes cellák) és kupacos A*; a nagy térképen a lineáris nyílt lista lassú lenne
 const KGW=400,KGH=200;let KGL=null;
-function kGL(){if(KGL)return KGL;KGL=new Uint8Array(KGW*KGH);for(let j=0;j<KGH;j++)for(let i=0;i<KGW;i++){const x=(i+0.5)*4-KHW,z=(j+0.5)*4-KHD,h=contHeight(x,z);KGL[j*KGW+i]=(h>0.5&&!kOnWall(x,z))||onDock(x+KX,z)?1:0}return KGL}
+function kGL(){if(KGL)return KGL;KGL=new Uint8Array(KGW*KGH);for(let j=0;j<KGH;j++)for(let i=0;i<KGW;i++){const x=(i+0.5)*4-KHW,z=(j+0.5)*4-KHD,h=contHeight(x,z);KGL[j*KGW+i]=(h>0.5&&!kOnWall(x,z))||onDock(x+KX,z)?1:0;if(KGL[j*KGW+i]&&COLG&&colHit(x+KX,z,0.8))KGL[j*KGW+i]=0}return KGL}
 function astarK(ax,az,bx,bz){const L=kGL(),W=KGW,N=KGW*KGH;const gi=(x,z)=>clamp(Math.floor((x-KX+KHW)/4),0,W-1)+clamp(Math.floor((z+KHD)/4),0,KGH-1)*W;
   const S=gi(ax,az),T=gi(bx,bz);if(!L[T])return null;const ti=T%W,tj=(T/W)|0;const g=new Float32Array(N).fill(1e9),from=new Int32Array(N).fill(-1),closed=new Uint8Array(N);
   const hn=[],hf=[];const push=(n,f)=>{let i=hn.length;hn.push(n);hf.push(f);while(i>0){const p=(i-1)>>1;if(hf[p]<=hf[i])break;[hn[p],hn[i]]=[hn[i],hn[p]];[hf[p],hf[i]]=[hf[i],hf[p]];i=p}};
@@ -3404,7 +3410,7 @@ function astarK(ax,az,bx,bz){const L=kGL(),W=KGW,N=KGW*KGH;const gi=(x,z)=>clamp
   const out=[];let cur={x:ax,z:az},k=0;while(k<pts.length){let best=k;for(let m=Math.min(pts.length-1,k+30);m>k;m--){if(lineClear(cur.x,cur.z,pts[m].x,pts[m].z)){best=m;break}}out.push(pts[best]);cur=pts[best];k=best+1}
   return out}
 const gIdx=(x,z)=>[clamp(Math.floor((x-zoneOf(x)*ZX+HALF)/GC),0,GN-1),clamp(Math.floor((z+HALF)/GC),0,GN-1)];
-function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;const x=ax+(bx-ax)*t,z=az+(bz-az)*t;const hh=height(x,z);if((hh<0.3&&!onDock(x,z))||([7,8,10].includes(zoneOf(x))&&hh>13)||(zoneOf(x)===12&&kOnWall(x-KX,z)))return false}return true}
+function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az);if(COLG)for(let q=0.5;q<d;q+=0.5){const t=q/d;if(colHit(ax+(bx-ax)*t,az+(bz-az)*t))return false}const n=Math.ceil(d/1.2);for(let i=1;i<n;i++){const t=i/n;const x=ax+(bx-ax)*t,z=az+(bz-az)*t;const hh=height(x,z);if((hh<0.3&&!onDock(x,z))||([7,8,10].includes(zoneOf(x))&&hh>13)||(zoneOf(x)===12&&kOnWall(x-KX,z)))return false}return true}
 function astar(ax,az,bx,bz){
   const zn=zoneOf(ax);if(zoneOf(bx)!==zn)return null;if(zn===12)return astarK(ax,az,bx,bz);const gLand=gLands[zn];const zx=zn*ZX;
   const [si,sj]=gIdx(ax,az),[ti,tj]=gIdx(bx,bz);if(!gLand[tj*GN+ti])return null;
@@ -3420,11 +3426,12 @@ function astar(ax,az,bx,bz){
   const out=[];let cur={x:ax,z:az};let k=0;while(k<pts.length){let best=k;for(let m=pts.length-1;m>k;m--){if(lineClear(cur.x,cur.z,pts[m].x,pts[m].z)){best=m;break}}out.push(pts[best]);cur=pts[best];k=best+1}
   return out;
 }
-let route=[];
+let route=[],colReplan=0;
 function walkTo(x,z,action){
   route=[];pendingAction=action||null;busy=null;fight=null;
   if(lineClear(px,pz,x,z)){target={x,z}}
-  else{const r=astar(px,pz,x,z);if(!r){chat('Oda nem vezet út.');target=null;pendingAction=null;return false}target=r.shift();route=r}
+  else{let r=null;if(COLG&&zoneOf(x)===zoneOf(px)&&Math.hypot(x-px,z-pz)<200){r=astarFine(px,pz,x,z);if(r&&!r.reached){const l=r.length?r[r.length-1]:{x:px,z:pz};if(Math.hypot(l.x-x,l.z-z)>2.5)pendingAction=null}if(r&&!r.length){chat('Oda nem vezet út.');target=null;pendingAction=null;return false}}
+    if(!r)r=astar(px,pz,x,z);if(!r){chat('Oda nem vezet út.');target=null;pendingAction=null;return false}target=r.shift();route=r}
   marker.position.set(x,height(x,z)+0.1,z);marker.visible=true;marker.scale.setScalar(1);return true;
 }
 function useObj(o){
@@ -4872,6 +4879,7 @@ function startAction(o){
   if(o.type==='altar'){let n=0,xpb=0;for(let i=0;i<28;i++){const st=inv[i];if(st&&(st.id==='csont'||st.id==='nagycsont')){n+=st.n;for(let k=0;k<st.n;k++)buryBone(st.id,true);inv[i]=null}}renderInv();const was=prp;prp=maxPr();renderPrayers();SFX.play('levelup');chat(n?`Feláldoztál ${n} csontot az oltáron (dupla Ima XP).`:(was<maxPr()?'Letérdelsz az oltárnál. Az imapontjaid visszatöltődtek.':'Letérdelsz, és csendben imádkozol.'),'xp');return}
   if(o.type==='stall'){stealStall(o);return}
   if(o.type==='runealtar'){const n=countItem('esszencia');if(!n){chat('Nincs nálad rúnaesszencia. A vulkán lábánál és Zúzmara-fokon bányászhatod.');return}const per=1+Math.floor(lvlFor(xp.rc)/11);takeN('esszencia',n);let k=0;for(let i=0;i<n*per;i++)if(giveItem('runa'))k++;addXp('rc',n*8,o.mesh.position);SFX.play('quest');floatText('✦',o.mesh.position,'#80c0ff',-20);chat(`Az esszencia felizzik: ${k} rúna lett belőle.`,'xp');return}
+  if(o.type==='door'){doorToggle(o);return}
   if(o.type==='agil'){if(lvlFor(xp.ag)<o.lvl){chat(`Ehhez ${o.lvl}-es Ügyesség kell.`);return}busy={obj:o,t:0,dur:o.dur};chat(`${o.name}: nekifutsz...`);return}
   if(o.type==='npc'){if(o.dialog&&DIALOG[o.dialog])DIALOG[o.dialog](o);else{showDialog(o.name,o.lines[o.li%o.lines.length]);o.li++}return}
   if(o.type==='monkey'){const q=qs.majom;if(q.st===1&&!q.key){if(monkeys.indexOf(o)===q.thief){q.key=true;giveItem('aranykulcs');chat('A majom megijed, és a kezéből kiesik egy aranykulcs! Felveszed.','xp');chestObj.mesh.visible=true;chestObj.depleted=false;renderQuests()}else chat('Ez a majom csak vigyorog, nincs nála semmi.')}else chat('A majom rád néz, elvigyorodik, aztán elszalad. Ooh ooh aah!');o.target={x:o.mesh.position.x+(Math.random()-0.5)*20,z:o.mesh.position.z+(Math.random()-0.5)*20};return}
@@ -5253,7 +5261,7 @@ function wander(o,sp,dt,range,test){
   const m=o.mesh;
   if(!o.target){o.wait-=dt;if(o.wait<=0){let tx,tz,k=0;do{tx=m.position.x+(Math.random()-0.5)*range;tz=m.position.z+(Math.random()-0.5)*range;k++}while(!test(tx,tz)&&k<10);if(k<10)o.target={x:tx,z:tz};o.wait=2+Math.random()*4}return false}
   const dx=o.target.x-m.position.x,dz=o.target.z-m.position.z,d=Math.hypot(dx,dz);if(d<0.3){o.target=null;return false}
-  const s=Math.min(sp*dt,d);m.position.x+=dx/d*s;m.position.z+=dz/d*s;m.rotation.y=Math.atan2(dx,dz);return true;
+  const s=Math.min(sp*dt,d),ox=m.position.x,oz=m.position.z;m.position.x+=dx/d*s;m.position.z+=dz/d*s;if(COLG&&colHit(m.position.x,m.position.z,0.6)&&!colHit(ox,oz,0.6)){m.position.x=ox;m.position.z=oz;o.target=null;return false}m.rotation.y=Math.atan2(dx,dz);return true;
 }
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
@@ -5268,7 +5276,8 @@ function animate(now){
     const dx=target.x-px,dz=target.z-pz,d=Math.hypot(dx,dz);const sp=(run&&energy>0?9:4.5)*dt;if(run){energy=Math.max(0,energy-dt*Math.max(1.2,4.5-lvlFor(xp.ag)*0.035));if(energy<=0){toggleRun();chat('Kifulladtál, sétálsz tovább.')}}
     if(d<0.15){if(route.length){target=route.shift()}else{target=null;marker.visible=false;if(pendingAction){const a=pendingAction;pendingAction=null;startAction(a)}}}
     else{const s=Math.min(sp,d);const nx=px+dx/d*s,nz=pz+dz/d*s;
-      const hh=height(nx,nz);const wall=(zoneOf(nx)===3&&hh>6)||([7,8,10].includes(zoneOf(nx))&&hh>13)||(zoneOf(nx)===12&&kOnWall(nx-KX,nz));if((hh>0.0&&!wall)||onDock(nx,nz)||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true}else{target=null;route=[];marker.visible=false;chat(wall?(zoneOf(nx)===12?'Koronavár fala. Kapu mind a négy égtáj felé nyílik.':zoneOf(nx)===7?'Várfal. A kapu a déli oldalon van.':zoneOf(nx)===8?'Sövényfal. Keresd a folyosót.':zoneOf(nx)===10?'A kastély fala. A kapu a déli oldalon.':'Sziklafal. Erre nem jutsz tovább.'):(zoneOf(nx)===11?'Ott csak felhő van, alatta a semmi. Keresd a hidakat.':'Ott víz van, nem gázolsz bele.'))}}
+      const hh=height(nx,nz);const wall=(zoneOf(nx)===3&&hh>6)||([7,8,10].includes(zoneOf(nx))&&hh>13)||(zoneOf(nx)===12&&kOnWall(nx-KX,nz));const cb=COLG&&colHit(nx,nz)&&!colHit(px,pz);if(cb){colReplan=(colReplan||0)+1;const fin=route.length?route[route.length-1]:target;const r=colReplan<3?astarFine(px,pz,fin.x,fin.z):null;if(r&&r.length&&!(r.length===1&&!lineClear(px,pz,r[0].x,r[0].z))){target=r.shift();route=r}else{target=null;route=[];marker.visible=false;colReplan=0}}
+      else if((hh>0.0&&!wall)||onDock(nx,nz)||(pendingAction&&!wall)){px=nx;pz=nz;facing=Math.atan2(dx,dz);moving=true;colReplan=0}else{target=null;route=[];marker.visible=false;chat(wall?(zoneOf(nx)===12?'Koronavár fala. Kapu mind a négy égtáj felé nyílik.':zoneOf(nx)===7?'Várfal. A kapu a déli oldalon van.':zoneOf(nx)===8?'Sövényfal. Keresd a folyosót.':zoneOf(nx)===10?'A kastély fala. A kapu a déli oldalon.':'Sziklafal. Erre nem jutsz tovább.'):(zoneOf(nx)===11?'Ott csak felhő van, alatta a semmi. Keresd a hidakat.':'Ott víz van, nem gázolsz bele.'))}}
   }
   player.position.set(px,Math.max(height(px,pz),0.3)+(onDock(px,pz)&&height(px,pz)<0.3?1.05:0),pz);
   if(voyage)player.position.y=OCEAN.ship.position.y+0.95;
@@ -5299,7 +5308,7 @@ function animate(now){
     let mv=false;
     if(s.aggro&&!dead)bossMech(s,dt,d);
     if(s.aggro){
-      if(s.frozenT>0){s.frozenT-=dt}else if(d>1.6){const dx=px-m.position.x,dz=pz-m.position.z;const sp=Math.min(s.d.speed*dt,d-1.5);m.position.x+=dx/d*sp;m.position.z+=dz/d*sp;m.rotation.y=Math.atan2(dx,dz);mv=true}
+      if(s.frozenT>0){s.frozenT-=dt}else if(d>1.6){const dx=px-m.position.x,dz=pz-m.position.z;const sp=Math.min(s.d.speed*dt,d-1.5),ox=m.position.x,oz=m.position.z;m.position.x+=dx/d*sp;m.position.z+=dz/d*sp;if(COLG&&colHit(m.position.x,m.position.z,0.6)&&!colHit(ox,oz,0.6)){m.position.x=ox;m.position.z=oz}m.rotation.y=Math.atan2(dx,dz);mv=true}
       else{m.rotation.y=Math.atan2(px-m.position.x,pz-m.position.z);if(s.frozenT>0){s.frozenT-=dt}else{s.atkT-=dt;if(s.atkT<=0){monsterHit(s);s.atkT=2.4}}}
     }else mv=wander(s,2,dt,14,(x,z)=>{const h=height(x,z),zx=zoneOf(x);return zx===3?h<6:zx===12?(h>0.7&&!kOnWall(x-KX,z)):h>3});
     m.position.y=height(m.position.x,m.position.z);
@@ -5567,7 +5576,7 @@ KS.update=function(dt){if(zoneOf(px)!==12)return;
 function kRefresh(){const kb=stats.kb||0;for(const o of KBOOKS){const got=!!(kb&(1<<o.i));o.mesh.visible=!got;o.depleted=got}
   for(const o of KSTONES)o.glyph.material.color.setHex(((stats.kst||0)&(1<<o.i))?0x60d0ff:0x2a3a4a);kCryptRunes();kLight.lamp.material=stats.kfeny?mats.kGlass:mats.kGlassOff}
 let kHydra=null;
-function kAnim(dt){if(zoneOf(px)!==12){MUSIC.tavern(0);return}KLIFE.step(dt);KTAV.step(dt);kMill.sails.rotation.z+=dt*0.6;const lit=!!stats.kfeny&&night>0.2;kLight.piv.visible=lit;if(lit)kLight.piv.rotation.y+=dt*0.7;kWater.position.y=water.position.y;
+function kAnim(dt){if(zoneOf(px)!==12){MUSIC.tavern(0);return}KLIFE.step(dt);KTAV.step(dt);interiorsStep();kMill.sails.rotation.z+=dt*0.6;const lit=!!stats.kfeny&&night>0.2;kLight.piv.visible=lit;if(lit)kLight.piv.rotation.y+=dt*0.7;kWater.position.y=water.position.y;
   if(!kHydra)kHydra=monsters.find(m=>m.kind==='mocsarihidra');if(kHydra&&!kHydra.depleted){const hs=kHydra.mesh.userData.heads;if(hs)for(let i=0;i<hs.length;i++){hs[i].rotation.x=hs[i].userData.x0+Math.sin(t*(kHydra.aggro?3:1.2)+i*1.3)*0.18;hs[i].rotation.z=hs[i].userData.z0+Math.sin(t*0.9+i)*0.1}}}
 function kMapLabels(lab){const L=(x,z,s)=>lab(KX+x,z,s);L(KR.cap.x,KR.cap.z-72,'Koronavár');L(KR.port.x,KR.port.z+44,'Halászrév');L(KR.arkan.x,KR.arkan.z+40,'Arkánum');L(KR.koho.x+10,KR.koho.z+48,'Kohóváros');L(KR.ash.x-60,KR.ash.z-40,'Hamuvidék');L(KR.mine.x,KR.mine.z-26,'Bánya');
   L(KR.swamp.x+30,KR.swamp.z+70,'Gyíkláp');L(KR.hydra.x,KR.hydra.z-30,'Hidraodú');L(KR.lake.x,KR.lake.z+78,'Tükörtó');L(KR.camp.x,KR.camp.z-54,'Pajzsőrség');L(KR.orkcamp.x,KR.orkcamp.z+40,'Orktábor');L(KR.forest.x,KR.forest.z+10,'Ezüsterdő');
@@ -5605,6 +5614,59 @@ function kMergeObj(o){if(!o.mesh||!o.mesh.isGroup||MERGE_SKIP.has(o.type))return
 function kMergeWorld(){const t0=performance.now();let k=0;for(const o of interactables){if(o.mesh===player)continue;kMergeObj(o);k++}
   const skip=new Set([player,marker,...interactables.map(o=>o.mesh)]);for(const o of scene.children){if(!o.isGroup||skip.has(o)||o.userData.mp||o.userData.keep)continue;mergeStatic(o);k++}
   return [k,Math.round(performance.now()-t0)]}
+// ===== Épület-ütközés (v59): az épületek falai, tornyai, pillérei elforgatott téglalapok; rácsos térbeli kereséssel.
+// A karakter, a szörnyek nem mennek át rajtuk; közelre finom (1 egységes) A* kerüli ki őket; az ajtók nyithatók. =====
+var COLR=null,COLG=null;const COLC=12;
+function colAdd(x,z,hw,hd,rot,tag){if(!COLR){COLR=[];COLG=new Map()}const r={x,z,hw,hd,c:Math.cos(rot),s:Math.sin(rot),on:true,tag};const R=Math.hypot(hw,hd)+1;
+  for(let i=Math.floor((x-R)/COLC);i<=Math.floor((x+R)/COLC);i++)for(let j=Math.floor((z-R)/COLC);j<=Math.floor((z+R)/COLC);j++){const k=i*100003+j;let L=COLG.get(k);if(!L)COLG.set(k,L=[]);L.push(r)}COLR.push(r);return r}
+function colHit(x,z,rad=0.32){if(!COLG)return null;const L=COLG.get(Math.floor(x/COLC)*100003+Math.floor(z/COLC));if(!L)return null;
+  for(const r of L){if(!r.on)continue;const dx=x-r.x,dz=z-r.z,lx=dx*r.c-dz*r.s,lz=dx*r.s+dz*r.c;if(Math.abs(lx)<r.hw+rad&&Math.abs(lz)<r.hd+rad)return r}return null}
+// egy csoport talajon álló, magas részei (fal, torony, pillér) -> téglalapok a csoport saját forgatásában
+const _cb=new THREE.Box3(),_cv=new THREE.Vector3(),_cq=new THREE.Quaternion(),_ce=new THREE.Euler(),_cs=new THREE.Vector3(),_cm=new THREE.Matrix4(),_ci=new THREE.Matrix4();
+function colFromGroup(g,tag,minH=1.5){g.updateMatrixWorld(true);_ci.copy(g.matrixWorld).invert();g.getWorldQuaternion(_cq);_ce.setFromQuaternion(_cq,'YXZ');const rot=_ce.y;g.getWorldScale(_cs);const sc=_cs.x;let n=0;
+  g.traverse(m=>{if(!m.isMesh||!m.geometry||m.userData.nocol||m.material&&m.material.visible===false)return;for(let p=m;p&&p!==g;p=p.parent)if(p.userData.nocol||p.visible===false)return;
+    if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();_cm.multiplyMatrices(_ci,m.matrixWorld);_cb.copy(m.geometry.boundingBox).applyMatrix4(_cm);
+    const h=(_cb.max.y-_cb.min.y)*sc;if(h<minH||_cb.min.y*sc>1.2)return;const w=(_cb.max.x-_cb.min.x),d=(_cb.max.z-_cb.min.z);if(w*sc<0.25||d*sc<0.25)return;
+    _cv.set((_cb.min.x+_cb.max.x)/2,0,(_cb.min.z+_cb.max.z)/2).applyMatrix4(g.matrixWorld);colAdd(_cv.x,_cv.z,w*sc/2,d*sc/2,rot,tag);n++});return n}
+function walkable(x,z){const zn=zoneOf(x),hh=height(x,z);if((hh<0.3&&!onDock(x,z))||(zn===3&&hh>6)||([7,8,10].includes(zn)&&hh>13)||(zn===12&&kOnWall(x-KX,z)))return false;return !colHit(x,z)}
+// finom A* egy ablakban (1 egységes cellák); ha a cél nem érhető el, a hozzá legközelebbi elérhető pontig visz
+function astarFine(ax,az,bx,bz){const pad=24,x0=Math.floor(Math.min(ax,bx)-pad),z0=Math.floor(Math.min(az,bz)-pad),W=Math.min(260,Math.ceil(Math.abs(bx-ax)+pad*2)),H=Math.min(260,Math.ceil(Math.abs(bz-az)+pad*2)),N=W*H;
+  const ok=new Int8Array(N);const OK=n=>{if(ok[n])return ok[n]>0;const v=walkable(x0+(n%W)+0.5,z0+((n/W)|0)+0.5);ok[n]=v?1:-1;return v};
+  const ci=(x,z)=>{const i=Math.floor(x-x0),j=Math.floor(z-z0);return i<0||j<0||i>=W||j>=H?-1:i+j*W};const S=ci(ax,az),T=ci(bx,bz);if(S<0||T<0)return null;ok[S]=1;
+  const g=new Float32Array(N).fill(1e9),from=new Int32Array(N).fill(-1),closed=new Uint8Array(N),ti=T%W,tj=(T/W)|0;const hn=[],hf=[];
+  const push=(n,f)=>{let i=hn.length;hn.push(n);hf.push(f);while(i>0){const p=(i-1)>>1;if(hf[p]<=hf[i])break;[hn[p],hn[i]]=[hn[i],hn[p]];[hf[p],hf[i]]=[hf[i],hf[p]];i=p}};
+  const pop=()=>{const n=hn[0],ln=hn.pop(),lf=hf.pop();if(hn.length){hn[0]=ln;hf[0]=lf;let i=0;for(;;){const a=2*i+1,b=a+1;let m=i;if(a<hn.length&&hf[a]<hf[m])m=a;if(b<hn.length&&hf[b]<hf[m])m=b;if(m===i)break;[hn[m],hn[i]]=[hn[i],hn[m]];[hf[m],hf[i]]=[hf[i],hf[m]];i=m}}return n};
+  g[S]=0;push(S,0);let best=S,bestH=1e9,it=0;
+  while(hn.length&&it<60000){it++;const n=pop();if(closed[n])continue;closed[n]=1;const i=n%W,j=(n/W)|0,hh=Math.hypot(i-ti,j-tj);if(hh<bestH){bestH=hh;best=n}if(n===T)break;
+    for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){if(!di&&!dj)continue;const ni=i+di,nj=j+dj;if(ni<0||nj<0||ni>=W||nj>=H)continue;const m=ni+nj*W;if(closed[m]||!OK(m))continue;if(di&&dj&&(!OK(i+nj*W)||!OK(ni+j*W)))continue;
+      const ng=g[n]+(di&&dj?1.4142:1);if(ng<g[m]){g[m]=ng;from[m]=n;push(m,ng+Math.hypot(ni-ti,nj-tj))}}}
+  const end=closed[T]?T:best;if(end===S)return closed[T]?[{x:bx,z:bz}]:[];const path=[];let c=end;while(c!==S&&c>=0){path.push(c);c=from[c]}path.reverse();
+  const pts=path.map(n=>({x:x0+(n%W)+0.5,z:z0+((n/W)|0)+0.5}));if(end===T)pts.push({x:bx,z:bz});
+  const out=[];let cur={x:ax,z:az},k=0;while(k<pts.length){let b=k;for(let m=Math.min(pts.length-1,k+60);m>k;m--){if(lineClear(cur.x,cur.z,pts[m].x,pts[m].z)){b=m;break}}out.push(pts[b]);cur=pts[b];k=b+1}
+  out.reached=end===T;return out}
+// --- ajtók: kattintásra nyílnak/csukódnak; csukva útban vannak ---
+var DOORS; // (var: a város és a kocsma korábban épül, mint ez a modul)
+function makeDoor(parent,hx,hz,len,axis,swing,name){const piv=new THREE.Group();piv.position.set(hx,0,hz);parent.add(piv);piv.userData.keep=true;
+  const dm=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.16:len,2.9,axis==='z'?len:0.16),M(0x5a3a1e));dm.position.set(axis==='z'?0:len/2,1.45,axis==='z'?len/2:0);piv.add(dm);
+  for(let i=0;i<2;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(axis==='z'?0.2:len*0.9,0.12,axis==='z'?len*0.9:0.2),M(0x2a2a2a));b.position.set(dm.position.x,0.7+i*1.5,dm.position.z);piv.add(b)}
+  const kn=new THREE.Mesh(new THREE.SphereGeometry(0.07,5,4),M(0xd0a030));kn.position.set(axis==='z'?0.12:len*0.85,1.4,axis==='z'?len*0.85:0.12);piv.add(kn);dm.userData.nocol=true;
+  const o={mesh:piv,type:'door',name:name||'Ajtó',action:'Kinyitom',hit:dm,open:false,swing,piv,rect:null};
+  o.init=()=>{parent.updateMatrixWorld(true);const c=new THREE.Vector3();dm.getWorldPosition(c);const q=new THREE.Quaternion();dm.getWorldQuaternion(q);const e=new THREE.Euler().setFromQuaternion(q,'YXZ');
+    o.rect=colAdd(c.x,c.z,axis==='z'?0.3:len/2,axis==='z'?len/2:0.3,e.y,'ajto');o.wp=c.clone()};interactables.push(o);(DOORS||(DOORS=[])).push(o);return o}
+function doorToggle(o){o.open=!o.open;o.piv.rotation.y=o.open?o.swing*Math.PI/2:0;if(o.rect)o.rect.on=!o.open;o.action=o.open?'Becsukom':'Kinyitom';SFX.play('pickup');chat(o.open?'Kinyitod az ajtót.':'Becsukod az ajtót.')}
+// --- belső terek: ha a karakter bent van, az emelet és a tető eltűnik ---
+var INTERIORS;function interiorsStep(){if(INTERIORS)for(const I of INTERIORS){const dx=px-I.x,dz=pz-I.z,lx=dx*I.c-dz*I.s,lz=dx*I.s+dz*I.c,inn=Math.abs(lx)<I.hw&&Math.abs(lz)<I.hd;if(inn!==I.inn){I.inn=inn;for(const u of I.upper)u.visible=!inn}}}
+function interiorAdd(g,upper,hw,hd){g.updateMatrixWorld(true);const c=new THREE.Vector3();g.getWorldPosition(c);const q=new THREE.Quaternion();g.getWorldQuaternion(q);const e=new THREE.Euler().setFromQuaternion(q,'YXZ');(INTERIORS||(INTERIORS=[])).push({x:c.x,z:c.z,hw,hd,c:Math.cos(e.y),s:Math.sin(e.y),upper:[].concat(upper),inn:false})}
+// --- bejegyzés: minden épület (házak, kunyhók, egyedi épületek, Koronavár, kocsma) ---
+function colRegisterAll(){const t0=performance.now();let n=0;const seen=new Set();const reg=(g,tag)=>{if(!g||seen.has(g))return;seen.add(g);n+=colFromGroup(g,tag)};
+  for(const h of huts)reg(h,'haz');for(const o of KCITY_OBJS)reg(o,'varos');if(typeof KTAV!=='undefined')reg(KTAV.g,'kocsma');if(DOORS)for(const d of DOORS)d.init();
+  // ami épületen belül maradt (NPC, stand, érc), annak az épületrésze átjárható marad, hogy elérhető legyen
+  {const v=new THREE.Vector3();for(const o of interactables){if(o.type==='monster'||o.type==='door'||o.walk||!o.mesh)continue;o.mesh.getWorldPosition(v);let r;while((r=colHit(v.x,v.z,0.2))){r.on=false;r.tag+='-nyitott';r.by=o.name}}}
+  // a durva (4 egységes) rácsokon is lezárjuk az épületek alját, hogy a távoli útvonalak se vezessenek rajtuk át
+  for(let zn=0;zn<12;zn++)for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;if(!gLands[zn][k])continue;const x=(i+0.5)*GC-HALF+zn*ZX,z=(j+0.5)*GC-HALF;if(colHit(x,z,0.8))gLands[zn][k]=0}
+  COL_STAT={rects:COLR?COLR.length:0,ms:Math.round(performance.now()-t0)};return COL_STAT}
+var COL_STAT=null;
+colRegisterAll();
 const MERGE_STAT=kMergeWorld();
 // ---------- NYÍLT TENGER (13. zóna): valódi hajózás a szigetek kicsinyített mása között ----------
 // Közös világföldrajz (WGEO): a szigetek helye egy közös óceánon (tengeri koordináták, OX körül). Ugyanebből készül a
