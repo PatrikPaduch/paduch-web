@@ -1562,7 +1562,7 @@ const CUR_ARROW=curSvg('#ffe87a'),CUR_HOT=curSvg('#ff8a3a');document.body.style.
 function pick(cx,cy){
   mouse.x=(cx/innerWidth)*2-1;mouse.y=-(cy/innerHeight)*2+1;ray.setFromCamera(mouse,camera);
   const hits=interactables.filter(o=>!o.depleted).map(o=>o.hit);
-  const ih=ray.intersectObjects(hits,false);
+  const ih=ray.intersectObjects(hits,false).filter(h=>!occFaded(h.object));
   if(ih.length){const o=interactables.find(o=>o.hit===ih[0].object);return {obj:o,point:ih[0].point}}
   const th=ray.intersectObjects(terrains,false);
   if(th.length)return {obj:null,point:th[0].point};
@@ -3169,11 +3169,7 @@ function animate(now){
   const cy=Math.max(height(px,pz),0.3)+1.5;
   const cx=px+Math.sin(camYaw)*Math.cos(camPitch)*camDist,cz=pz+Math.cos(camYaw)*Math.cos(camPitch)*camDist,ch=cy+Math.sin(camPitch)*camDist;
   camera.position.set(cx,Math.max(ch,height(cx,cz)+1.5),cz);camera.lookAt(px,cy,pz);
-  // a kamera és a játékos közé eső fák elrejtése
-  {const ax=camera.position.x,az=camera.position.z,bx=px,bz=pz;const vx=bx-ax,vz=bz-az;const L2=vx*vx+vz*vz;
-    const occl=interactables.filter(o=>o.type==='tree'&&!o.depleted).map(o=>o.mesh).concat(huts);
-    for(const m of occl){const wx=m.position.x-ax,wz=m.position.z-az;const tt=(wx*vx+wz*vz)/L2;
-      const dd=tt>0.05&&tt<0.92?Math.hypot(wx-vx*tt,wz-vz*tt):99;m.visible=dd>3.2}}
+  updateOcclusion(dt);
   {const h=height(px,pz);SFX.update(dt,zoneOf(px)===3?0:clamp(1-(h-0.3)/4,0,1),zoneOf(px)===3?0.8:clamp(1-(dVol(px,pz)-12)/30,0,1),clamp((h-4)/4,0,1),night)}
   renderer.render(scene,camera);drawMinimap();drawHpbars();
 }
@@ -3246,7 +3242,7 @@ async function cloudSave(force,keep){
   cloud.busy=false;cloudStatus();
 }
 async function cloudLoad(code){
-  try{const r=await fetch(API+'/save',{headers:{'X-Save-Code':code}});if(r.status===404)return {none:true};if(!r.ok)return null;return await r.json()}catch(err){return null}
+  try{const r=await fetch(API+'/save',{headers:{'X-Save-Code':code}});if(r.status===404)return {none:true};if(!r.ok)return null;const j=await r.json();return j&&j.none?{none:true}:j}catch(err){return null}
 }
 function saveGame(){saveLocal();stEl.classList.add('on');setTimeout(()=>stEl.classList.remove('on'),300)}
 // indulás: helyi mentés, aztán a felhő (ha ott frissebb, az nyer)
@@ -3371,6 +3367,29 @@ const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THR
   // később létrehozott, zónához kötött objektumok is a csoportba kerüljenek
   const _add=scene.add.bind(scene);scene.add=function(o){if(o&&!keep.has(o)&&(o.isMesh||o.isGroup||o.isPointLight)&&!o.isInstancedMesh&&!zoneGroups.includes(o)&&!(o.userData&&(o.userData.tail||o.userData.mp))){const zn=zoneOf(o.position.x);if(zoneGroups[zn]){zoneGroups[zn].add(o);return scene}}return _add(o)};
 })();
+// kamera-takarás: ami a kamera és a játékos közé esik (fa, ház, torony, fal, sövény), áttetszővé halványul
+const OCC={list:[],zone:-1,t:9,act:new Set(),hit:new Set(),box:new THREE.Box3(),ray:new THREE.Ray(),v:new THREE.Vector3(),tgt:new THREE.Vector3(),dir:new THREE.Vector3(),
+  skip:new Set(['monster','npc','player','monkey','crab','sheep','puppy','genie','fire','fish','clue','dig','digsite','shell','herb','plot'])};
+function occCandidates(z){const out=[],g=zoneGroups[z];if(!g)return out;const ex=new Set();
+  for(const o of interactables)if(OCC.skip.has(o.type))ex.add(o.mesh);for(const n of npcs)ex.add(n.mesh);for(const m of monsters)ex.add(m.mesh);
+  for(const o of g.children){if(ex.has(o)||terrains.includes(o)||o===water||o.isPointLight||o.isInstancedMesh||o.isPoints)continue;
+    let b=o.userData.occB;if(!b){b=new THREE.Box3().setFromObject(o);o.userData.occB=b}
+    const h=b.max.y-b.min.y;if(h<2.2||b.max.x-b.min.x>80||b.max.z-b.min.z>80)continue;out.push(o)}
+  return out}
+function occSet(o,on,op){const u=o.userData;
+  if(!on){if(u.occM)for(const [m,orig] of u.occM)m.material=orig;return}
+  if(!u.occM){u.occM=[];o.traverse(m=>{if(m.isMesh&&m.material&&!Array.isArray(m.material)){const c=m.material.clone();c.transparent=true;u.occM.push([m,m.material,c])}})}
+  for(const [m,orig,c] of u.occM){if(m.material!==c)m.material=c;c.opacity=op*(orig.opacity==null?1:orig.opacity);c.depthWrite=op>0.95}}
+function occFaded(m){for(let p=m;p;p=p.parent)if(p.userData&&p.userData.occF>0.4)return true;return false}
+function updateOcclusion(dt){const z=zoneOf(px);OCC.t+=dt;if(z!==OCC.zone||OCC.t>1){OCC.zone=z;OCC.t=0;OCC.list=occCandidates(z)}
+  const cam=camera.position,tgt=OCC.tgt.set(px,Math.max(height(px,pz),0.3)+1.2,pz),dir=OCC.dir.copy(tgt).sub(cam);const L=dir.length();dir.normalize();OCC.ray.set(cam,dir);
+  const hit=OCC.hit;hit.clear();
+  for(const o of OCC.list){if(!o.visible)continue;OCC.box.copy(o.userData.occB).expandByScalar(0.2);
+    if(OCC.box.containsPoint(cam)){hit.add(o);continue}const p=OCC.ray.intersectBox(OCC.box,OCC.v);if(p&&cam.distanceTo(p)<L-0.6)hit.add(o)}
+  for(const o of hit)OCC.act.add(o);
+  for(const o of OCC.act){const u=o.userData,want=hit.has(o)?1:0;u.occF=(u.occF||0)+(want-(u.occF||0))*Math.min(1,dt*10);
+    if(!want&&u.occF<0.03){u.occF=0;occSet(o,false);OCC.act.delete(o);continue}
+    occSet(o,true,1-0.75*u.occF)}}
 let curVisZone=-1;function updateZoneVis(){const z=zoneOf(px);if(z===curVisZone)return;curVisZone=z;for(let i=0;i<zoneGroups.length;i++)zoneGroups[i].visible=i===z}
 updateZoneVis();
 // teljes képernyő + service worker (gyorsabb újratöltés, telefonra kitehető)
