@@ -1543,7 +1543,9 @@ let rb=null;
 canvas.addEventListener('mousedown',e=>{if(e.button===1||e.button===2){dragging=true;lastX=e.clientX;lastY=e.clientY;e.preventDefault();if(e.button===2)rb={x:e.clientX,y:e.clientY,moved:false}}});
 addEventListener('mouseup',e=>{dragging=false;if(e.button===2&&rb&&!rb.moved&&e.target===canvas){openCtx(e.clientX,e.clientY,ctxWorld(e.clientX,e.clientY))}rb=null});
 addEventListener('mousemove',e=>{if(rb&&Math.hypot(e.clientX-rb.x,e.clientY-rb.y)>5)rb.moved=true;if(dragging&&!(rb&&!rb.moved)){camYaw-=(e.clientX-lastX)*0.008;camPitch=clamp(camPitch+(e.clientY-lastY)*0.006,0.2,1.35);lastX=e.clientX;lastY=e.clientY}});
-canvas.addEventListener('contextmenu',e=>e.preventDefault());
+// a böngésző saját jobb klikk menüje sehol ne jöjjön elő (a játék menüje a kurzor alá nyílik, és a contextmenu esemény
+// már azon sül el); szövegmezőkben (chat, mentéskód) marad, ott kell a másolás/beillesztés
+addEventListener('contextmenu',e=>{const t=e.target;if(!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA')))e.preventDefault()});
 canvas.addEventListener('wheel',e=>{camDist=clamp(camDist+e.deltaY*0.02,8,60)},{passive:true});
 let touchStart=null,lastPinch=null;
 let lpT=null;
