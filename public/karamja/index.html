@@ -3036,7 +3036,7 @@ function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.ca
       if(i%4===1){B(g,1.8,0.08,0.06,0x3a2414,x+U/2-0.6,2.9,4.6);B(g,1.0,0.7,0.06,P.trim,x+U/2-0.6,2.4,4.6)}}
     g.updateMatrixWorld(true);for(const c of chim){const v=new THREE.Vector3(0,1.6,0);c.localToWorld(v);KCITY_CHIM.push(v)}return g};
   for(const s of[-1,1]){rowHouse(s*32.8,-8,0,4);rowHouse(s*32.8,20,Math.PI,4);rowHouse(s*32.8,44.6,0,4);rowHouse(s*44.6,-14,s<0?Math.PI/2:-Math.PI/2,3)}
-  rowHouse(10,35,-Math.PI/2,3);rowHouse(-10,-20.5,Math.PI/2,2);rowHouse(-34,-45,0,2);rowHouse(34,-45,0,2);
+  rowHouse(-10,-20.5,Math.PI/2,2);rowHouse(-34,-45,0,2);rowHouse(34,-45,0,2);
   // ===== kőtemplom harangtoronnyal (bejárat a főutca felé) =====
   {const ch=root(C.x-12,C.z+28);ch.position.x=KX+C.x-12;ch.position.z=C.z+28;B(ch,9,7,15,ST,0,3.5,0);const RFc=tTiles(shade(P.tower,0.8)),a=Math.atan2(5,4.5),Ls=5.3/Math.cos(a);for(const s of[-1,1]){const r=B(ch,Ls,0.3,16,RFc,s*2.65,7+5-Math.tan(a)*2.65+0.15,0,1.6);r.rotation.z=-s*a}
     const sh=new THREE.Shape();sh.moveTo(-4.5,0);sh.lineTo(4.5,0);sh.lineTo(0,5);sh.closePath();for(const e of[-1,1]){const gg=new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false});const uv=gg.attributes.uv;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)/2,uv.getY(k)/2);const m=new THREE.Mesh(gg,ST);m.position.set(0,7,e>0?7.2:-7.5);ch.add(m)}
@@ -3120,6 +3120,55 @@ const KLIFE=(function(){const C=KR.cap,OX=KX+C.x,OZ=C.z,W=(lx,lz)=>[OX+lx,OZ+lz]
     for(const sm of smoke){sm.t=(sm.t+dt*0.25)%1;sm.s.position.set(sm.base.x+Math.sin(sm.t*5)*0.3,sm.base.y+sm.t*4,sm.base.z+sm.t*0.8);sm.s.scale.setScalar(0.6+sm.t*1.6);sm.s.material.opacity=0.45*(1-sm.t)}
     if(KCITY_WIN){const k=clamp((night-0.15)*1.6,0,1);KCITY_WIN.emissive.setRGB(0.95*k,0.62*k,0.25*k)}}
   return {step,walkers,guards,sellers}})();
+// --- Arany Korsó fogadó (v58): bejárható kocsma a déli főutcán: söntés, hordók, asztalok, kandalló, zenekar, iddogálók.
+// Ha bent vagy, a tető és az emelet eltűnik (OSRS-módra belátsz); a kocsmazene a távolsággal halkul és tompul. ---
+const KTAV=(function(){const C=KR.cap,cx=12,cz=35,Wd=11,Ln=18,OX=KX+C.x+cx,OZ=C.z+cz;
+  const lin=c=>new THREE.Color(c).convertSRGBToLinear(),MC={},F=c=>MC[c]||(MC[c]=new THREE.MeshLambertMaterial({color:lin(c),flatShading:true}));
+  const g=new THREE.Group();kAt(g,C.x+cx,C.z+cz);scene.add(g);g.userData.keep=true;g.userData.occB=new THREE.Box3(); // a kamera-takarás ne halványítsa (bent a tető magától eltűnik)
+  const upper=new THREE.Group();g.add(upper);
+  const B=(p,w,h,d,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),typeof c==='number'?F(c):c);m.position.set(x,y,z);p.add(m);return m};
+  const Cy=(p,r0,r1,h,c,x,y,z,s=10)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,h,s),F(c));m.position.set(x,y,z);p.add(m);return m};
+  const ST=0x8a847a,TM=0x4a3020,PL=0xe8dcc0,WOOD=0x7a5432,DK=0x3a2414,H1=4;
+  // padló, falak (földszint kő, nyugati homlokzat ajtóval és ablakokkal)
+  B(g,Wd,0.2,Ln,0x6a4a2e,0,0.1,0);for(let i=0;i<9;i++)B(g,Wd,0.02,0.06,0x4a3020,0,0.21,-Ln/2+1+i*2);
+  B(g,0.6,H1,Ln,ST,Wd/2-0.3,H1/2,0);B(g,Wd,H1,0.6,ST,0,H1/2,-Ln/2+0.3);B(g,Wd,H1,0.6,ST,0,H1/2,Ln/2-0.3);
+  for(const [z0,z1] of[[-Ln/2,-1.4],[1.4,Ln/2]]){B(g,0.6,H1,z1-z0,ST,-Wd/2+0.3,H1/2,(z0+z1)/2)}B(g,0.6,1.2,2.8,ST,-Wd/2+0.3,H1-0.6,0);
+  const winM=new THREE.MeshLambertMaterial({color:lin(0x2a2418),emissive:lin(0xffa040),emissiveIntensity:0.6});for(const z of[-6,-3,3,6]){B(g,0.7,1.4,1.4,winM,-Wd/2+0.3,2.2,z);B(g,0.8,0.12,1.6,TM,-Wd/2+0.25,1.45,z)}
+  // emelet (favázas) + nyeregtető: ezek tűnnek el, ha bent vagy
+  B(upper,Wd+0.6,0.3,Ln+0.6,TM,0,H1+0.15,0);B(upper,Wd+0.4,3.2,Ln+0.4,PL,0,H1+1.9,0);for(let i=0;i<7;i++){B(upper,0.2,3.2,0.12,TM,-Wd/2-0.22,H1+1.9,-Ln/2+0.3+i*(Ln-0.6)/6);B(upper,0.12,3.2,0.2,TM,Wd/2+0.22,H1+1.9,-Ln/2+0.3+i*(Ln-0.6)/6)}
+  for(const z of[-6,-2,2,6])B(upper,0.15,1.1,1.0,winM,-Wd/2-0.25,H1+2.0,z);const a=Math.atan2(4,Wd/2),Ls=(Wd/2+0.6)/Math.cos(a);
+  for(const s of[-1,1]){const r=B(upper,Ls,0.35,Ln+1.2,0x9a3e2a,s*(Wd/2+0.6)/2,H1+3.5+4-Math.tan(a)*(Wd/2+0.6)/2,0);r.rotation.z=-s*a}B(upper,0.4,0.4,Ln+1.3,0x5a2a1a,0,H1+3.5+4.15,0).rotation.z=Math.PI/4;
+  const sh=new THREE.Shape();sh.moveTo(-Wd/2,0);sh.lineTo(Wd/2,0);sh.lineTo(0,4);sh.closePath();for(const e of[-1,1]){const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.2,bevelEnabled:false}),F(PL));m.position.set(0,H1+3.5,e>0?Ln/2:-Ln/2-0.2);upper.add(m)}
+  B(upper,1.2,4,1.2,ST,2.5,H1+6.5,-5);// kémény
+  // cégér: kinyúló kar, lógó tábla korsóval
+  const sg=new THREE.Group();sg.position.set(-Wd/2-0.3,3.3,2.4);g.add(sg);B(sg,1.8,0.1,0.1,DK,-0.9,0.6,0);B(sg,1.3,1.0,0.08,0x8a5a2a,-1.1,0,0);B(sg,1.1,0.8,0.1,0x2a1a0e,-1.1,0,0);Cy(sg,0.18,0.15,0.36,0xe0b030,-1.1,0,0.08,8);B(sg,0.08,0.18,0.1,0xe0b030,-0.88,0,0.08);
+  // söntés, hordók, polc, kandalló, asztalok
+  B(g,1.2,1.2,8,WOOD,Wd/2-2.6,0.8,-2);B(g,1.4,0.12,8.2,0x5a3a20,Wd/2-2.6,1.45,-2);for(let i=0;i<4;i++){const br=Cy(g,0.55,0.55,1.1,0x7a4a24,Wd/2-0.95,0.85,-5+i*1.3,12);br.rotation.x=Math.PI/2;B(g,0.12,0.12,0.15,0x3a3a3a,Wd/2-1.5,0.85,-5+i*1.3)}
+  B(g,0.4,0.08,6,DK,Wd/2-0.8,2.6,-2);for(let i=0;i<9;i++)Cy(g,0.08,0.08,0.3,[0x3a6a3a,0x6a2a2a,0x8a6a2a][i%3],Wd/2-0.8,2.8,-4.6+i*0.6,6);
+  B(g,3.4,3.0,1.0,ST,0,1.5,Ln/2-1.0);B(g,2.0,1.4,0.4,0x140a04,0,0.9,Ln/2-1.45);const fire=new THREE.Mesh(new THREE.ConeGeometry(0.45,0.9,6),new THREE.MeshBasicMaterial({color:lin(0xff8a20)}));fire.position.set(0,0.65,Ln/2-1.6);g.add(fire);B(g,3.8,0.25,1.2,0x6a645a,0,3.0,Ln/2-1.0);
+  const tables=[[-2.5,-5],[-2.5,0.5],[-2.5,5.5],[1.5,4.5]];const mugs=[];for(const [x,z] of tables){B(g,1.8,0.12,1.4,WOOD,x,1.0,z);for(const [lx,lz] of[[-0.7,-0.5],[0.7,-0.5],[-0.7,0.5],[0.7,0.5]])B(g,0.12,0.95,0.12,DK,x+lx,0.5,z+lz);for(const s of[-1,1])B(g,1.6,0.1,0.4,WOOD,x,0.6,z+s*1.0);for(let k=0;k<2;k++){const m=Cy(g,0.12,0.1,0.25,0xd8b040,x+(k?0.4:-0.3),1.19,z+(k?0.2:-0.25),8);mugs.push(m)}}
+  // zenekar a déli sarokban, emelvényen
+  B(g,4,0.3,3,0x5a3a22,2.6,0.35,-Ln/2+2.2);
+  const people=[];const sit=(o)=>{const u=o.mesh.userData;u.legL.rotation.x=u.legR.rotation.x=-1.4;o.mesh.position.y-=0.5};
+  const mk=(lx,lz,name,lines,look,ry,dialog)=>{const o=npc(KX+C.x+cx+lx,C.z+cz+lz,name,lines,look,dialog);o.mesh.rotation.y=ry;return o};
+  const fid=mk(1.6,-Ln/2+2.2,'Hegedűs Feri',['♪ Ezt a nótát a nagyapámtól tanultam! ♪','Rendelj valamit, kalandor, és járd el velünk!'],{skin:0xe8c39e,hair:0xc84a1a,shirt:0x8a1a1a,sleeves:0xe8e0c8,pants:0x3a3a4a,boots:0x2a1a0a},0.3);
+  {const u=fid.mesh.userData,fd=new THREE.Group();fd.position.set(-0.2,2.0,0.25);fd.rotation.set(0.3,0,-0.9);fid.mesh.add(fd);const bd=new THREE.Mesh(new THREE.SphereGeometry(0.17,8,6),F(0x8a4a1a));bd.scale.set(1,1.5,0.4);fd.add(bd);B(fd,0.05,0.5,0.04,DK,0,0.4,0);u.armL.rotation.set(-1.4,0,0.6);u.armR.rotation.x=-1.0;fid.bow=u.armR}
+  const drm=mk(3.6,-Ln/2+2.2,'Dobos Jani',['Bum-bum-tak! Ez az élet!','A ritmus a lényeg, barátom.'],{skin:0xd8a880,hair:0x1a1a1a,shirt:0x2a5a8a,sleeves:0x2a5a8a,pants:0x4a3a2a,boots:0x2a1a0a,beard:true},-0.3);
+  {Cy(drm.mesh,0.45,0.45,0.3,0xd8c8a0,0,1.35,0.55,14).rotation.x=1.2;drm.arms=[drm.mesh.userData.armL,drm.mesh.userData.armR];for(const a of drm.arms)a.rotation.x=-1.1}
+  const keeper=mk(Wd/2-1.6,-2,'Kocsmáros Gáspár',[],{skin:0xd8b090,hair:0x5a3a1a,shirt:0xe8e0c8,sleeves:0xe8e0c8,pants:0x3a2a1a,boots:0x2a1a0a,beard:true},-Math.PI/2,'kocsmaros');
+  B(keeper.mesh,0.82,0.9,0.08,0xf0ece0,0,1.3,0.25);
+  const drinkLook=()=>({skin:[0xe8c39e,0xd8a880,0xc89070][(Math.random()*3)|0],hair:[0x2a1a0a,0x5a3a1a,0x8a8a8a][(Math.random()*3)|0],shirt:[0x6a4a2a,0x2a5a3a,0x5a2a2a,0x3a3a5a][(Math.random()*4)|0],pants:0x3a2a1a,boots:0x2a1a0a,beard:Math.random()<0.5});
+  const DL=['Hé, kalandor! Igyál velünk!','Ez a sör a legjobb egész Koronaföldön!','Hallottad a Kolosszus balladáját?','Egészségedre!','Még egy kört, Gáspár!','Hic!'];
+  for(const [x,z,ry] of[[-2.5,-6.1,0],[-2.5,-3.9,Math.PI],[-2.5,4.4,0],[1.5,5.6,Math.PI],[-2.5,6.6,Math.PI]]){const o=mk(x,z,'Iddogáló',[DL[(Math.random()*DL.length)|0],DL[(Math.random()*DL.length)|0]],drinkLook(),ry);sit(o);o.toast=Math.random()*8;people.push(o)}
+  const light=KL.add(OX,3,OZ,0xffa050,1.6,14);
+  setTimeout(()=>DIALOG.kocsmaros=o=>{const S=say(o.name);S('Üdv az Arany Korsóban! Mi legyen? A sör hideg, a pörkölt meleg, a zene ingyen.',[{t:'Egy korsó sört (5 érme)',f:()=>{if(coins<5){S('Nincs elég érméd. A hitelt a kútba dobtuk.');return}if(!giveItem('sor'))return;setCoins(coins-5);SFX.play('pickup');S('Tessék, egészségedre! Hab a tetején, ahogy kell.')}},{t:'Mi újság a városban?',f:()=>S(['Az orkok egyre közelebb merészkednek a déli úthoz.','A királynő keres valakit, aki elhozza az öt pecsétet.','Azt mondják, a kriptában tengerillat van. Fura, nem?','A Hegedűs Feri a legjobb muzsikus a kontinensen. Ne mondd neki, elbízza magát.'][(Math.random()*4)|0])},{t:'Semmit, köszönöm.'}])},0);
+  for(const o of[fid,drm,keeper,...people])for(const k of['legL','legR','armL','armR'])o.mesh.userData[k].userData.keep=true;
+  let wasIn=false,merged=false;
+  function step(dt){if(!merged){merged=true;upper.userData.keep=true;fire.userData.keep=true;mergeStatic(g);mergeStatic(upper)}const d=Math.hypot(px-OX,pz-OZ);const inside=Math.abs(px-OX)<Wd/2+0.2&&Math.abs(pz-OZ)<Ln/2+0.2;if(inside!==wasIn){upper.visible=!inside;wasIn=inside}
+    const vol=inside?1:clamp(1-(d-6)/34,0,1);MUSIC.tavern(vol,inside);if(d>60)return;
+    fire.scale.set(1+Math.sin(t*13)*0.12,1+Math.sin(t*9+1)*0.2,1);if(fid.bow)fid.bow.rotation.z=Math.sin(t*10)*0.45;for(let i=0;i<2;i++)drm.arms[i].rotation.x=-1.1+Math.max(0,Math.sin(t*12+i*Math.PI))*0.5;
+    for(const o of people){o.toast-=dt;const u=o.mesh.userData;if(o.toast<0){u.armR.rotation.x=-2.2;if(o.toast<-1.2){u.armR.rotation.x=0;o.toast=5+Math.random()*9}}}}
+  return {step,x:OX,z:OZ}})();
 // a kripta lejárata a palota mellett (a szellemkövek titka)
 const kCrypt=(function(){const g=new THREE.Group();kB(g,4,0.4,4,mats.kStoneDark,0,0.2,0);const d=kB(g,2.4,2.8,0.4,M(0x0a0806),0,1.6,-1.2);kB(g,3.2,0.6,0.6,mats.stone,0,3.2,-1.2);for(const sx of[-1,1])kB(g,0.6,3.2,0.6,mats.stone,sx*1.5,1.6,-1.2);
   const runes=[];for(let i=0;i<4;i++){const r=kB(g,0.3,0.3,0.1,mats.kRune,-0.9+i*0.6,2.6,-0.98);runes.push(r)}
@@ -4202,15 +4251,40 @@ const MUSIC=(()=>{
   ];
   let cur=-1,curZone=-1,gain=null,timer=null,startT=0,sched=0,announce=null,lock=false;
   function stop(){if(timer){clearInterval(timer);timer=null}if(gain){const c=SFX.ctx();gain.gain.setTargetAtTime(0.0001,c.currentTime,0.4);const g=gain;setTimeout(()=>{try{g.disconnect()}catch(e){}},1500);gain=null}}
-  function play(i){stop();cur=i;if(!on||i<0||!SONGS[i])return;const c=SFX.ctx();gain=c.createGain();gain.gain.value=0.0001;gain.connect(SFX.master());gain.gain.setTargetAtTime(1,c.currentTime,0.8);
+  function play(i){stop();cur=i;if(!on||i<0||!SONGS[i])return;const c=SFX.ctx();gain=c.createGain();gain.gain.value=0.0001;gain.connect(SFX.master());gain.gain.setTargetAtTime(tDuck,c.currentTime,0.8);
     const song=SONGS[i];const stepDur=60/song.bpm/2;const len=Math.max(...song.tracks.map(t=>t.seq.len));startT=c.currentTime+0.1;sched=0;
     if(announce)announce(song.name);const loops=Math.max(2,Math.round(90/(len*stepDur)));
     timer=setInterval(()=>{const now=c.currentTime;while(startT+sched*stepDur<now+0.35){if(sched>=len*loops){if(lock)play(cur);else next();return}const st=sched%len;for(const t of song.tracks)for(const n of t.seq.notes)if(n.step===st)t.inst(c,gain,hz(n.n),startT+sched*stepDur,n.len*stepDur,t.vol);sched++}},100)}
   const zoneList=z=>{const l=[];SONGS.forEach((s,i)=>{if(s.zone===z)l.push(i)});return l.length?l:[0]};
   function setZone(z){if(lock){curZone=z;return}if(z===curZone&&cur>=0)return;curZone=z;const l=zoneList(z);play(l[Math.floor(Math.random()*l.length)])}
   function next(){if(lock){play((cur+1)%SONGS.length);return}const l=zoneList(curZone);if(l.length<2){play(cur);return}const k=l.indexOf(cur);play(l[(k+1)%l.length])}
-  function toggle(){on=!on;try{localStorage.setItem('karamja_music',on?'1':'0')}catch(e){}if(!on)stop();else play(cur);return on}
-  return {setZone,toggle,next,isOn:()=>on,stop,current:()=>cur,list:()=>SONGS.map((s,i)=>({i,name:s.name,zone:s.zone})),pick:i=>{lock=true;play(i)},auto:()=>{lock=false;const l=zoneList(curZone);play(l[Math.floor(Math.random()*l.length)])},locked:()=>lock,name:()=>cur>=0?SONGS[cur].name:'',setAnnounce:f=>{announce=f}};
+  function toggle(){on=!on;try{localStorage.setItem('karamja_music',on?'1':'0')}catch(e){}if(!on){stop();tavStop()}else play(cur);return on}
+  // --- kocsmazene (Arany Korsó): külön réteg; hangereje és tompítása a távolságtól függ, a zónazenét lehalkítja ---
+  const TAV=[
+    {name:'Arany Korsó (jig)',bpm:132,tracks:[
+      {inst:accordion,vol:0.05,seq:parse('D5 - E5 F#5 - D5 | A4 - D5 F#5 - A5 | G5 - E5 C#5 - E5 | A5 - G5 F#5 - E5 | D5 - E5 F#5 - D5 | B4 - D5 G5 - B5 | A5 - F#5 E5 - C#5 | D5 - - D5 - . | F#5 - A5 A5 - F#5 | G5 - B5 B5 - G5 | F#5 - A5 D6 - A5 | G5 - E5 C#5 - A4 | F#5 - A5 A5 - F#5 | G5 - B5 B5 - G5 | A5 - F#5 E5 - C#5 | D5 - - - - .')},
+      {inst:flute,vol:0.03,seq:parse('A4 - - - - - | F#4 - - - - - | E4 - - - - - | C#5 - - - - - | A4 - - - - - | G4 - - - - - | E4 - - - - - | F#4 - - - - . | A4 - - - - - | B4 - - - - - | A4 - - - - - | E4 - - - - - | A4 - - - - - | B4 - - - - - | C#5 - - - - - | A4 - - - - .')},
+      {inst:marimba,vol:0.05,seq:parse('D4 . F#4 A4 . F#4 | D4 . F#4 A4 . F#4 | A3 . C#4 E4 . C#4 | A3 . C#4 E4 . C#4 | D4 . F#4 A4 . F#4 | G3 . B3 D4 . B3 | A3 . C#4 E4 . C#4 | D4 . F#4 A4 . . | D4 . F#4 A4 . F#4 | G3 . B3 D4 . B3 | D4 . F#4 A4 . F#4 | A3 . C#4 E4 . C#4 | D4 . F#4 A4 . F#4 | G3 . B3 D4 . B3 | A3 . C#4 E4 . C#4 | D4 . F#4 A4 . .')},
+      {inst:bass,vol:0.12,seq:parse('D2 - - A2 - - | D2 - - A2 - - | A1 - - E2 - - | A1 - - E2 - - | D2 - - A2 - - | G1 - - D2 - - | A1 - - E2 - - | D2 - - D2 - . | D2 - - A2 - - | G1 - - D2 - - | D2 - - A2 - - | A1 - - E2 - - | D2 - - A2 - - | G1 - - D2 - - | A1 - - E2 - - | D2 - - - - .')},
+      {inst:drum,vol:0.06,seq:parse('C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 A5 A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . C2 C2 . . | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 A5 A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . A5 C2 . A5 | C2 . C2 C2 . .')}]},
+    {name:'A részeg tengerész',bpm:150,tracks:[
+      {inst:accordion,vol:0.05,seq:parse('A4 - A4 B4 C5 - B4 A4 | G4 - G4 A4 B4 - A4 G4 | A4 - A4 B4 C5 - D5 E5 | D5 C5 B4 G4 A4 - - . | E5 - E5 D5 C5 - B4 A4 | G4 - G4 A4 B4 - G4 B4 | C5 - B4 A4 G4 - B4 D5 | A4 - - - A4 - . .')},
+      {inst:marimba,vol:0.05,seq:parse('A3 . C4 E4 A3 . C4 E4 | G3 . B3 D4 G3 . B3 D4 | A3 . C4 E4 A3 . C4 E4 | G3 . B3 D4 E4 . . . | A3 . C4 E4 A3 . C4 E4 | G3 . B3 D4 G3 . B3 D4 | C4 . E4 G4 G3 . B3 D4 | A3 . C4 E4 A3 . . .')},
+      {inst:bass,vol:0.12,seq:parse('A2 - E2 - A2 - E2 - | G2 - D2 - G2 - D2 - | A2 - E2 - A2 - E2 - | G2 - D2 - E2 - - . | A2 - E2 - A2 - E2 - | G2 - D2 - G2 - D2 - | C2 - G2 - G2 - D2 - | A2 - - - A2 - . .')},
+      {inst:drum,vol:0.06,seq:parse('C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 A5 A5 A5 | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 C2 A5 . | C2 . A5 . C2 C2 A5 . | C2 . C2 . C2 . . .')}]}];
+  let tg=null,tf=null,tTimer=null,tSong=0,tStart=0,tSched=0,tVol=0,tLast=0,tDuck=1,tNoise=null,tZero=0;
+  function tavStop(){if(tTimer){clearInterval(tTimer);tTimer=null}if(tNoise){try{tNoise.stop()}catch(e){}tNoise=null}if(tg){const g=tg;g.gain.setTargetAtTime(0.0001,SFX.ctx().currentTime,0.3);setTimeout(()=>{try{g.disconnect()}catch(e){}},1200);tg=null;tf=null}duck(1)}
+  function duck(v){if(Math.abs(v-tDuck)<0.02)return;tDuck=v;if(gain)gain.gain.setTargetAtTime(v,SFX.ctx().currentTime,0.5)}
+  function tavStart(){const c=SFX.ctx();tf=c.createBiquadFilter();tf.type='lowpass';tf.frequency.value=900;tg=c.createGain();tg.gain.value=0.0001;tg.connect(tf);tf.connect(SFX.master());
+    const n=c.sampleRate*2,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);let l=0;for(let i=0;i<n;i++){l=l*0.97+(Math.random()*2-1)*0.03;d[i]=l*(0.6+0.4*Math.sin(i/c.sampleRate*3.1)*Math.sin(i/c.sampleRate*1.7))}
+    tNoise=c.createBufferSource();tNoise.buffer=b;tNoise.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=420;bp.Q.value=0.7;const ng=c.createGain();ng.gain.value=1.4;tNoise.connect(bp);bp.connect(ng);ng.connect(tg);tNoise.start();
+    tSong=(tSong+1)%TAV.length;tStart=c.currentTime+0.1;tSched=0;
+    tTimer=setInterval(()=>{const now=c.currentTime;if(performance.now()-tLast>800){tavStop();return}const song=TAV[tSong],sd=60/song.bpm/2,len=Math.max(...song.tracks.map(t=>t.seq.len));
+      while(tStart+tSched*sd<now+0.35){if(tSched>=len*3){tSong=(tSong+1)%TAV.length;tStart=tStart+tSched*sd+0.8;tSched=0;break}const st=tSched%len;for(const t of song.tracks)for(const nn of t.seq.notes)if(nn.step===st)t.inst(c,tg,hz(nn.n),tStart+tSched*sd,nn.len*sd,t.vol);tSched++}
+      if(Math.random()<0.02)bell(c,tg,2200+Math.random()*900,now+0.05,0.1,0.02)},100)}
+  function tavern(vol,inside){tLast=performance.now();if(!on||vol<=0.005){if(tTimer&&(tZero+=1)>20)tavStop();duck(1);return}tZero=0;if(!tTimer)tavStart();const c=SFX.ctx();
+    if(Math.abs(vol-tVol)>0.01||!tg.__set){tVol=vol;tg.__set=1;tg.gain.setTargetAtTime(vol*0.9,c.currentTime,0.3);tf.frequency.setTargetAtTime(inside?16000:600+vol*2400,c.currentTime,0.3)}duck(1-0.85*vol)}
+  return {setZone,toggle,tavern,next,isOn:()=>on,stop,current:()=>cur,list:()=>SONGS.map((s,i)=>({i,name:s.name,zone:s.zone})),pick:i=>{lock=true;play(i)},auto:()=>{lock=false;const l=zoneList(curZone);play(l[Math.floor(Math.random()*l.length)])},locked:()=>lock,name:()=>cur>=0?SONGS[cur].name:'',setAnnounce:f=>{announce=f}};
 })();
 (function(){const b=document.getElementById('mus');const r=()=>{b.textContent=MUSIC.isOn()?'🎵':'🔕';b.title='Zene be/ki (jobb klikk: következő szám)'};r();b.onclick=()=>{MUSIC.toggle();r();chat(MUSIC.isOn()?'Zene bekapcsolva.':'Zene kikapcsolva.')};b.oncontextmenu=e=>{e.preventDefault();if(MUSIC.isOn()&&!SFX.isMuted())MUSIC.next()};MUSIC.setAnnounce(n=>chat('♪ Most szól: '+n,'xp'));
   let started=false;const start=()=>{if(started)return;started=true;if(!SFX.isMuted()&&MUSIC.isOn())MUSIC.setZone(zoneOf(px))};addEventListener('pointerdown',start,{once:true});addEventListener('keydown',start,{once:true});
@@ -5493,7 +5567,7 @@ KS.update=function(dt){if(zoneOf(px)!==12)return;
 function kRefresh(){const kb=stats.kb||0;for(const o of KBOOKS){const got=!!(kb&(1<<o.i));o.mesh.visible=!got;o.depleted=got}
   for(const o of KSTONES)o.glyph.material.color.setHex(((stats.kst||0)&(1<<o.i))?0x60d0ff:0x2a3a4a);kCryptRunes();kLight.lamp.material=stats.kfeny?mats.kGlass:mats.kGlassOff}
 let kHydra=null;
-function kAnim(dt){if(zoneOf(px)!==12)return;KLIFE.step(dt);kMill.sails.rotation.z+=dt*0.6;const lit=!!stats.kfeny&&night>0.2;kLight.piv.visible=lit;if(lit)kLight.piv.rotation.y+=dt*0.7;kWater.position.y=water.position.y;
+function kAnim(dt){if(zoneOf(px)!==12){MUSIC.tavern(0);return}KLIFE.step(dt);KTAV.step(dt);kMill.sails.rotation.z+=dt*0.6;const lit=!!stats.kfeny&&night>0.2;kLight.piv.visible=lit;if(lit)kLight.piv.rotation.y+=dt*0.7;kWater.position.y=water.position.y;
   if(!kHydra)kHydra=monsters.find(m=>m.kind==='mocsarihidra');if(kHydra&&!kHydra.depleted){const hs=kHydra.mesh.userData.heads;if(hs)for(let i=0;i<hs.length;i++){hs[i].rotation.x=hs[i].userData.x0+Math.sin(t*(kHydra.aggro?3:1.2)+i*1.3)*0.18;hs[i].rotation.z=hs[i].userData.z0+Math.sin(t*0.9+i)*0.1}}}
 function kMapLabels(lab){const L=(x,z,s)=>lab(KX+x,z,s);L(KR.cap.x,KR.cap.z-72,'Koronavár');L(KR.port.x,KR.port.z+44,'Halászrév');L(KR.arkan.x,KR.arkan.z+40,'Arkánum');L(KR.koho.x+10,KR.koho.z+48,'Kohóváros');L(KR.ash.x-60,KR.ash.z-40,'Hamuvidék');L(KR.mine.x,KR.mine.z-26,'Bánya');
   L(KR.swamp.x+30,KR.swamp.z+70,'Gyíkláp');L(KR.hydra.x,KR.hydra.z-30,'Hidraodú');L(KR.lake.x,KR.lake.z+78,'Tükörtó');L(KR.camp.x,KR.camp.z-54,'Pajzsőrség');L(KR.orkcamp.x,KR.orkcamp.z+40,'Orktábor');L(KR.forest.x,KR.forest.z+10,'Ezüsterdő');
