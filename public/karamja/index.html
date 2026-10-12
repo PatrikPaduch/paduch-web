@@ -3095,7 +3095,7 @@ mats.kLava=new THREE.MeshBasicMaterial({map:TEX.lava});mats.kStoneDark=M(0x5a565
 const KCITY_PAL={
   varrock:{stone:0x9c968c,stone2:0x7c766c,pave:0x8a8478,cobble:0x7e7a72,roofs:[0xa8402a,0x8e3826,0x6e4a36,0xb4583a],tower:0x8a3a2a,plaster:[0xece2c8,0xe4d6b8,0xf2eadc],timber:0x4a3020,flag:0x8a1a1a,trim:0xd0a030},
   falador:{stone:0xe6e2d8,stone2:0xc6c2b8,pave:0xb8b2a6,cobble:0xa8a296,roofs:[0x3a5aa8,0x2e4c90,0x4a6ab8,0x34508e],tower:0x2a4a9a,plaster:[0xf6f4ee,0xeceae2,0xf2eee4],timber:0x8a8a94,flag:0x2a4aa8,trim:0xd8c060}};
-let KCITY_STYLE='varrock',KCITY_OBJS=[],KCITY_WIN=null,KCITY_CHIM=[],KCITY_SHOPS=[];
+let KCITY_STYLE='varrock',KCITY_OBJS=[],KCITY_WIN=null,KCITY_CHIM=[],KCITY_SHOPS=[],KCITY_BANK=null;
 function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.cap,w=C.w;let seed=777;const Rn=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
   for(const o of KCITY_OBJS)scene.remove(o);KCITY_OBJS=[];KCITY_CHIM=[];KCITY_SHOPS=[];const keep=o=>{KCITY_OBJS.push(o);return o};
   const lin=c=>new THREE.Color(c).convertSRGBToLinear(),hex=c=>'#'+c.toString(16).padStart(6,'0'),shade=(c,k)=>{const f=v=>Math.min(255,Math.max(0,v*k))|0;return(f(c>>16&255)<<16)|(f(c>>8&255)<<8)|f(c&255)};
@@ -3243,6 +3243,52 @@ function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.ca
     for(const s of[-1,1])for(let i=-2;i<=2;i++){B(ch,0.15,2.4,0.9,0x6a8ac8,s*4.55,3.6,i*2.6);const ar2=new THREE.Mesh(new THREE.CircleGeometry(0.45,10,0,Math.PI),flat(0x6a8ac8));ar2.position.set(s*4.6,4.8,i*2.6);ar2.rotation.y=s*Math.PI/2;ch.add(ar2)}
     for(const z of[-6,6])for(const s of[-1,1])B(ch,1,6,1,ST2,s*4.9,3,z);
     makeDoor(ch,-1.1,-10.25,2.2,'x',-1,'Templomajtó');interiorAdd(ch,up,Wc/2,10.6);KL.add(KX+C.x-12,4,C.z+30,0xffd8a0,0.8,12)}
+  // ===== Koronavári Bank (v68): kőépület oszlopos előcsarnokkal; bent márványpadló, rácsos bankfülkék, páncélterem-ajtó =====
+  {const bk=root(C.x+13.5,C.z-21);bk.position.x=KX+C.x+13.5;bk.position.z=C.z-21;bk.rotation.y=-Math.PI/2;const up=new THREE.Group();bk.add(up);up.userData.keep=true;
+    const Hb=6.5,hw=6,hd=5,t=0.6,GO=0xd8b040,MR=0x8a1a1a,WD=0x6a3a1e,DK=0x4a2414,RFb=tTiles(shade(P.tower,0.75)),gl=c=>new THREE.MeshBasicMaterial({color:lin(c)}),cols=[];
+    const CHK=ctex('chk',128,(x,s)=>{for(let i=0;i<4;i++)for(let j=0;j<4;j++){x.fillStyle=(i+j)%2?'#5a2424':'#e8e0d0';x.fillRect(i*32,j*32,32,32)}noise(x,s,'0,0,0',300,0.06)});
+    // falak, lábazat, sarokpillérek, ablakok
+    const Hl=3.0,Hu=Hb-Hl,yU=Hl+Hu/2;B(bk,hw*2,Hl,t,ST,0,Hl/2,-hd+t/2);B(up,hw*2,Hu,t,ST,0,yU,-hd+t/2);for(const e of[-1,1]){B(bk,t,Hl,hd*2,ST,e*(hw-t/2),Hl/2,0);B(up,t,Hu,hd*2,ST,e*(hw-t/2),yU,0)}for(const e of[-1,1]){B(bk,hw-1.25,Hl,t,ST,e*(1.25+(hw-1.25)/2),Hl/2,hd-t/2);B(up,hw-1.25,Hu,t,ST,e*(1.25+(hw-1.25)/2),yU,hd-t/2)}B(bk,2.5,0.1,t,ST,0,2.95,hd-t/2);B(up,2.5,Hu,t,ST,0,yU,hd-t/2);
+    B(bk,hw*2+0.4,0.7,0.2,ST2,0,0.35,-hd-0.1);for(const e of[-1,1]){B(bk,0.2,0.7,hd*2+0.4,ST2,e*(hw+0.1),0.35,0);B(bk,hw-1.05,0.7,0.2,ST2,e*(1.25+(hw-1.25)/2+0.1),0.35,hd+0.1)}
+    for(const [x,z] of[[-hw,-hd],[hw,-hd],[-hw,hd],[hw,hd]]){B(bk,0.9,Hl,0.9,ST2,x,Hl/2,z);B(up,0.9,Hu,0.9,ST2,x,yU,z)}
+    const arch=(x,y,z,ry,w)=>{const a=new THREE.Mesh(new THREE.CircleGeometry(w/2,10,0,Math.PI),flat(0x203048));a.position.set(x,y,z);a.rotation.y=ry;up.add(a)};
+    for(const e of[-1,1])for(const z of[-2.6,0,2.6]){B(bk,t+0.1,1.2,1.1,0x203048,e*(hw-t/2),2.4,z);B(up,t+0.1,1.2,1.1,0x203048,e*(hw-t/2),3.6,z);arch(e*(hw+0.06),4.2,z,e*Math.PI/2,1.1);B(bk,0.35,0.15,1.4,ST2,e*(hw+0.1),1.75,z)}
+    for(const x of[-3.8,3.8]){B(bk,1.1,1.2,t+0.1,0x203048,x,2.4,-hd+t/2);B(up,1.1,1.2,t+0.1,0x203048,x,3.6,-hd+t/2);arch(x,4.2,-hd-0.06,Math.PI,1.1);B(bk,1.4,0.15,0.35,ST2,x,1.75,-hd-0.1)}
+    // tető (bent eltűnik): párkány, nyeregtető, oromfalak
+    B(up,hw*2+0.7,0.45,hd*2+0.7,ST2,0,Hb+0.22,0);{const rh=3.4,a=Math.atan2(rh,hd+0.6),Ls=(hd+0.6)/Math.cos(a);for(const s_ of[-1,1]){const r=B(up,hw*2+1.0,0.3,Ls,RFb,0,Hb+0.45+rh/2+0.1,s_*(hd+0.6)/2,1.6);r.rotation.x=s_*a}B(up,hw*2+1.1,0.35,0.35,shade(P.tower,0.5),0,Hb+0.45+rh+0.1,0).rotation.x=Math.PI/4;
+      const sh=new THREE.Shape();sh.moveTo(-hd-0.3,0);sh.lineTo(hd+0.3,0);sh.lineTo(0,rh);sh.closePath();for(const e of[-1,1]){const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false}),ST2);m.rotation.y=Math.PI/2;m.position.set(e*(hw+0.15)-0.15,Hb+0.45,0);up.add(m)}
+      B(up,0.9,2.2,0.9,ST2,3.5,Hb+2.4,-2.2)}
+    // előcsarnok: lépcső, négy oszlop, gerendázat felirattal, timpanon arany érmével, zászlók, lámpások
+    B(bk,10.2,0.2,2.8,ST2,0,0.1,hd+1.4);B(bk,10.2,0.1,0.5,ST2,0,0.05,hd+3.05);
+    for(const x of[-4.3,-1.9,1.9,4.3]){B(bk,0.95,0.3,0.95,ST2,x,0.35,hd+2.1);Cy(bk,0.38,0.42,2.6,ST2,x,1.8,hd+2.1,12);Cy(up,0.36,0.38,2.4,ST2,x,4.3,hd+2.1,12);B(up,1.0,0.35,1.0,ST2,x,5.65,hd+2.1)}
+    B(up,10.4,0.9,3.0,ST2,0,6.25,hd+1.4);B(up,10.6,0.18,3.2,ST,0,6.78,hd+1.4);
+    {const cv=document.createElement('canvas');cv.width=512;cv.height=64;const x=cv.getContext('2d');x.fillStyle='#3a2414';x.fillRect(0,0,512,64);x.strokeStyle='#d8b040';x.lineWidth=4;x.strokeRect(4,4,504,56);x.font='bold 38px Georgia';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#e8c050';x.fillText('KORONAVÁRI BANK',256,34);
+      const tx=new THREE.CanvasTexture(cv);tx.encoding=THREE.sRGBEncoding;const sg=new THREE.Mesh(new THREE.PlaneGeometry(6.4,0.8),new THREE.MeshLambertMaterial({map:tx}));sg.position.set(0,6.25,hd+2.92);up.add(sg)}
+    {const sh=new THREE.Shape();sh.moveTo(-5.3,0);sh.lineTo(5.3,0);sh.lineTo(0,2.0);sh.closePath();const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.4,bevelEnabled:false}),ST2);m.position.set(0,6.87,hd+2.4);up.add(m);const c=Cy(up,0.5,0.5,0.12,GO,0,7.55,hd+2.82,16);c.rotation.x=Math.PI/2;B(up,0.12,0.5,0.05,0x8a6a20,0,7.55,hd+2.9)}
+    for(const x of[-3.1,3.1]){B(up,0.95,2.3,0.05,MR,x,4.65,hd+2.85);B(up,0.95,0.12,0.06,GO,x,5.75,hd+2.86);const c=Cy(up,0.22,0.22,0.06,GO,x,4.9,hd+2.9,12);c.rotation.x=Math.PI/2;const tp=new THREE.Mesh(new THREE.ConeGeometry(0.48,0.5,3),flat(MR));tp.rotation.set(Math.PI/2,0,Math.PI);tp.position.set(x,3.35,hd+2.85);up.add(tp)}
+    for(const x of[-1.75,1.75]){Cy(bk,0.04,0.04,0.5,0x2a2a2a,x,3.3,hd+0.12,5);B(bk,0.32,0.42,0.32,gl(0xffd080),x,2.95,hd+0.22)}
+    // belső tér: kockás márvány, vörös futószőnyeg, lambéria, falikarok, oszlopok, padok, növények
+    Pl(bk,hw*2-2*t,hd*2-2*t,CHK,0,0.12,0,3);B(bk,1.9,0.03,4.8,GO,0,0.15,2.05);B(bk,1.55,0.04,4.8,MR,0,0.16,2.05);
+    B(bk,hw*2-1.25,1.0,0.05,WD,0,0.62,-hd+t+0.03);for(const e of[-1,1]){B(bk,0.05,1.0,hd*2-1.25,WD,e*(hw-t-0.03),0.62,0);B(bk,0.06,0.1,hd*2-1.25,GO,e*(hw-t-0.04),1.14,0)}B(bk,hw*2-1.25,0.1,0.06,GO,0,1.14,-hd+t+0.04);
+    for(const e of[-1,1])for(const z of[-2.6,2.6]){B(bk,0.2,0.3,0.2,GO,e*(hw-t-0.12),2.2,z);B(bk,0.24,0.32,0.24,gl(0xffd890),e*(hw-t-0.14),2.52,z)}
+    for(const e of[-1,1]){Cy(bk,0.42,0.45,Hl,ST2,e*3.6,Hl/2,2.3,12);Cy(up,0.4,0.42,Hb-0.3-Hl,ST2,e*3.6,Hl+(Hb-0.3-Hl)/2,2.3,12);B(bk,0.95,0.3,0.95,ST2,e*3.6,0.27,2.3)}
+    for(const e of[-1,1]){const bx=e*(hw-t-0.4);B(bk,0.55,0.12,2.2,WD,bx,0.5,2.4);B(bk,0.1,0.6,2.2,WD,bx+e*0.25,0.85,2.4);for(const z of[1.45,3.35])B(bk,0.5,0.45,0.1,DK,bx,0.23,z);
+      const px_=e*(hw-t-0.45),pz_=4.0;Cy(bk,0.32,0.24,0.6,0x8a4a2a,px_,0.42,pz_,10);for(let k=0;k<5;k++){const l=new THREE.Mesh(new THREE.SphereGeometry(0.32,6,5),flat(k%2?0x3a7a2a:0x4a8a32));l.position.set(px_+Math.cos(k*1.3)*0.18,0.95+(k%3)*0.2,pz_+Math.sin(k*1.3)*0.18);bk.add(l)}cols.push([px_,pz_,0.35,0.35])}
+    // pultsor: négy rácsos fülke, mögöttük a bankárok helye
+    const zc=-0.9,booths=[-3.6,-1.2,1.2,3.6],tops=[];for(const bx of booths){B(bk,2.3,1.05,0.7,WD,bx,0.6,zc);tops.push(B(bk,2.38,0.1,0.82,DK,bx,1.17,zc));B(bk,2.3,0.08,0.04,GO,bx,1.0,zc+0.36);B(bk,1.5,0.55,0.04,0x7a4a2a,bx,0.6,zc+0.37);B(bk,0.5,0.35,0.05,0x8a5a3a,bx,0.6,zc+0.4);
+      for(const e of[-1,1])B(bk,0.14,2.55,0.14,DK,bx+e*1.18,1.3,zc);for(let b=-3;b<=3;b++)if(Math.abs(b)>1)B(bk,0.03,0.85,0.03,GO,bx+b*0.32,2.15,zc+0.25);B(bk,1.4,0.04,0.04,GO,bx,1.73,zc+0.25);B(bk,0.65,0.22,0.05,GO,bx,2.85,zc+0.18);
+      B(bk,0.4,0.05,0.3,0xe8dcc0,bx-0.5,1.24,zc-0.1);const st=Cy(bk,0.09,0.09,0.12,GO,bx+0.6,1.28,zc-0.15,8)}
+    B(bk,hw*2-1.2,0.35,0.3,DK,0,2.75,zc);for(const e of[-1,1]){B(bk,0.62,1.05,0.7,WD,e*(hw-t-0.31),0.6,zc);B(bk,0.66,0.1,0.82,DK,e*(hw-t-0.31),1.17,zc)}cols.push([0,zc,hw-t,0.37]);
+    // hátsó tér: páncélterem-ajtó, aranykupacok, ládák, főkönyvek
+    B(bk,3.4,2.95,0.2,ST2,0,1.5,-hd+t+0.08);{const ring=Cy(bk,1.32,1.32,0.25,0x5a5a62,0,1.55,-hd+t+0.25,24);ring.rotation.x=Math.PI/2;const disc=Cy(bk,1.12,1.12,0.32,0x8a8a94,0,1.55,-hd+t+0.3,24);disc.rotation.x=Math.PI/2;
+      const wh=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.06,5,16),flat(GO));wh.position.set(0,1.55,-hd+t+0.5);bk.add(wh);for(let k=0;k<3;k++){const sp=B(bk,1.0,0.08,0.06,GO,0,1.55,-hd+t+0.5);sp.rotation.z=k*Math.PI/3}
+      for(let k=0;k<10;k++){const a=k/10*6.283,b=Cy(bk,0.08,0.08,0.1,0x3a3a40,Math.cos(a)*1.22,1.55+Math.sin(a)*1.22,-hd+t+0.42,6);b.rotation.x=Math.PI/2}for(const e of[-1,1])B(bk,0.3,0.5,0.3,0x3a3a40,e*1.4,1.55+e*0.5,-hd+t+0.3)}
+    for(const e of[-1,1]){const gx=e*3.4,gz=-3.5;B(bk,1.1,0.6,0.65,0x6a3a1a,gx,0.42,gz);B(bk,1.14,0.1,0.69,GO,gx,0.5,gz);B(bk,1.14,0.1,0.69,GO,gx,0.2,gz);B(bk,0.15,0.18,0.05,GO,gx,0.45,gz+0.34);
+      for(let k=0;k<7;k++){const h=0.08+((k*37)%5)*0.06;Cy(bk,0.12,0.12,h,GO,gx+e*1.1+(k%3-1)*0.28,0.12+h/2,gz+0.6+((k/3)|0)*0.28,10)}
+      const sh=e*(hw-t-0.3);B(bk,0.5,2.4,1.6,0x5a3a1e,sh,1.32,-3.3);for(const y of[0.6,1.3,2.0])for(let k=0;k<5;k++)B(bk,0.3,0.42,0.12,[0x6a1a1a,0x1a3a6a,0x3a5a2a,0x5a3a1a][(k+y*3|0)%4],sh-e*0.05,y+0.27,-3.9+k*0.28);cols.push([gx,gz,0.6,0.38])}
+    makeDoor(bk,-1.25,hd-t/2,2.5,'x',1,'Bankajtó',2.9);
+    const iRef={};interiorAdd(bk,up,hw-t,hd-t,inn=>{const u=bk.userData;if(inn){if(!u.occB0)u.occB0=u.occB||null;u.occB=new THREE.Box3()}else if(u.occB0!==undefined){if(u.occB0)u.occB=u.occB0;else delete u.occB;delete u.occB0}});
+    KCITY_BANK={g:bk,up,booths,tops,zc,hw,hd,cols,door:DOORS[DOORS.length-1]}}
   // ===== kút a téren, a királynő szobrával =====
   const ft=root(C.x,C.z+6);Cy(ft,5,5.4,1.2,ST,0,0.6,0,18);const wv=new THREE.Mesh(new THREE.CylinderGeometry(4.6,4.6,0.2,18),water.material);wv.position.y=1.05;ft.add(wv);Cy(ft,0.8,1,3.4,ST2,0,2.6,0,10);
   const sg=humanoid({skin:0xc8c4bc,hair:0xc8c4bc,shirt:0xc8c4bc,sleeves:0xc8c4bc,pants:0xc8c4bc,boots:0xc8c4bc,hairStyle:'long'});sg.position.y=4.2;sg.scale.setScalar(1.2);sg.userData.armR.rotation.x=-2.4;ft.add(sg);Cy(ft,0.42,0.42,0.3,P.trim,0,7.3,0,8);
@@ -3252,7 +3298,7 @@ function buildCapital(style){const P=KCITY_PAL[style]||KCITY_PAL.varrock,C=KR.ca
 (function capital(){const C=KR.cap;for(let i=0;i<12;i++)kr(); // a régi város 12 kr()-t vett el (háztetőszín): a kontinens többi része így a helyén marad
   buildCapital(KCITY_STYLE);
   // templom, bank, standok (a régi helyükön, a piactér szélén)
-  altar(KX+C.x-12,C.z+33);bankObj(KX+C.x+12,C.z-16);
+  altar(KX+C.x-12,C.z+33);
   stall(KX+C.x-15,C.z-4,'Ékszer stand','gyongy',30,60,0xe0e0f0);stall(KX+C.x+15,C.z-4,'Fűszeres stand','zsalya',20,40,0x6a9a50);stall(KX+C.x-15,C.z-12,'Pékség stand','kenyer',8,22,0xd8a050);stall(KX+C.x+15,C.z+16,'Prémes stand','rokabor',38,75,0xc87030);
 })();
 // --- Koronavár élete (v57): sétáló városlakók az utcahálózaton, kapuőrök, falon járőrözők, kiabáló árusok, lantos,
@@ -3394,6 +3440,21 @@ const KSHOP=(function(){const L=(skin,hair,shirt,sleeves,pants,x)=>Object.assign
   setTimeout(()=>{for(const S of KCITY_SHOPS){const d=S.door;if(!d||d.open)continue;d.open=true;d.piv.rotation.y=d.swing*Math.PI/2;if(d.rect)d.rect.on=false;d.action='Becsukom'}},0);
   setTimeout(()=>{for(const k in DEF)DIALOG['kshop_'+k]=o=>{const D=DEF[k],S=say(o.name);S(D.hi,[{t:'Mit árulsz?',f:()=>openShop(D.list,D.t)},{t:D.q,f:()=>S(D.a)},{t:'Csak nézelődöm.'}])}},0);
   return {list,DEF}})();
+// --- Koronavári Bank (v68): négy bankár a fülkékben, a fülke pultja maga is bank; őr az ajtóban, egy sorban álló kereskedő ---
+const KBANK=(function(){const K=KCITY_BANK;if(!K)return null;const g=K.g,v=new THREE.Vector3(),ry=g.rotation.y;g.updateMatrixWorld(true);const W=(x,z)=>v.set(x,0,z).applyMatrix4(g.matrixWorld).clone();
+  const suit=(skin,hair,x)=>Object.assign({skin,hair,shirt:0x2a2a44,sleeves:0x2a2a44,pants:0x1a1a2a,boots:0x111111},x||{});
+  const BL=[['Bankár Bernát',suit(0xe8c39e,0x5a3a1a,{beard:true})],['Bankár Klára',suit(0xf0d0b0,0xc8a050,{hairStyle:'long'})],['Bankár Ödön',suit(0xd8a880,0x8a8a8a)],['Bankár Szilvia',suit(0xc89070,0x1a1a1a,{hairStyle:'long'})]];
+  const list=[];K.booths.forEach((bx,k)=>{const p=W(bx,K.zc-0.75);const o=npc(p.x,p.z,BL[k][0],[],BL[k][1],'kbankar');o.mesh.rotation.y=ry;o.banker=true;for(const q of['legL','legR','armL','armR'])o.mesh.userData[q].userData.keep=true;
+    const tie=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.45,0.05),M(0x8a1a1a));tie.position.set(0,1.55,0.24);o.mesh.add(tie);
+    const q=W(bx,K.zc+0.62),mk=new THREE.Group();mk.position.copy(q);scene.add(mk);interactables.push({mesh:mk,type:'bank',name:'Bankfülke',action:'Bankolok',hit:K.tops[k],noIcon:k>0});list.push(o)});
+  for(const [cx,cz,hw,hd] of K.cols){const p=W(cx,cz);(COL_PENDING||(COL_PENDING=[])).push([p.x,p.z,hw,hd,ry,'bank'])}
+  {const p=W(2.4,3.6);const o=npc(p.x,p.z,'Banki őr Gyula',['Itt minden érme biztonságban van.','A márványon ne fuss, csúszik!','A páncélterem ajtaja három törpe munkája.'],{skin:0xd8b090,hair:0x3a2a1a,shirt:0x8a1a1a,sleeves:0x7a7a84,pants:0x5a5a64,boots:0x2a2a2a,beard:true});o.mesh.rotation.y=ry+Math.PI*0.75;
+    const h=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.32,0.62),M(0x9a9aa4));h.position.y=2.55;o.mesh.add(h);const tb=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,0.05),M(0xd0a030));tb.position.set(0,1.55,0.24);o.mesh.add(tb)}
+  {const p=W(-1.2,0.55);const o=npc(p.x,p.z,'Gazdag kereskedő',['Csak a kamatomat jöttem megnézni.','Ötszáz arany, és egy fillérrel se kevesebb!'],{skin:0xf0d0b0,hair:0x8a8a8a,shirt:0x6a1a6a,sleeves:0xd8b040,pants:0x3a2a4a,boots:0x2a1a0a,beard:true});o.mesh.rotation.y=ry+Math.PI}
+  {const p=W(0,0);KL.add(p.x,p.y+4,p.z,0xffd8a0,1.0,14)}
+  setTimeout(()=>{const d=K.door;if(d&&!d.open){d.open=true;d.piv.rotation.y=d.swing*Math.PI/2;if(d.rect)d.rect.on=false;d.action='Becsukom'}
+    DIALOG.kbankar=o=>{const S=say(o.name);S('Üdvözlöm a Koronavári Bankban! Miben segíthetek?',[{t:'Bankolni szeretnék.',f:()=>{hideDialog();openBank()}},{t:'Mennyire biztonságos ez a bank?',f:()=>S(['A páncélterem ajtaját három törpekovács készítette. Még a királynő ékszerei is nálunk vannak, de ezt nem tőlem hallotta.','Az elmúlt száz évben egyetlen érme sem tűnt el. Egyszer egy kobold próbálkozott, azóta ő a takarítónk.'][(Math.random()*2)|0])},{t:'Semmit, köszönöm.'}])}},0);
+  return {list}})();
 // a kripta lejárata a palota mellett (a szellemkövek titka)
 const kCrypt=(function(){const g=new THREE.Group();kB(g,4,0.4,4,mats.kStoneDark,0,0.2,0);const d=kB(g,2.4,2.8,0.4,M(0x0a0806),0,1.6,-1.2);kB(g,3.2,0.6,0.6,mats.stone,0,3.2,-1.2);for(const sx of[-1,1])kB(g,0.6,3.2,0.6,mats.stone,sx*1.5,1.6,-1.2);
   const runes=[];for(let i=0;i<4;i++){const r=kB(g,0.3,0.3,0.1,mats.kRune,-0.9+i*0.6,2.6,-0.98);runes.push(r)}
@@ -5526,7 +5587,7 @@ function drawMinimap(){
   const ico=(x,z,draw)=>{const [a,b]=mmPos(x,z);if(inR(a,b))draw(a,b)};
   const sq=(col)=>(a,b)=>{mctx.fillStyle='#000';mctx.fillRect(a-4,b-4,8,8);mctx.fillStyle=col;mctx.fillRect(a-3,b-3,6,6)};
   const txt=(ch,col)=>(a,b)=>{mctx.font='bold 12px Trebuchet MS';mctx.textAlign='center';mctx.textBaseline='middle';mctx.lineWidth=3;mctx.strokeStyle='#000';mctx.strokeText(ch,a,b);mctx.fillStyle=col;mctx.fillText(ch,a,b)};
-  for(const o of interactables)if(o.type==='bank')ico(o.mesh.position.x,o.mesh.position.z,sq('#d8a030'));
+  for(const o of interactables)if(o.type==='bank'&&!o.noIcon)ico(o.mesh.position.x,o.mesh.position.z,sq('#d8a030'));
   ico(anvilObj.mesh.position.x,anvilObj.mesh.position.z,sq('#c8c8d0'));ico(furnaceObj.mesh.position.x,furnaceObj.mesh.position.z,sq('#ff8a20'));
   for(const o of interactables)if(o.type==='portal')ico(o.mesh.position.x,o.mesh.position.z,sq('#c8a060'));
   for(const b of boats)if(b.toZone!==0.5)ico(b.mesh.position.x,b.mesh.position.z,(a,c)=>{mctx.fillStyle='#000';mctx.beginPath();mctx.moveTo(a,c-6);mctx.lineTo(a+6,c+4);mctx.lineTo(a-6,c+4);mctx.fill();mctx.fillStyle='#fff';mctx.beginPath();mctx.moveTo(a,c-4);mctx.lineTo(a+4,c+3);mctx.lineTo(a-4,c+3);mctx.fill()});
