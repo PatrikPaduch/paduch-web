@@ -3730,14 +3730,15 @@ function updateDay(dt){
   dayT=(dayT+dt/DAY)%1;
   const a=dayT*Math.PI*2;const el=-Math.cos(a);
   const sx=Math.sin(a)*120,sy=el*120,sz=40;
-  sun.position.set(px+sx,Math.max(sy,-20)+20,pz+sz);sun.target.position.set(px,0,pz);
+  // az árnyékot vető fény meredekebb, mint a látszó nap: reggel/este sem nyúlnak el az árnyékok (kb. tárgymagasságnyiak)
+  sun.position.set(px+sx*0.4,Math.max(sy,-20)+75,pz+sz*0.5);sun.target.position.set(px,0,pz);
   sunMesh.position.set(px+sx*3,sy*3,pz+sz*3);sunMesh.visible=el>-0.2;
   moon.position.set(px-sx,Math.max(-sy,5)+20,pz-sz);moon.target.position.set(px,0,pz);
   moonMesh.position.set(px-sx*3,-sy*3,pz-sz*3);moonMesh.visible=el<0.2;
   const daylight=clamp((el+0.15)/0.5,0,1);const dusk=clamp(1-Math.abs(el-0.05)/0.25,0,1);
   night=1-daylight;
   const cave=zoneOf(px)===3?1:0;
-  sun.intensity=1.15*daylight*(1-cave);{const W=WX.fog();if(W&&!cave){sun.intensity*=1-W.k*0.6}const f=WX.flash();if(f>0&&!cave){sun.intensity+=2.5*f;hemi.intensity+=0.8*f}}hemi.intensity=(0.2+0.47*daylight)*(1-cave)+0.08*cave;moon.intensity=0.4*night*(1-cave);torch.intensity=cave?1.6:0;
+  sun.intensity=0.98*daylight*(1-cave);{const W=WX.fog();if(W&&!cave){sun.intensity*=1-W.k*0.6}const f=WX.flash();if(f>0&&!cave){sun.intensity+=2.5*f;hemi.intensity+=0.8*f}}hemi.intensity=(0.22+0.66*daylight)*(1-cave)+0.08*cave;moon.intensity=0.4*night*(1-cave);torch.intensity=cave?1.6:0;
   sun.color.setHSL(0.1,0.6,lerp(0.6,0.9,daylight));
   skyC.copy(skyNight).lerp(skyDay,daylight);skyC.lerp(skyDusk,dusk*0.7*(1-night*0.5));if(cave)skyC.setHex(0x050403);scene.background.copy(skyC);
   fogC.copy(fogNight).lerp(fogDay,daylight);if(cave)fogC.setHex(0x050403);if(zoneOf(px)===10){fogC.setHex(0x3a4a3c).lerp(new THREE.Color(0x121a16),1-daylight*0.8);skyC.copy(fogC);scene.background.copy(skyC)}if(zoneOf(px)===11){fogC.lerp(new THREE.Color(0xe8f0ff),0.5*daylight)}{const W=cave?null:WX.fog();if(W){fogC.lerp(new THREE.Color(W.col),W.k*(0.5+0.5*daylight));skyC.lerp(new THREE.Color(W.col),W.k*0.7);scene.background.copy(skyC)}scene.fog.color.copy(fogC);scene.fog.near=cave?12:(W?Math.min(W.near,zoneOf(px)===10?25:999):(zoneOf(px)===10?25:110));scene.fog.far=cave?70:(W?Math.min(W.far,zoneOf(px)===10?110:999):(zoneOf(px)===10?110:240))}
@@ -4376,7 +4377,7 @@ updateZoneVis();
 // Ultra: nagy felbontású textúrák (simított szűréssel), sűrű talajnövényzet és apró tárgyak (fűszál, avar, kavics, gally,
 // gomba, bokor, virág), élesebb árnyék. Az extrák csak Ultrán épülnek fel (zónánként/darabonként, lustán).
 const GFX={level:'high',P:{low:{name:'Alacsony',shadow:0,pr:1,fog:0.72,grass:0,kvis:190,hd:false,clutter:false},medium:{name:'Közepes',shadow:1024,pr:1,fog:0.86,grass:0.5,kvis:220,hd:false,clutter:false},
-  high:{name:'Magas',shadow:2048,pr:1.5,fog:1,grass:1,kvis:250,hd:false,clutter:false},ultra:{name:'Ultra',shadow:4096,pr:2,fog:1,grass:1,kvis:250,hd:true,clutter:true,cn:1.4}},clut:{},zone:-1};
+  high:{name:'Magas',shadow:2048,pr:1.5,fog:1,grass:1,kvis:250,hd:false,clutter:true,cn:0.7},ultra:{name:'Ultra',shadow:4096,pr:2,fog:1,grass:1,kvis:250,hd:true,clutter:true,cn:1.4}},clut:{},zone:-1};
 GFX.p=GFX.P.high;
 // --- nagy felbontású textúrák ---
 function hdCanvas(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);return c}
@@ -4420,12 +4421,19 @@ function clLeaves(){const pos=[],col=[],nor=[];const pal=[[0.85,0.5,0.15],[0.75,
 const GFXU={uTime:{value:0}};
 function clSway(m,amp=0.09){m.onBeforeCompile=sh=>{sh.uniforms.uTime=GFXU.uTime;sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;').replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat swp=instanceMatrix[3].x*0.31+instanceMatrix[3].z*0.27;float sw=(sin(uTime*1.8+swp)+0.4*sin(uTime*3.1+swp*1.7))*'+amp.toFixed(3)+'*max(position.y,0.0)*2.0;transformed.x+=sw;transformed.z+=sw*0.6;\n#endif')};return m}
 const clGrass=c=>clSway(new THREE.MeshLambertMaterial({vertexColors:true,color:c,side:THREE.DoubleSide}));
-const CLG={blade:clBlades(),litter:clLeaves(),pebble:new THREE.DodecahedronGeometry(0.16,0),twig:new THREE.CylinderGeometry(0.025,0.035,0.75,4).rotateZ(Math.PI/2),
+// bokrocska: 3 egymásba csúszó, csúcsszínezett gömböc (a fák új stílusában); lóhere: lapos háromlevelű foltok
+function clShrub(){const pos=[],col=[];const lin=c=>new THREE.Color(c).convertSRGBToLinear();for(const [x,y,z,r] of [[0,0.32,0,0.42],[0.3,0.24,0.12,0.3],[-0.26,0.22,-0.1,0.32]]){const g=new THREE.IcosahedronGeometry(r,0).toNonIndexed(),P=g.attributes.position;
+    for(let i=0;i<P.count;i++){const k=1+(Math.random()-0.5)*0.25,yy=P.getY(i)*k*0.85;pos.push(P.getX(i)*k+x,yy+y,P.getZ(i)*k+z);const c=lin(0x2a5a1a).lerp(lin(0x5aa032),clamp((yy+r)/(2*r),0,1));col.push(c.r,c.g,c.b)}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g}
+function clClover(){const pos=[],col=[],nor=[];for(let i=0;i<5;i++){const cx=(Math.random()-0.5)*0.6,cz=(Math.random()-0.5)*0.6;for(let l=0;l<3;l++){const a=l*2.094+i,ox=cx+Math.cos(a)*0.06,oz=cz+Math.sin(a)*0.06,c=l%2?[0.25,0.55,0.18]:[0.3,0.62,0.22];
+    for(let t=0;t<6;t++){const a0=t/6*6.283,a1=(t+1)/6*6.283;pos.push(ox,0.04,oz,ox+Math.cos(a0)*0.06,0.04,oz+Math.sin(a0)*0.06,ox+Math.cos(a1)*0.06,0.04,oz+Math.sin(a1)*0.06);for(let k=0;k<3;k++){col.push(...c);nor.push(0,1,0)}}}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));return g}
+const CLG={shrub:clShrub(),clover:clClover(),blade:clBlades(),litter:clLeaves(),pebble:new THREE.DodecahedronGeometry(0.16,0),twig:new THREE.CylinderGeometry(0.025,0.035,0.75,4).rotateZ(Math.PI/2),
   cap:new THREE.ConeGeometry(0.15,0.12,6),stem:new THREE.CylinderGeometry(0.03,0.04,0.18,5),bush:crossGeo(1.3,1.0,3),flower:crossGeo(0.5,0.5,2),bone:new THREE.CylinderGeometry(0.04,0.05,0.55,4).rotateZ(Math.PI/2)};
-const CLM={blade:clGrass(0x6eae3e),bladeDry:clGrass(0xc8b070),bladeDark:clGrass(0x4a6a30),bladeSnow:clGrass(0xc8d0c8),bladeArc:clGrass(0x8a7ac8),
+const CLM={shrub:new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),clover:new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}),blade:clGrass(0x6eae3e),bladeDry:clGrass(0xc8b070),bladeDark:clGrass(0x4a6a30),bladeSnow:clGrass(0xc8d0c8),bladeArc:clGrass(0x8a7ac8),
   litter:new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}),litterDark:new THREE.MeshLambertMaterial({vertexColors:true,color:0x8a8a70,side:THREE.DoubleSide}),flowerY:clSway(amat(TEX.flowerY),0.06),flowerP:clSway(amat(TEX.flowerP),0.06),flowerW:clSway(amat(TEX.flowerW),0.06),pebble:M(0x8e8a84),pebbleDark:M(0x4a4642),twig:M(0x5a4028),cap:M(0xc83a2a),cap2:M(0xd8c8a8),stem:M(0xf0e8d8),bone:M(0xe8e0d0)};
 // zóna-profilok: [geometria, anyag, darab, y-eltolás, méret, teljes forgatás]
-const CL_GREEN=[['blade','blade',5400,0,[0.8,1.4]],['litter','litter',450,0.03,[0.8,1.3]],['pebble','pebble',300,0.04,[0.6,1.6],1],['twig','twig',260,0.05,[0.7,1.3]],['stem','stem',130,0.09,[0.8,1.3]],['cap','cap',130,0.22,[0.8,1.3]],['flower','flowerY',140,0,[0.8,1.2]],['flower','flowerP',120,0,[0.8,1.2]],['flower','flowerW',120,0,[0.8,1.2]]];
+const CL_GREEN=[['blade','blade',4200,0,[0.8,1.4]],['blade','blade',4800,0,[0.7,1.3],0,[6,0.9]],['blade','bladeDark',1600,0,[0.9,1.5],0,[5,0.7]],['shrub','shrub',260,0,[0.7,1.3],0,[3,1.4]],['clover','clover',700,0,[0.8,1.3],0,[6,1.2]],['litter','litter',450,0.03,[0.8,1.3]],['pebble','pebble',300,0.04,[0.6,1.6],1],['twig','twig',260,0.05,[0.7,1.3]],['stem','stem',130,0.09,[0.8,1.3]],['cap','cap',130,0.22,[0.8,1.3]],['flower','flowerY',140,0,[0.8,1.2]],['flower','flowerP',120,0,[0.8,1.2]],['flower','flowerW',120,0,[0.8,1.2]],['flower','flowerY',520,0,[1,1.5],0,[13,2.4]],['flower','flowerP',420,0,[1,1.5],0,[13,2.4]],['flower','flowerW',420,0,[1,1.5],0,[13,2.4]]];
 const CL_PROF={0:CL_GREEN,1:CL_GREEN,4:CL_GREEN,6:CL_GREEN,7:CL_GREEN,8:CL_GREEN,9:CL_GREEN,11:CL_GREEN,
   2:[['blade','bladeSnow',2200,0,[0.8,1.3]],['pebble','pebbleDark',500,0.04,[0.7,1.8],1],['twig','twig',160,0.05,[0.7,1.2]]],
   3:[['pebble','pebbleDark',900,0.04,[0.6,2.2],1],['pebble','pebble',300,0.04,[0.6,1.6],1]],
@@ -4436,16 +4444,19 @@ function clMat(k){return CLM[k]||mats[k]}
 function clInst(parent,geoK,matK,list,yo,full){if(!list.length)return;const im=new THREE.InstancedMesh(CLG[geoK],clMat(matK),list.length);const d=new THREE.Object3D();
   list.forEach(([x,z,h,s,r,r2],i)=>{d.position.set(x,h+yo*s,z);d.rotation.set(full?r2:0,r,full?r2*0.7:0);d.scale.set(s,s,s);d.updateMatrix();im.setMatrixAt(i,d.matrix)});im.frustumCulled=false;im.receiveShadow=true;parent.add(im)}
 // az ugyanabba a pontba eső dupla mintákat a stem/cap párhoz közös listából vesszük
-function clFill(parent,prof,n,pick){const pairs={};for(const [g,m,cnt,yo,[s0,s1],full] of prof){const N=Math.round(cnt*n);let list;
-    if(g==='cap'&&pairs.stem){list=pairs.stem.map(([x,z,h,s,r])=>[x,z,h,s,r,0])}else{list=[];for(let k=0;k<N*6&&list.length<N;k++){const p=pick();if(p)list.push([p[0],p[1],p[2],rr(s0,s1),R_()*6.283,R_()*3])}}
+function clFill(parent,prof,n,pick){const pairs={};for(const [g,m,cnt,yo,[s0,s1],full,cl] of prof){const N=Math.round(cnt*n);let list;
+    if(g==='cap'&&pairs.stem){list=pairs.stem.map(([x,z,h,s,r])=>[x,z,h,s,r,0])}else{list=[];for(let k=0;k<N*6&&list.length<N;k++){const p=pick();if(!p)continue;
+      if(!cl){list.push([p[0],p[1],p[2],rr(s0,s1),R_()*6.283,R_()*3]);continue}
+      // csomó: a középpont körül cl[0] darab, a széle felé ritkulva
+      for(let j=0;j<cl[0]&&list.length<N;j++){const a=R_()*6.283,d=Math.sqrt(R_())*cl[1],q=j?pick(p[0]+Math.cos(a)*d,p[1]+Math.sin(a)*d):p;if(q)list.push([q[0],q[1],q[2],rr(s0,s1)*(j?0.75+R_()*0.4:1),R_()*6.283,R_()*3])}}}
     if(g==='stem')pairs.stem=list;clInst(parent,g,m,list,yo,!!full)}}
 function gfxClutterZone(z){if(GFX.clut[z]||!CL_PROF[z])return;const g=new THREE.Group();g.name='clutter'+z;const zx=z*ZX,ok=clOK[z];
-  clFill(g,CL_PROF[z],GFX.p.cn||1,()=>{const x=(R_()-0.5)*SIZE*0.92+zx,zz=(R_()-0.5)*SIZE*0.92,h=height(x,zz);if(!ok(h)||pathDist(x,zz)<2.4||isWater(x,zz))return null;return [x,zz,h]});
+  clFill(g,CL_PROF[z],GFX.p.cn||1,(qx,qz)=>{const x=qx!==undefined?qx:(R_()-0.5)*SIZE*0.92+zx,zz=qz!==undefined?qz:(R_()-0.5)*SIZE*0.92,h=height(x,zz);if(!ok(h)||pathDist(x,zz)<2.4||isWater(x,zz))return null;return [x,zz,h]});
   zoneGroups[z].add(g);GFX.clut[z]=g}
 // a kontinens darabjaiban régiónként
 function gfxClutterChunk(c){if(c.clut)return;const g=new THREE.Group();const w0=kRegW(c.x0+KCH/2,c.z0+KCH/2);
   const prof=w0.ash>0.5?[['pebble','pebbleDark',500,0.04,[0.7,2],1],['twig','twig',140,0.05,[0.7,1.2]],['blade','bladeDry',400,0,[0.8,1.2]]]:w0.sw>0.5?CL_PROF[10]:w0.mo>0.5?CL_PROF[2]:w0.arc>0.5?[['blade','bladeArc',3000,0,[0.8,1.3]],['flower','flowerP',260,0,[0.8,1.2]],['pebble','pebble',200,0.04,[0.6,1.5],1]]:CL_GREEN;
-  clFill(g,prof,0.3*(GFX.p.cn||1),()=>{const x=c.x0+R_()*KCH,z=c.z0+R_()*KCH,h=kH(x,z);if(h<1.1||kOnWall(x,z)||kRoadDist(x,z)<2.6)return null;return [KX+x,z,h]});c.g.add(g);c.clut=g}
+  clFill(g,prof,0.3*(GFX.p.cn||1),(qx,qz)=>{const x=qx!==undefined?qx-KX:c.x0+R_()*KCH,z=qz!==undefined?qz:c.z0+R_()*KCH,h=kH(x,z);if(h<1.1||kOnWall(x,z)||kRoadDist(x,z)<2.6)return null;return [KX+x,z,h]});c.g.add(g);c.clut=g}
 // a meglévő aljnövényzet sűrűsége (példányszám), az árnyék, a felbontás, a látótáv
 function gfxApply(level,quiet){const P=GFX.P[level]||GFX.P.high;const old=GFX.p;GFX.level=level;GFX.p=P;
   renderer.setPixelRatio(Math.min(devicePixelRatio,P.pr));resize();
