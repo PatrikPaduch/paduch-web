@@ -30,7 +30,7 @@
   #minimap{width:100%;height:100%;display:block}
   #compass{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
   #compass span{position:absolute;left:50%;top:6px;transform:translateX(-50%);color:#fff;font-weight:bold;font-size:13px;text-shadow:0 0 3px #000}
-  #panel{position:absolute;right:12px;top:200px;width:196px;background:linear-gradient(#5b4426,#3b2a14);border:3px solid #1a1206;box-shadow:inset 0 0 0 2px #8a6a3a;border-radius:4px;color:#ff9a1a;font-size:13px;text-shadow:1px 1px 0 #000;box-sizing:border-box}
+  #panel{position:absolute;right:12px;top:200px;width:236px;background:linear-gradient(#5b4426,#3b2a14);border:3px solid #1a1206;box-shadow:inset 0 0 0 2px #8a6a3a;border-radius:4px;color:#ff9a1a;font-size:13px;text-shadow:1px 1px 0 #000;box-sizing:border-box}
   #panel{max-height:calc(100vh - 215px);overflow-y:auto}
   #tabs{display:flex;border-bottom:2px solid #1a1206}
   #tabs div{flex:1;text-align:center;padding:4px 0 2px;cursor:pointer;color:#ffe87a;background:#2e2112;font-size:12px}
@@ -81,7 +81,7 @@
     #mobBtn{display:block}
     #panel{display:none;position:absolute;left:0;right:0;bottom:0;top:auto;width:100%;max-height:60vh;overflow:auto;border-radius:10px 10px 0 0;z-index:7}
     #panel.open{display:block}
-    .slot{height:44px;font-size:26px}
+    .slot{height:52px;font-size:26px}
   }
   @media (pointer:coarse){
     #tabs div{padding:9px 0 6px;font-size:14px}#tabs canvas{width:28px;height:28px}
@@ -90,7 +90,8 @@
     .qrow{padding:9px 8px;font-size:14px}.arow{padding:7px 8px;font-size:13px}.eqs{padding:8px}
     #ctx div{padding:10px 14px;font-size:15px}
     #mobBtn{width:56px;height:56px;font-size:26px}
-    .slot{height:48px;font-size:28px}
+    .slot{height:54px;font-size:28px}
+    .slot img{width:38px;height:38px}
     #chat{font-size:13px;line-height:17px}
     #hover{font-size:14px}
   }
@@ -112,9 +113,11 @@
   .sk .lvl{color:#fff;font-weight:bold}
   .bar{height:4px;background:#000;border:1px solid #0008;margin-top:1px}
   .bar i{display:block;height:100%;background:#00c800;width:0%}
-  #inv{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-  .slot{height:38px;background:#2e2112;border:1px solid #0008;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;cursor:pointer;border-radius:3px}
+  #inv{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .slot{height:48px;background:#2e2112;border:1px solid #0008;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;cursor:pointer;border-radius:3px}
   .slot:hover{background:#4a3a24}
+  .slot img{width:34px;height:34px;image-rendering:pixelated;pointer-events:none}
+  .slot .q{position:absolute;left:3px;top:1px;font-size:12px;line-height:12px;color:#ffff00;font-weight:bold;text-shadow:1px 1px 0 #000,-1px -1px 0 #000;pointer-events:none}
   #invHint{font-size:11px;color:#ddd;margin-top:6px;line-height:14px}
   #run{margin:6px 8px 8px;text-align:center;padding:4px;background:#3b2a14;border:2px solid #8a6a3a;color:#ffe87a;font-size:12px;cursor:pointer;text-shadow:1px 1px 0 #000}
   #run.on{background:#2a5a1a}
@@ -2327,6 +2330,28 @@ function itemIcon(k){
   const sword=(col,hilt)=>{L(5,19,19,5,'#000',5);L(5,19,19,5,col,3);L(3,15,9,21,'#000',4);L(3,15,9,21,hilt||'#8a5a2a',2);R(2,20,4,3,'#000');R(3,21,2,1,'#4a3014')};
   const rock=(col,spot)=>{x.fillStyle='#000';x.beginPath();x.moveTo(3,18);x.lineTo(6,8);x.lineTo(13,4);x.lineTo(20,9);x.lineTo(21,18);x.lineTo(16,22);x.lineTo(7,22);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(5,17);x.lineTo(7,10);x.lineTo(13,6);x.lineTo(18,10);x.lineTo(19,17);x.lineTo(15,20);x.lineTo(8,20);x.fill();if(spot){R(9,10,3,3,spot);R(14,13,3,3,spot);R(10,16,2,2,spot)}};
   const bar=(col,col2)=>{x.fillStyle='#000';x.beginPath();x.moveTo(2,16);x.lineTo(16,4);x.lineTo(22,8);x.lineTo(8,20);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(4,16);x.lineTo(16,6);x.lineTo(20,8);x.lineTo(8,18);x.fill();L(6,15,16,7,col2,1.5)};
+  // anyag-sorozatok: érc, rúd, drágakő, szerszám, páncél és ékszer az anyag színével (bronz…rúna, zafír…gyémánt)
+  function tierIcon(k){const TI={bronz:['#b87333','#e8a868'],vas:['#a0a0a8','#dcdce4'],acel:['#cfd3e0','#ffffff'],mithril:['#4a5ab8','#94a4f4'],adamant:['#3a8a4a','#80d090'],runa:['#2aa0c0','#90ecfa']};
+    const GEM={zafir:['#2448d8','#9ab0ff'],smaragd:['#1ea84a','#98f4b4'],rubin:['#c81c2c','#ff9a9a'],gyemant:['#c8e8f8','#ffffff']};
+    const P=(pts,col)=>{x.fillStyle=col;x.beginPath();x.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)x.lineTo(pts[i],pts[i+1]);x.fill()};
+    const gem=([c,h])=>{P([12,2,21,9,12,22,3,9],'#000');P([12,4,19,9,12,20,5,9],c);P([12,4,17,9,7,9],h);P([7,9,17,9,12,19],c);L(12,9,12,18,h,1);R(9,6,2,1,'#fff')};
+    const ORE={rezerc:['#8a7a6a','#d88a40'],onerc:['#8a8a90','#e0e0d8'],szen:['#3a3632','#0a0a0a'],mithrilerc:['#6a6a78','#5a6ad0'],adamanterc:['#6a6a6a','#4aa05a'],runaerc:['#6a7078','#40c0e0']};
+    if(ORE[k]){rock(...ORE[k]);return true}
+    if(GEM[k]){gem(GEM[k]);return true}
+    let m=k.match(/^(zafir|smaragd|rubin|gyemant)(gyuru|amulett)$/);
+    if(m){const [c,h]=GEM[m[1]];if(m[2]==='gyuru'){x.strokeStyle='#000';x.lineWidth=6;x.beginPath();x.arc(12,15,6,0,6.283);x.stroke();x.strokeStyle='#f0c020';x.lineWidth=3;x.beginPath();x.arc(12,15,6,0,6.283);x.stroke();P([12,2,17,7,12,12,7,7],'#000');P([12,4,15,7,12,10,9,7],c);R(11,5,2,1,h)}
+      else{x.strokeStyle='#000';x.lineWidth=4;x.beginPath();x.arc(12,8,8,0.3,2.84);x.stroke();x.strokeStyle='#d8b040';x.lineWidth=2;x.beginPath();x.arc(12,8,8,0.3,2.84);x.stroke();P([12,11,19,17,12,23,5,17],'#000');P([12,13,17,17,12,21,7,17],c);R(10,15,2,2,h)}return true}
+    m=k.match(/^(bronz|vas|acel|mithril|adamant|runa)(rud|kard|csakany|fejsze|sisak|labszar|pajzs|mell)$/);if(!m)return false;const [c,h]=TI[m[1]],wood='#8a5a2a';
+    switch(m[2]){
+      case 'rud':bar(c,h);break;
+      case 'kard':sword(c);break;
+      case 'csakany':L(7,21,14,8,'#000',4);L(7,21,14,8,wood,2);x.strokeStyle='#000';x.lineWidth=5;x.beginPath();x.moveTo(3,11);x.quadraticCurveTo(12,0,22,9);x.stroke();x.strokeStyle=c;x.lineWidth=3;x.beginPath();x.moveTo(4,10);x.quadraticCurveTo(12,1,21,9);x.stroke();L(8,6,14,4,h,1);break;
+      case 'fejsze':L(6,22,15,5,'#000',4);L(6,22,15,5,wood,2);P([12,3,20,2,23,10,17,13,13,8],'#000');P([13,4,19,4,21,10,17,11,14,8],c);L(18,5,20,10,h,1);break;
+      case 'sisak':x.fillStyle='#000';x.beginPath();x.arc(12,12,10,Math.PI,0);x.lineTo(22,17);x.lineTo(2,17);x.fill();x.fillStyle=c;x.beginPath();x.arc(12,12,8,Math.PI,0);x.lineTo(20,16);x.lineTo(4,16);x.fill();R(10,13,4,8,'#000');R(11,14,2,6,c);R(3,16,18,2,'#000');R(7,6,3,2,h);break;
+      case 'labszar':R(4,2,16,5,'#000');R(4,6,7,16,'#000');R(13,6,7,16,'#000');R(5,3,14,3,c);R(5,7,5,14,c);R(14,7,5,14,c);L(7,8,7,20,'#000',1);L(16,8,16,20,'#000',1);R(5,3,14,1,h);break;
+      case 'pajzs':P([12,2,21,6,19,16,12,22,5,16,3,6],'#000');P([12,4,19,7,17,15,12,20,7,15,5,7],c);L(12,5,12,19,h,1.5);L(6,10,18,10,h,1);break;
+      case 'mell':P([2,6,8,3,12,6,16,3,22,6,22,13,18,13,18,22,6,22,6,13,2,13],'#000');P([3,7,8,5,12,8,16,5,21,7,21,12,17,12,17,21,7,21,7,12,3,12],c);L(12,8,12,20,'#0006',1);L(8,6,10,12,h,1);R(8,14,8,1,'#0005');break}
+    return true}
   const FC={garnela:['#f0a0a0','#c06060'],hering:['#5aa0d8','#2a6aa8'],pisztrang:['#8ab070','#4a7a40'],lazac:['#e07050','#a04030'],tonhal:['#3a5a9a','#1a3a6a'],capa:['#8a9aa8','#4a5a68']};
   if(k.startsWith('kopeny_')){const col='#'+CAPECOL[k.slice(7)].toString(16).padStart(6,'0');x.fillStyle='#000';x.beginPath();x.moveTo(6,3);x.lineTo(18,3);x.lineTo(21,21);x.lineTo(3,21);x.fill();x.fillStyle=col;x.beginPath();x.moveTo(7,4);x.lineTo(17,4);x.lineTo(19,20);x.lineTo(5,20);x.fill();R(6,3,12,2,'#f0d040');L(12,6,12,19,'#000',1);return c.toDataURL()}
   if(FC[k]){fish(FC[k][0],FC[k][1]);return c.toDataURL()}
@@ -2411,7 +2436,7 @@ function itemIcon(k){
     case 'terkepdarab':x.fillStyle='#000';x.beginPath();x.moveTo(3,4);x.lineTo(20,2);x.lineTo(22,15);x.lineTo(17,21);x.lineTo(5,19);x.fill();x.fillStyle='#e8d8a8';x.beginPath();x.moveTo(5,5);x.lineTo(19,4);x.lineTo(20,14);x.lineTo(16,19);x.lineTo(7,17);x.fill();L(7,8,16,15,'#8a5a2a',1.5);L(9,14,15,9,'#c02020',2);L(11,9,15,13,'#c02020',2);break;
     case 'kalozkalap':x.fillStyle='#000';x.beginPath();x.moveTo(2,15);x.lineTo(6,6);x.lineTo(12,4);x.lineTo(18,6);x.lineTo(22,15);x.lineTo(12,19);x.fill();x.fillStyle='#1a1a1a';x.beginPath();x.moveTo(4,14);x.lineTo(7,8);x.lineTo(12,6);x.lineTo(17,8);x.lineTo(20,14);x.lineTo(12,17);x.fill();R(10,9,4,3,'#f0f0f0');R(9,13,6,1,'#f0f0f0');break;
     case 'gyongy':Cc(12,12,9,'#000');Cc(12,12,7,'#e8e8f0');Cc(9,9,2.5,'#fff');Cc(13,14,3,'#c8c8d8');break;
-    default:x.font='18px sans-serif';x.textAlign='center';x.fillText(ITEMS[k]?ITEMS[k].icon:'?',12,19);
+    default:if(tierIcon(k))break;x.font='18px sans-serif';x.textAlign='center';x.fillText(ITEMS[k]?ITEMS[k].icon:'?',12,19);
   }
   return c.toDataURL();
 }
@@ -2441,7 +2466,8 @@ Object.assign(EXAMINE,{halpecset:'Halászrévi pecsét. Hal és horgony a viaszb
   'Vándor Kázmér':'Kopott köpenyes vándor. Mindig többet tud, mint amennyit mond.','Főmágus Selene':'Az Arkánum főmágusa. A szeme lila fényben dereng.','Könyvtáros Lőrinc':'Pápaszemes könyvtáros. Rejtvényekben beszél.','Kohómester Brokk':'Kormos törpe, kalapácsnyi öklökkel.',
   'Bányász Kata':'Fiatal törpe bányász, lámpával a sisakján.','Szszaar, a gyíkok bölcse':'Öreg gyíkember, a népe bölcse. Lassan, sziszegve beszél.','Mocsárjáró Vendel':'Vadász, aki évtizedek óta a lápon él.','Tábornok Hédi':'A Pajzsőrség tábornoka. Kemény, de igazságos.',
   'Kiképző Bálint':'A tábor kiképzője. Egy ütésből tudja, ki mit ér.','Favágómester Gergő':'A favágócéh mestere. Fenyőillatú.','Remete Sára':'Az erdő remetéje. A fák nevét is tudja.','Gazdasszony Rozália':'Búzavölgy legjobb gazdasszonya. Sosem áll meg.','Hegyi vezető Márk':'Hegyi vezető, fagyott szakállal.'});
-const ICON={};for(const k in ITEMS)ICON[k]=itemIcon(k);
+// lusta ikon-tár: a később (Object.assign-nal) felvett tárgyak is képet kapnak az első használatkor
+const ICON=new Proxy({},{get(t,k){if(typeof k==='string'&&!(k in t)&&ITEMS[k])t[k]=itemIcon(k);return t[k]}});
 const iconImg=(k)=>`<img src="${ICON[k]}" alt="">`;
 const SELL={felhoesszencia:10,harpiatoll:14,griffkarom:60,viharpikkely:90,aranyszarv:400,felhokenyer:8,egikopeny:1500,griffsisak:900,viharkard:3000,nyershus:3,sulthus:6,szarvasbor:12,mez:5,mezeskalacs:8,gyapju:5,unikornisszarv:120,medvebor:30,mohakristaly:80,sarkanycsont:40,zoldsarkanybor:300,pioca:6,varangylab:8,rongy:2,ektoplazma:25,lidercpor:45,verfarkasbor:150,vampirfog:200,druidakopeny:600,medvesapka:250,sarkanypajzs:2500,szentamulett:500,ezustkard:1800,ejkopeny:2000,nyirronk:4,tolgyronk:8,juharronk:14,fuzronk:18,baobabronk:22,tiszafaronk:35,magikusronk:120,bogyo:2,gomba:3,kaposzta:1,hagyma:1,len:3,zsalya:8,levendula:14,mandragora:30,gombaleves:12,gnomkoktel:15,deneverszarny:6,trollfog:25,kigyomereg:15,golemsziv:60,ellenmereg:40,trollamulett:300,aranykorona:2500,sarkanykard:4000,nagycsont:3,esszencia:2,borsapka:20,bormelleny:45,bornadrag:35,kincseskalap:500,imaital:30,jegpajzs:350,hosokkardja:5000,gyogyfu:12,gyogyfutea:30,tolgyij:150,elfij:600,osfabot:900,tundekopeny:800,vizestomlo:4,urestomlo:1,datolya:3,gyolcs:6,faraobot:900,skarabeusz:700,fejkendo:30,runa:2,rum:4,kalozkabat:400,aranykoponya:500,kapitanykard:2000,varazsbot:100,kenyer:8,halleves:20,ragu:25,aranygyuru:150,jeggyuru:400,gyongylanc:300,erositoital:60,regenital:50,buza:6,repa:5,krumpli:5,sultkrumpli:9,buzamag:2,repamag:4,krumplimag:6,vulkankard:1500,vassisak:40,acelsisak:90,jegsisak:400,vaslabszar:60,acellabszar:140,jeglabszar:500,borcsizma:30,premcsizma:90,jegkristaly:120,farkasbor:35,jegkard:600,premkopeny:300,garnela:3,sultgarnela:5,hering:5,sulthering:8,pisztrang:10,sultpisztrang:15,lazac:18,sultlazac:25,tonhal:25,sulttonhal:35,capa:60,sultcapa:90,toll:2,nyil:1,ij:60,fapajzs:40,tyuktojas:3,sor:2,gyogyital:15,nyershal:5,sulthal:8,ronk:3,erc:10,arany:40,selyem:15,kigyobor:25,fullank:30,tojas:4,gyongy:150,kagylo:2,vasrud:20,aranyrud:80,banan:2,egett:0,bronzkard:30,vaskard:60,acelkard:120,aranykard:300,kigyomelleny:150};
 Object.assign(SELL,{gyikpikkely:20,hidrafog:500,hamupor:15,lavamag:120,lelekko:60,orkfog:25,jetiszor:40,kolosszusziv:800,rokabor:30,aranyagancs:2000,hidrakarom:6000,koronakopeny:5000,arkankontos:1500,tabornokisisak:1500,erdojarocsizma:800,lavagyuru:900,szarvasamulett:1200,kolosszuspajzs:6000});
