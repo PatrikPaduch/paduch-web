@@ -4236,7 +4236,7 @@ function itemIcon(k){
     const M={sarkanykard:['sword','#d83020','#3a2a1a'],ezustkard:['sword','#e8e8f4','#4a4a8a'],viharkard:['sword','#80c8ff','#2a2a6a'],
       pet_jegorias:['pet','#a8dcf4','#ffffff','ice'],pet_vulkankiraly:['pet','#8a3a20','#ff8a20','flame'],pet_kalozkapitany:['pet','#e0b890','#202020','hat'],pet_farao:['pet','#e0d8b8','#f0c020','band'],pet_erdoorzo:['pet','#6a8a3a','#8aca4a','leaf'],
       pet_lavaspirit:['pet','#ff6a10','#ffd040','flame'],pet_zephyra:['pet','#4ab0d0','#e0f0ff','wings'],pet_varur:['pet','#8a8a90','#f0c020','crown'],pet_zoldsarkany:['pet','#3a9a3a','#a0e060','wings'],pet_vampirur:['pet','#4a3a5a','#c02020','cape'],
-      pet_mocsarihidra:['pet','#3a7a3a','#8ac050','horns'],pet_kokolosszus:['pet','#7a7a80','#a0a0a8','rock'],pet_korvin:['pet','#22222c','#d8b040','crown'],
+      pet_mocsarihidra:['pet','#3a7a3a','#8ac050','horns'],pet_kokolosszus:['pet','#7a7a80','#a0a0a8','rock'],pet_korvin:['pet','#22222c','#d8b040','crown'],pet_gorgath:['pet','#6a5a48','#d8b040','rock'],
       arenasisak:['helm','#b0a080','#e8dcb0','#c02020'],griffsisak:['helm','#d0a040','#fff0a0','#f0f0f0'],tabornokisisak:['helm','#9a9aa0','#e0e0e8','#2a4aa8'],
       vadaszsisak:['cap','#6a4a2a','#4a3018','#c02020'],medvesapka:['cap','#5a3a20','#7a5a3a'],borsapka:['cap','#8a5a2a','#6a4018'],gnomsapka:['cone','#d02828','#a01818'],kincseskalap:['tophat','#3a2a1a','#f0c020'],
       arenakopeny:['cape','#a82020','#f0c020'],egikopeny:['cape','#6aa8f0','#ffffff'],druidakopeny:['cape','#3a6a2a','#8aca5a'],ejkopeny:['cape','#1e1e3e','#6a6aa0'],koronakopeny:['cape','#8a1a2a','#f0c020'],
@@ -4880,6 +4880,8 @@ Object.assign(QUESTS,{
 });
 // --- Hajnalföld, 1. fázis (v72): az első fő küldetés, új tárgyak és szörnyek ---
 for(const k of['tolgydeszka','kotel','naplolap','krakentinta','hajnallampa'])STACK.add(k);
+QUESTS.sinek={name:'A sínek népe',giver:'Nori sínmester (Mélykapu, a csilleállomás)',desc:'A csillevasút váltói tönkrementek. Aki rossz állásnál indul, azt a csille a Mélységbe viszi.',reward:'A csillevasút (Mélykapu, Hóvég, Vasorom-bányák), 12 000 Kovácsolás XP, 3000 érme',qp:2,obj:q=>{const pc=v=>[0,1,2].filter(k=>(v||0)&(1<<k)).length;return ({0:`Javítsd meg a három váltókart a mélykapui peron mellett (mindegyikhez vasrúd és kalapács): ${pc(q.fx)}/3.`,1:`Gyűjtsd össze a régi sínkönyv lapjait: kérdezd Borint a Mélykohónál, Bombur kocsmárost és Hilda rúnakovácsot (${pc(q.pg)}/3).`,2:'Állítsd be a váltókat a lapok szerint, és indulj csillével Hóvégre.',3:'Térj vissza Nori sínmesterhez Mélykapuba.'})[q.n]||''}};
+QUESTS.gorgath={name:'Gorgath ébredése',giver:'Bányamester Dvalin (Mélykapu)',desc:'A Vasorom-bányákban remeg a föld, új hasadékok nyílnak. Valami ébredezik a hegy alatt.',reward:'Gorgath-pajzs, 25 000 Bányászat és 10 000 Kovácsolás XP, a Gorgath-bossharc',qp:3,obj:q=>({0:`Vizsgáld meg a három friss hasadékot a Vasorom-bányák állomása mellett: ${[0,1,2].filter(k=>(q.m||0)&(1<<k)).length}/3.`,1:'Vidd a pikkelydarabot Dvalin bányamesternek Mélykapuba.',1.5:'Hozz három ércgólem-szilánkot Rúnakovács Hildának a kőszívó rúnához.',2:'Tedd a kőszívó rúnát a bánya kőkörében álló ébresztő kőre, és győzd le Gorgathot, a Kőférget.',3:'Térj vissza Dvalin bányamesterhez.'})[q.n]||''};
 QUESTS.erclaz={name:'Ércláz',giver:'Bányamester Dvalin (Mélykapu, a tárna szájánál)',desc:'A fiatal Kili orichalkumot keresett a régi tárnában, aztán beomlott a bejárat.',reward:'Bányászsisak, 8000 Bányászat XP, 2000 érme',qp:1,obj:q=>[`Bontsd el az öreg tárna három omladékát a hegyoldalban: ${q.m||0}/3.`,`Győzd le a tárnából előrontó koboldokat: ${q.k||0}/3.`,'Beszélj Kilivel.','Vidd az orichalkum-rögöt Dvalin bányamesternek Mélykapuba.'][q.n]||''};
 QUESTS.ostrom={name:'Mélykapu ostroma',giver:'Thráin király (Mélykapu, trónterasz)',desc:'A koboldok egy hadúr alatt egyesültek, kőtrollokat és vasférgeket hoztak. Ostrom készül Mélykapu ellen.',reward:'A 3. napkorong-szilánk, Törpe hadisisak, 15 000 Kovácsolás és 15 000 Bányászat XP, 5000 érme',qp:3,obj:q=>[`Javítsd meg a kapu előtti két ostromballisztát (mindkettőhöz 2 acélrúd, 2 vasrúd és kalapács): ${[1,2].filter(b=>(q.m||0)&b).length}/2.`,'Szólj Thráin királynak, hogy készen állsz a védelemre.',`Védd meg a kaput! ${q.w||0}/3. hullám. A ballisztákkal is lőhetsz (kattints rájuk).`,'Térj vissza Thráin királyhoz.'][q.n]||''};
 QUESTS.hollok={name:'Hollók tanácsa',giver:'Druida Rozina (Hollótanya)',desc:'A második napkorong-szilánk nyoma Hollóerdőbe vezet. A Hollótanács tudja, hol van, de csak annak felel, aki beszéli a nyelvüket.',reward:'A 2. napkorong-szilánk, a Kőkapu-hálózat, Hollótoll-köpeny, 15 000 Vadászat, 10 000 Ügyesség és 10 000 Gyógynövénytan XP',qp:3,obj:q=>['Hallgasd meg a tanácsfa hét hollóját, és rakd sorba a tollakat a tolloltáron. Rozina jegyzete szerint: ahány kár, annyiadik; éj fekete, hó fehér, vér vörös, nap arany, ég kék, moha zöld, hold ezüst.',`Vigyél ajándékot a tolloltárhoz: holdharmat ${countItem('holdharmat')?'✔':'✘'} (üvegcsébe, éjjel a gombás tisztás páfrányairól; nappal elpárolog), fenyőgyanta ${countItem('gyanta')?'✔':'✘'} (fakéregőr), holdfarkas-agyar ${countItem('holdagyar')?'✔':'✘'} (éjjel).`,'Mássz fel a kötéllétrán Korvin fészkéhez (Hollótanyától keletre, a legmagasabb fenyőn), és győzd le Korvint, a Hollókirályt.','Vidd a szilánkot és a kőgyűrűt Druida Rozinának.'][q.n]||''};
@@ -6739,7 +6741,7 @@ const HREGT={};
       for(const s of[-1,1])for(let c=0;c<9;c++){const l=new THREE.Mesh(new THREE.TorusGeometry(0.35,0.1,4,8),S(0x3a3a3e));l.position.set(s*(6.5-c*0.75),13-c*0.7,2.6);l.rotation.y=c%2?Math.PI/2:0;g.add(l)}P(g,36,-46,0);HMK.sealed=[36,-41];KL.add(HJX+CX+36,7,CZ-42,0x60c0ff,1.2,14)}
     // az orichalkum-tárna szája (még beomlott) és a csillevasút állomása
     {const g=G();box(g,10,9,3,0x3a3632,0,4.5,0);box(g,6,6,0.6,0x0a0806,0,3,1.6);for(const s of[-1,1])box(g,0.6,6.5,0.6,0x5a3a20,s*3.3,3.25,1.9);box(g,7.2,0.6,0.6,0x5a3a20,0,6.5,1.9);for(let k=0;k<5;k++){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(0.9+k%2*0.4,0),S(0x5a5650));r.position.set(-1.6+k*0.8,0.7,2.3+k%2);g.add(r)}P(g,-36,-45,0);HMK.ori=[-36,-41]}
-    {const g=G();box(g,14,0.6,8,0x6e6a64,0,0.3,0);for(let i=0;i<10;i++)box(g,2.2,0.12,0.4,0x5a3a20,0,0.66,-4+i*1.2);for(const s of[-1,1])box(g,0.12,0.12,14,0x6a6a72,s*0.7,0.72,2);for(const s of[-1,1])box(g,0.5,5,0.5,0x5a3a20,s*6.6,2.5,-3.6);box(g,14,0.4,5,0x5a3a20,0,5,-2);P(g,40,30,-Math.PI/2);HMK.station=[40,30]}
+    HMK.station=[40,30];
     // piac a kapu mögött, kocsma, bank
     {const st=(x,z,c)=>{const g=G();for(const sx of[-1,1])for(const sz of[-1,1])box(g,0.2,2.6,0.2,0x5a3a20,sx*1.5,1.3,sz*1);box(g,3.4,0.15,2.4,c,0,2.65,0);box(g,3,0.9,1.6,0x6a4a2a,0,0.45,0);return P(g,x,z,0)};st(-12,40,0x8a2a1a);st(12,40,0x2a4a8a);st(-12,30,0x3a6a2a);st(12,30,0x8a6a1a);HMK.stalls=[[-12,40],[12,40],[-12,30],[12,30]]}
     {const [x,z]=W(-26,26);house(HJX+x,z,9,7,Math.PI/2,{style:'varrock',bars:true,sign:0xa83a1a});HMK.tavern=[-26,26]}
@@ -6747,6 +6749,34 @@ const HREGT={};
     for(const [x,z,ry] of[[-26,8,Math.PI/2],[-26,-8,Math.PI/2],[28,-6,-Math.PI/2],[28,-20,-Math.PI/2],[-14,-30,0],[18,-30,0]]){const [wx,wz]=W(x,z);house(HJX+wx,wz,7,6,ry,{style:'varrock',bars:true})}
     {const [x,z]=W(26,24);house(HJX+x,z,9,7,-Math.PI/2,{style:'varrock',bars:true,sign:0x5a2a7a});HMK.runehall=[26,24]}
     HPOI.push([CX,CZ,80])}
+  // ---------- v77: a csillevasút állomásai, a Mélység pereme, Gorgath arénája ----------
+  {const HMV=window.HMV={st:{}};const [mcx,mcz]=HMK.c;
+    const station=(id,x,z,ry,name,len,city)=>{const g=G();const c=Math.cos(ry),sn=Math.sin(ry);
+      box(g,8,0.6,10,0x6e6a64,0,0.3,0);for(let i=0;i<Math.round(len/1.2);i++)box(g,2.2,0.12,0.4,0x5a3a20,0,0.08+(i<8?0.6:0),-4+i*1.2);for(const s of[-1,1])box(g,0.12,0.12,len,0x6a6a72,s*0.7,0.2+0.6,-4+len/2-0.6);
+      for(const s of[-1,1])box(g,0.5,4.6,0.5,0x5a3a20,s*3.6,2.6,-3);box(g,8,0.4,3,0x5a3a20,0,4.9,-3);
+      const cv=document.createElement('canvas');cv.width=256;cv.height=64;const k=cv.getContext('2d');k.fillStyle='#3a2a1a';k.fillRect(0,0,256,64);k.strokeStyle='#d8b040';k.lineWidth=4;k.strokeRect(3,3,250,58);k.fillStyle='#f0e0b0';k.font='bold 28px Trebuchet MS';k.textAlign='center';k.fillText(name,128,42);
+      const sg=new THREE.Mesh(new THREE.PlaneGeometry(4,1),new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(cv)}));sg.position.set(0,4.2,-1.35);g.add(sg);
+      // alagútszáj a sín végén
+      const pz=-4+len;if(!city){for(const [ox,oy,oz,r,sy] of[[0,3,pz+3,8,0.9],[-6,1,pz+1,5,0.7],[6,1,pz+1,5,0.7],[0,6,pz+6,7,0.7]]){const m=new THREE.Mesh(new THREE.DodecahedronGeometry(r,1),S(0x6a6660));m.position.set(ox,oy,oz);m.scale.y=sy;g.add(m)}}
+      box(g,7,6.5,1.4,0x4a4642,0,3.25,pz);box(g,4.4,4.6,1.5,0x0a0806,0,2.3,pz+0.1);for(const s of[-1,1])box(g,0.6,5,0.6,0x5a3a20,s*2.4,2.5,pz-0.8);box(g,5.6,0.6,0.6,0x5a3a20,0,5,pz-0.8);
+      put(g,x,z,ry);g.userData.noOcc=true;KL.add(HJX+x,4,z,0xffc060,1.0,12);
+      // a sín két végpontja világkoordinátában: peron és alagútszáj
+      const P0=[x+sn*0,z+c*0],P1=[x+sn*(pz-1.5),z+c*(pz-1.5)];HMV.st[id]={x,z,ry,name,P0,P1,g};if(!city){HPOI.push([x+sn*len/2,z+c*len/2,len/2+8])}colAdd(HJX+x+sn*pz,z+c*pz,3.6,1.2,ry,'alagut')};
+    station('mely',mcx+40,mcz+30,Math.PI/2,'Mélykapu',15,true);station('hoveg',-271,-1562,Math.atan2(-16,26),'Hóvég',22,false);station('banya',-60,-1197,Math.PI/2,'Vasorom-bányák',22,false);station('melyseg',205,-1256,-0.6,'???',18,false);
+    // a három váltókar a mélykapui peron mellett
+    {const g=G();box(g,5,1,1.6,0x4a4642,0,0.5,0);const levers=[];for(let i=0;i<3;i++){const p=new THREE.Group();p.position.set(-1.6+i*1.6,1,0);g.add(p);const l=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,1.6,5),S(0x8a8a92));l.position.y=0.8;p.add(l);const kn=new THREE.Mesh(new THREE.SphereGeometry(0.18,6,5),S(i===0?0xc02020:i===1?0x2a6ad8:0xd8b040));kn.position.y=1.6;p.add(kn);p.rotation.z=0.5;levers.push(p)}
+      put(g,mcx+40-6,mcz+30+5,Math.PI/2);HMV.levers=levers;HMV.leverPos=[mcx+40-6,mcz+30+5]}
+    // a Mélység pereme: sziklapárkány, a közepén feneketlen szakadék
+    {const [ax,az]=[205+Math.sin(-0.6)*-14,-1256+Math.cos(-0.6)*-14];const g=G();const hole=new THREE.Mesh(new THREE.CircleGeometry(8,28),new THREE.MeshBasicMaterial({color:0x000000}));hole.rotation.x=-Math.PI/2;hole.position.y=0.15;g.add(hole);
+      for(let i=0;i<3;i++){const r=new THREE.Mesh(new THREE.RingGeometry(8+i*1.2,9.4+i*1.2,28),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.6-i*0.18,depthWrite:false}));r.rotation.x=-Math.PI/2;r.position.y=0.14;g.add(r)}
+      for(let i=0;i<10;i++){const a=i/10*6.283;const st=new THREE.Mesh(new THREE.ConeGeometry(0.8,3+((i*3)%4),5),S(0x3a3632));st.position.set(Math.cos(a)*10.5,1.5,Math.sin(a)*10.5);g.add(st)}
+      put(g,ax,az,0);for(let i=0;i<16;i++){const a=i/16*6.283;colAdd(HJX+ax+Math.cos(a)*8,az+Math.sin(a)*8,1.6,1.6,0,'szakadek')}HPOI.push([ax,az,16]);HMV.abyss=[ax,az]}
+    // Gorgath arénája: törött kőoszlopok gyűrűje, az ébresztő kő, hasadékok
+    {const [ax,az]=[-65,-1231];const g=G();for(let i=0;i<10;i++){const a=i/10*6.283;const h=3+((i*5)%4)*1.2;box(g,1.6,h,1.6,0x5a5650,Math.cos(a)*17,h/2,Math.sin(a)*17).rotation.y=a}
+      box(g,2.4,1.6,1.6,0x4a4642,0,0.8,0);const rune=new THREE.Mesh(new THREE.OctahedronGeometry(0.45,0),glow(0xff8a30));rune.position.y=2.2;g.add(rune);
+      for(let i=0;i<6;i++){const a=i*1.1;const cr=new THREE.Mesh(new THREE.PlaneGeometry(0.5,6+i%3*2),new THREE.MeshBasicMaterial({color:0x1a1210}));cr.rotation.set(-Math.PI/2,0,a);cr.position.set(Math.cos(a)*7,0.08,Math.sin(a)*7);g.add(cr)}
+      put(g,ax,az,0);for(let i=0;i<10;i++){const a=i/10*6.283;colAdd(HJX+ax+Math.cos(a)*17,az+Math.sin(a)*17,0.9,0.9,0,'oszlop')}colAdd(HJX+ax,az,1.3,0.9,0,'oltarko');HPOI.push([ax,az,22]);HMV.arena=[ax,az];HMV.rune=rune;
+      HMV.cracks=[[-72,-1180],[-84,-1206],[-50,-1252]]}}
   // ---------- HOLLÓERDŐ: Hollótanya druidafalu, odvas óriásfa, kőkör, világító gombák tisztása ----------
   {const [cx,cz]=HP.hollo;HREGT.hollo=[cx,cz];ring(cx,cz,17,5,0.5,'vadasz');
     {const g=G();cyl(g,3.4,4.6,22,0x4a3424,0,11,0,10);box(g,2,3.4,1,0x140e0a,0,1.7,3.9);for(let i=0;i<5;i++){const c=new THREE.Mesh(new THREE.IcosahedronGeometry(6-i*0.5,1),S(i%2?0x1e4a2c:0x2a5a34));c.position.set(Math.cos(i*1.3)*3,22+i*2.2,Math.sin(i*1.3)*3);g.add(c)}for(const a of[0.3,2.4,4.1]){const r=box(g,1,1,6,0x3a2a1a,Math.cos(a)*4.5,0.6,Math.sin(a)*4.5);r.rotation.y=-a}
@@ -7391,7 +7421,7 @@ function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
   kGive('hajnallampa');kGive('hajnallampa');addXp('ha',1000,p);chat('Megkaptad: Hajózás 10. szint, a Hajnalcsillag a tiéd, és két hajnali tudáslámpa (5000 XP egyenként, Horgászat, Kovácsolás vagy Hajózás). Mostantól hajó jár Halászrév és Hajnalrév között.','xp');hjSync()}
 // --- percenkénti/képkockánkénti teendők ---
-function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);AKQ.step(dt);HFL.step(dt);HFQ.step(dt);VML.step(dt);MKL.step(dt);MKQ.step(dt);hvMonTick(dt);
+function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);AKQ.step(dt);HFL.step(dt);HFQ.step(dt);VML.step(dt);MKL.step(dt);MKQ.step(dt);MVR.step(dt);hvMonTick(dt);
   // a torony lépcsőjén a lap: csak éjjel, ha ég a lámpa
   HJR.lhpage.mesh.visible=q.st===1&&q.n===0&&!((q.m||0)&2)&&night>0.45&&!!stats.kfeny;
   if(zn===14){const L=HJR.light;const lit=night>0.2;L.piv.visible=lit;if(lit)L.piv.rotation.y+=dt*0.7;
@@ -8095,7 +8125,7 @@ const MKQ=(()=>{const [CX,CZ]=HMK.c,[gx,gz]=HREGT.gate;const dw=(x,z,name,dlg,lo
       offer:'Thráin vagyok, Mélykapu királya. A koboldok egy hadúr alatt egyesültek, és kőtrollokat meg vasférgeket is hoztak. Ostromra készülnek. A kapu két ballisztája évek óta rozsdásodik. Segítesz megvédeni a városunkat?',yes:'Melletted állok, király.',
       after:'Előbb a balliszták. Mindkettőhöz két acélrúd, két vasrúd és egy kalapács kell. A kapun kívül állnak, a két oldalon.',ready:()=>false}))return;
     if(Q.st===1)return S(QUESTS.ostrom.obj(Q));S('Mélykapu ajtaja nyitva áll előtted, barátom.')};
-  {const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='erclaz'){kGive('banyaszsisak');addXp('mi',8000,p);setCoins(coins+2000)}if(id==='ostrom'){kGive('napszilank');kGive('torpesisak');addXp('sm',15000,p);addXp('mi',15000,p);setCoins(coins+5000)}}}
+  {const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='sinek'){addXp('sm',12000,p);setCoins(coins+3000)}if(id==='gorgath'){kGive('gorgathpajzs');addXp('mi',25000,p);addXp('sm',10000,p)}if(id==='erclaz'){kGive('banyaszsisak');addXp('mi',8000,p);setCoins(coins+2000)}if(id==='ostrom'){kGive('napszilank');kGive('torpesisak');addXp('sm',15000,p);addXp('mi',15000,p);setCoins(coins+5000)}}}
   {const _md=monsterDie;monsterDie=function(s){_md(s);if(s.erk){const Q=qs.erclaz;if(Q.st===1&&Q.n===1){Q.k=(Q.k||0)+1;if(Q.k>=3){Q.n=2;chat('A koboldok elmenekültek. Beszélj Kilivel!','xp');renderQuests()}}}}}
   function step(dt){if(zoneOf(px)!==14)return;for(const b of ballistas){if(b.cd>0)b.cd-=dt;const fixed=(qs.ostrom.m&(b.s<0?1:2))||qs.ostrom.st===2;b.broken.visible=!fixed;b.arm.rotation.z=fixed?0:0.5}
     const E=qs.erclaz;for(const r of rubble)if(!(E.st===1&&E.n===0))r.g.visible=false;
@@ -8103,6 +8133,105 @@ const MKQ=(()=>{const [CX,CZ]=HMK.c,[gx,gz]=HREGT.gate;const dw=(x,z,name,dlg,lo
       const alive=waveMons.filter(m=>!m.depleted).length;if(!alive){if(waveT>0){waveT-=dt;if(waveT<=0){if((Q.w||0)<3){spawnWave(Q.w||0);Q.w=(Q.w||0)+1}}}else if((Q.w||0)>=3){Q.n=3;SFX.play('quest');chat('Az ostrom véget ért! Mélykapu áll. Térj vissza Thráin királyhoz.','xp');questBanner('Mélykapu megmenekült');renderQuests();saveLocal()}else waveT=8}}}
   return {step,ballistas,get waveMons(){return waveMons},dvalin,rubble,resetSiege}})();
 ACH.push({id:'erclaz',name:'Kili megmentője',desc:'Ásd ki Kilit a beomlott tárnából.',chk:()=>qs.erclaz.st===2},{id:'ostrom',name:'A kapu védelmezője',desc:'Védd meg Mélykaput az ostromtól.',chk:()=>qs.ostrom.st===2});
+// ================= v77: a csillevasút, „A sínek népe”, „Gorgath ébredése” és Gorgath, a Kőféreg =================
+Object.assign(ITEMS,{gorgathdarab:{name:'Gorgath-pikkely darab',icon:'🪨'},koszivorune:{name:'Kőszívó rúna',icon:'🔶'},gorgathpikkely:{name:'Gorgath-pikkely',icon:'🛡️'},gorgathpajzs:{name:'Gorgath-pajzs',icon:'🛡️',gear:{slot:'shield',def:0.15,hit:1,col:0x6a5a48,lvl:75}},pet_gorgath:{name:'Kis kőféreg',icon:'🪱',pet:'boss',boss:'gorgath'}});
+Object.assign(SELL,{gorgathpikkely:900,gorgathpajzs:4000});
+QREQ.sinek=()=>qs.erclaz.st===2&&lvlFor(xp.sm)>=60;QREADY.sinek=()=>qs.sinek.n===3;(NPCQ.mvnori||(NPCQ.mvnori=[])).push('sinek');
+QREQ.gorgath=()=>qs.sinek.st===2&&qs.ostrom.st===2&&lvlFor(xp.mi)>=80;QREADY.gorgath=()=>qs.gorgath.n===3;(NPCQ.mkdvalin||(NPCQ.mkdvalin=[])).push('gorgath');
+// --- új szörnyek: vakgyík (a Mélység pereme) és Gorgath, a Kőféreg (boss) ---
+const MVM=(()=>{const L=ML,{Rn,lin,flat,glow,blob,at,seg,ball,box,cone,chain,sh,quad}=L;
+  function lizard(){const g=quad({c1:0xd8d0c8,c2:0xb8aca0,belly:0xf0e8e0,len:1.5,h:0.55,w:1.0,hs:1.2,snout:1.6,nose:0xc8b8b0,eye:null,ears:false,leg:0.9,tailN:6,tailR:0.16,tailUp:-0.02,tailLen:0.32,fur:0.12});for(let i=0;i<8;i++){const sp=cone(g,0.06,0.3,0xa89888,0,0.85,0.5-i*0.2,4);sp.rotation.x=-0.3}
+    const h=g.userData.head;for(const s of[-1,1])box(h,0.1,0.03,0.08,0x8a7a70,s*0.12,0.08,0.18);g.scale.setScalar(1.5);return sh(g)}
+  function gorgath(){const g=new THREE.Group();const segs=[];let y=1.0,z=0;for(let i=0;i<13;i++){const r=1.9-i*0.09;const s=blob(r,1,0.9,0.75,(x,yy,zz)=>Rn()<0.15?0xc8904a:(Rn()<0.5?0x6a5a48:0x5a4a3a),1,0.15);s.position.set(0,y,z);g.add(s);segs.push(s);
+      for(let k=0;k<5;k++){const a=k/5*Math.PI+0.3;const p=cone(g,0.25,0.9,0x4a3a2a,Math.cos(a)*r*0.85,y+Math.sin(a)*r*0.75,z,4);p.rotation.z=a-Math.PI/2}z-=1.25;y+=i<3?0.9:(i<6?0.2:-0.25)}
+    const head=new THREE.Group();head.position.set(0,1.3,1.6);g.add(head);const hd=blob(1.9,1,0.9,1.1,0x5a4a3a,1,0.12);head.add(hd);const mouth=new THREE.Mesh(new THREE.CircleGeometry(1.1,14),flat(0x2a0a04));mouth.position.z=1.95;head.add(mouth);
+    for(let k=0;k<3;k++){const a=k/3*6.283+Math.PI/2;chain(head,[[Math.cos(a)*1.0,Math.sin(a)*1.0,1.8],[Math.cos(a)*1.6,Math.sin(a)*1.6,2.6],[Math.cos(a)*1.0,Math.sin(a)*1.0,3.3]],[0.28,0.2,0.08],[0xd8c8a8])}
+    for(let k=0;k<8;k++){const a=k/8*6.283;const t=cone(head,0.1,0.5,0xe8e0c8,Math.cos(a)*0.85,Math.sin(a)*0.85,1.9,4);t.rotation.x=Math.PI/2}for(const s of[-1,1])ball(head,0.22,glow(0xff8a30),s*0.9,0.8,1.3,6);
+    const crust=new THREE.Group();g.add(crust);for(let i=0;i<22;i++){const c=new THREE.Mesh(new THREE.OctahedronGeometry(0.35+Rn()*0.35,0),glow(i%3?0xd8b040:0x60c0ff));const sg2=segs[i%9];c.position.set((Rn()-0.5)*3,sg2.position.y+1.2+Rn()*0.8,sg2.position.z+(Rn()-0.5));crust.add(c)}crust.visible=false;
+    const l=new THREE.PointLight(0xff8a30,1.2,14);l.position.set(0,3,3);g.add(l);g.rotation.y=Math.PI;const w=new THREE.Group();w.add(g);g.position.z=6;w.userData.body=hd;w.userData.segs=segs;w.userData.crust=crust;w.userData.inner=g;w.scale.setScalar(1.15);return sh(w)}
+  return {lizard,gorgath}})();
+Object.assign(MON,{vakgyik:{name:'Vakgyík',level:76,hp:190,maxHit:16,acc:0.76,speed:6.5,aggroD:7,aggroN:9,sl:70,build:()=>MVM.lizard(),drops:[['nagycsont',0.7],['runaerc',0.15]]},
+  gorgath:{name:'Gorgath, a Kőféreg',level:84,hp:560,maxHit:18,acc:0.74,speed:3.2,aggroD:16,aggroN:16,build:()=>MVM.gorgath(),drops:[['gorgathpikkely',1],['runaerc',0.6],['adamanterc',0.7]]}});
+BOSSES.push('gorgath');
+const MVR=(()=>{const S=HMV.st,K=HMV;const ride={on:false};let cart=null,fade=null;
+  const leverState=()=>(qs.sinek.lv||[0,0,0]);const LBL=['B','J'];
+  function cartMesh(){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.0,2.4),HMAT(0x5a4a3a));b.position.y=0.9;g.add(b);for(const s of[-1,1]){const r=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.3,2.5),HMAT(0x3a3a3e));r.position.set(s*0.92,1.3,0);g.add(r);for(const z of[-0.8,0.8]){const w=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.15,10),HMAT(0x2a2a2e));w.rotation.z=Math.PI/2;w.position.set(s*0.9,0.4,z);g.add(w)}}g.userData.noOcc=true;return g}
+  function fadeTo(on,ms=700){if(!fade){fade=document.createElement('div');fade.style.cssText='position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .7s;z-index:20';document.body.appendChild(fade)}fade.style.transition=`opacity ${ms}ms`;fade.style.opacity=on?1:0}
+  function startRide(from,to){if(ride.on)return;const A=S[from],B=S[to];if(!cart){cart=cartMesh()}const p=A.P0;cart.position.set(HJX+p[0],height(HJX+p[0],p[1])+0.6,p[1]);cart.rotation.y=A.ry;scene.add(cart);
+    Object.assign(ride,{on:true,from,to,ph:0,t:0,fl:{x:0,z:0,hw:0.8,hd:1.1,c:1,s:0,y0:0,y1:0}});FLOORS.push(ride.fl);if(A.cart)A.cart.visible=false;if(B.cart)B.cart.visible=false;target=null;route=[];busy=null;fight=null;hideDialog();SFX.play('mine');chat(`A csille megindul a sínen ${B.name==='???'?'... valahová':'a(z) '+B.name+' felé'}.`,'xp')}
+  function rideTick(dt){if(!ride.on)return;const A=S[ride.from],B=S[ride.to];ride.t+=dt;const seg=ride.ph===0?[A.P0,A.P1]:[B.P1,B.P0];const T=ride.ph===1?1.2:2.6;
+    if(ride.ph===1){if(ride.t>=T){ride.ph=2;ride.t=0;fadeTo(false)}return}
+    const k=Math.min(1,ride.t/T),e=ride.ph===0?k*k:1-(1-k)*(1-k),x=seg[0][0]+(seg[1][0]-seg[0][0])*e,z=seg[0][1]+(seg[1][1]-seg[0][1])*e,y=height(HJX+x,z)+0.6+0.6;
+    cart.position.set(HJX+x,y-0.6,z);cart.rotation.y=Math.atan2(seg[1][0]-seg[0][0],seg[1][1]-seg[0][1]);Object.assign(ride.fl,{x:HJX+x,z,y0:y+0.3,y1:y+0.3});px=HJX+x;pz=z;target=null;route=[];
+    if(ride.ph===0&&k>=1){ride.ph=1;ride.t=0;fadeTo(true);SFX.play('mine')}
+    if(ride.ph===0&&k>0.75&&fade&&fade.style.opacity!=='1')fadeTo(true,500);
+    if(ride.ph===2&&k>=1)endRide()}
+  function endRide(){const B=S[ride.to];ride.on=false;for(const st of Object.values(S))if(st.cart)st.cart.visible=true;const i=FLOORS.indexOf(ride.fl);if(i>=0)FLOORS.splice(i,1);scene.remove(cart);const p=B.P0,c=Math.cos(B.ry),s=Math.sin(B.ry);px=HJX+p[0]+c*3;pz=p[1]-s*3;placeAt(player,px,pz);HS.prime=true;target=null;route=[];
+    stats.rail=stats.rail||{};stats.rail[ride.to]=1;arrive(ride.to)}
+  function arrive(id){const q=qs.sinek;if(id==='melyseg'){chat('A csille kizökken egy szakadék szélén. Itt nincs állomás, csak sötétség és... valami csattog a kövön. Rossz volt a váltóállás! Ülj vissza gyorsan.','fight');SFX.play('boss');spawnLizards();return}
+    if(id==='hoveg'&&q.st===1&&q.n===2){q.n=3;SFX.play('quest');chat('Megérkeztél Hóvégre! A csillevasút újra jár. Vidd meg a hírt Nori sínmesternek Mélykapuba.','xp');renderQuests();saveLocal();return}
+    chat(`Megérkeztél: ${S[id].name}.`)}
+  // vakgyíkok a Mélység peremén
+  let liz=[];function spawnLizards(){if(liz.some(m=>!m.depleted))return;liz=[];const [ax,az]=K.abyss;for(let i=0;i<3;i++){const a=i*2.1+0.5;const o=hvSpawn('vakgyik','A',ax+Math.cos(a)*13,az+Math.sin(a)*13);o.temp=true;tempMons.push(o);liz.push(o)}}
+  // csillék az állomásokon
+  for(const [id,st] of Object.entries(S)){const g=cartMesh();const p=st.P0;g.position.set(HJX+p[0]+Math.cos(st.ry)*0,height(HJX+p[0],p[1])+0.6,p[1]);g.rotation.y=st.ry;scene.add(g);st.cart=g;const hit=g.children[0];
+    const o={mesh:g,type:'kact',name:'Csille ('+st.name+')',action:'Beszállok',hit,wp:{x:HJX+p[0]+Math.cos(st.ry)*2.6,z:p[1]-Math.sin(st.ry)*2.6},act:()=>useCart(id)};interactables.push(o)}
+  function useCart(id){const q=qs.sinek;if(ride.on)return;
+    if(id==='melyseg'){startRide('melyseg','mely');return}
+    if(q.st!==2){if(id!=='mely'){startRide(id,'mely');return}
+      if(!(q.st===1&&q.n>=2)){chat(q.st===1?'A váltók még nincsenek rendben. Nori sínmester nem enged a csillébe.':'A csillevasút áll. A váltók rozsdásak, Nori sínmester szerint életveszélyes.');return}
+      const lv=leverState();const dest=lv.join('')==='101'?'hoveg':lv.join('')==='001'?'banya':'melyseg';chat(`A váltók állása: ${lv.map(v=>LBL[v]).join(' · ')}.`);startRide('mely',dest);return}
+    const opts=Object.entries(S).filter(([k])=>k!==id&&k!=='melyseg').map(([k,s])=>({t:s.name,f:()=>startRide(id,k)}));showDialog('Csillevasút','Hová viszel a csille?',opts.concat([{t:'Maradok.'}]))}
+  // a váltókarok
+  HMV.levers.forEach((lv,i)=>{const g=new THREE.Group();const hit=new THREE.Mesh(new THREE.BoxGeometry(1.2,2.4,1.2),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=1.2;g.add(hit);const wp=new THREE.Vector3();lv.getWorldPosition(wp);g.position.set(wp.x,wp.y-1,wp.z);scene.add(g);
+    interactables.push({mesh:g,type:'kact',name:`${i+1}. váltókar`,action:'Átállítom',hit,wp:{x:wp.x-1.8,z:wp.z},act:()=>{const q=qs.sinek;q.fx=q.fx||0;if(q.st===1&&q.n===0&&!(q.fx&(1<<i))){if(countItem('vasrud')<1||!countItem('kalapacs')){chat('A váltókar eltörött. Egy vasrúd és egy kalapács kell a javításához.');return}takeItem('vasrud');q.fx|=1<<i;addXp('sm',800,g.position);SFX.play('smith');chat(`Megjavítottad a(z) ${i+1}. váltókart (${[0,1,2].filter(k=>q.fx&(1<<k)).length}/3).`,'xp');if(q.fx===7){q.n=1;chat('Mind a három váltókar működik. De hogyan kell állni Hóvég felé? Nori szerint a régi sínkönyv lapjai szétszóródtak a városban.','xp')}renderQuests();return}
+      if(q.st===1&&q.n===0){chat('Előbb a többi váltókart is meg kell javítani.');return}if(q.st===0){chat('A váltókar rozsdás, meg sem mozdul.');return}
+      const s=leverState().slice();s[i]=1-s[i];q.lv=s;SFX.play('smith');chat(`A(z) ${i+1}. váltó most ${s[i]?'jobbra':'balra'} áll. (${s.map(v=>LBL[v]).join(' · ')})`)}})});
+  // „A sínek népe”: Nori sínmester és a sínkönyv lapjai
+  {const [x,z]=S.mely.P0;const o=npc(HJX+x-2,z-4.5,'Nori sínmester',[],{skin:0xd8a880,hair:0x8a4a1a,shirt:0x3a4a5a,sleeves:0x2a3a4a,pants:0x2a2a2a,boots:0x2a1a0a,beard:true,item:'pick'},'mvnori');o.mesh.scale.set(1.12,0.8,1.12);hjSlim(o.mesh);HMV.nori=o}
+  DIALOG.mvnori=o=>{const S2=say('Nori sínmester'),q=qs.sinek;
+    if(q.st===1&&q.n===3){S2('Hóvégre értél! A csillevasút újra jár, ahogy a nagyapám idejében. A kocsik mostantól magától állnak a jó váltókra. Utazz, amerre akarsz!',[{t:'Köszönöm, Nori.',f:()=>finishQuest('sinek')}]);return}
+    if(sq(S2,'sinek',{req:QREQ.sinek,reqText:qs.erclaz.st!==2?'A sínekhez bányászvér kell. Előbb segíts Dvalinnak a kis Kilivel, akkor beszélünk.':'A váltók javításához hatvanas Kovácsolás kell, különben csak rosszabb lesz.',
+      offer:'Nori vagyok, a sínmester. A csillevasút összeköti Mélykaput Hóvéggel és a bányákkal, de a váltók tönkrementek. Aki rossz állásnál indul, azt a csille a Mélységbe viszi. Megjavítod őket?',yes:'Megjavítom a váltókat.',
+      after:'Mindhárom váltókarhoz egy vasrúd és egy kalapács kell. A peron mellett állnak.',ready:()=>false}))return;
+    if(q.st===1&&q.n===1){S2('A sínkönyv lapjait a nagyapám szétosztotta a barátai között, hogy ne lopják el. Kérdezd Borint a Mélykohónál, Bombur kocsmárost és Hilda rúnakovácsot.');return}
+    if(q.st===1)return S2(QUESTS.sinek.obj(q));S2('A sín az élet. Mindig figyelj a váltókra!')};
+  const page=(bit,txt)=>{const q=qs.sinek;q.pg=(q.pg||0)|bit;showDialog('Sínkönyv lapja',txt);chat('A sínkönyv lapja: „'+txt+'”','xp');if(q.pg===7){q.n=2;chat('Mindhárom lap megvan. Állítsd be a váltókat, és indulj Hóvégre!','xp')}renderQuests()};
+  for(const [id,bit,txt] of[['mkborin',1,'Hóvég felé az első váltónak jobbra kell állnia.'],['mkbombur',2,'Észak felé a második váltó mindig az elsővel ellentétesen áll.'],['mkhilda',4,'A harmadik váltó úgy álljon, mint az első, különben a sín a Mélységbe fordul.']]){const _d=DIALOG[id];DIALOG[id]=o=>{const q=qs.sinek;if(q.st===1&&q.n===1&&!((q.pg||0)&bit)){page(bit,txt);return}_d(o)}}
+  // --- „Gorgath ébredése” ---
+  const cracks=HMV.cracks.map(([x,z],i)=>{const g=new THREE.Group();const c=new THREE.Mesh(new THREE.PlaneGeometry(0.7,4),new THREE.MeshBasicMaterial({color:0x1a1210}));c.rotation.set(-Math.PI/2,0,i);c.position.y=0.08;g.add(c);const hit=new THREE.Mesh(new THREE.BoxGeometry(2,0.6,4),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=0.3;g.add(hit);g.position.set(HJX+x,height(HJX+x,z),z);scene.add(g);
+    const o={mesh:g,type:'kact',name:'Friss hasadék',action:'Megvizsgálom',hit,wp:{x:HJX+x+1.8,z},act:()=>{const q=qs.gorgath;if(!(q.st===1&&q.n===0)){chat('Egy repedés a kőben. Mintha mozogna alatta valami.');return}q.m=q.m||0;if(q.m&(1<<i)){chat('Ezt a hasadékot már átvizsgáltad.');return}q.m|=1<<i;SFX.play('mine');addXp('mi',600,g.position);
+      chat(['A hasadék szélén kőpor és egy hatalmas karomnyom. Valami alulról tolta szét a sziklát.','Ebből a hasadékból meleg levegő száll fel, és dübörgés hallatszik a mélyből.','A hasadékban egy hatalmas, érces pikkely akadt meg. Gorgath pikkelye!'][[0,1,2].filter(k=>q.m&(1<<k)).length-1],'xp');if(q.m===7){giveItem('gorgathdarab');q.n=1;chat('Vidd a pikkelydarabot Dvalin bányamesternek.','xp')}renderQuests()}};interactables.push(o);return o});
+  {const _d=DIALOG.mkdvalin;DIALOG.mkdvalin=o=>{const S2=say('Bányamester Dvalin'),q=qs.gorgath;if(qs.erclaz.st!==2)return _d(o);
+    if(q.st===1&&q.n===1&&countItem('gorgathdarab')){S2('Ez... Gorgath pikkelye. A Kőféreg. Azt hittük, ezer éve alszik a bánya alatt. Ha felébredt, az egész hegy beomolhat. Hilda tud kőszívó rúnát vésni, azzal felcsalogathatod a felszínre. Ne a tárnában harcolj vele, hanem a bánya kőkörében.');q.n=1.5;renderQuests();return}
+    if(q.st===1&&q.n===3){S2('Gorgath elesett! A hegy megmenekült, és a bányáink újra biztonságosak. Ebből a pikkelyből pajzsot kovácsoltunk neked, a Mélykohóban.',[{t:'Köszönöm, Dvalin.',f:()=>finishQuest('gorgath')}]);return}
+    if(sq(S2,'gorgath',{req:QREQ.gorgath,reqText:'A bányák mélyén valami mozgolódik. De ehhez nyolcvanas Bányászat kell, és a vasútnak, meg a városnak is meg kell lennie.',
+      offer:'A bányászok remegést éreznek a Vasorom-bányákban. Új hasadékok nyílnak a kőben, és valami dübörög a mélyben. Megnéznéd? Csillével gyorsan odaérsz.',yes:'Megnézem a hasadékokat.',after:'A Vasorom-bányák állomása mellett három friss hasadékot találsz. Nézd meg mindet!',ready:()=>false}))return;
+    if(q.st===1)return S2(QUESTS.gorgath.obj(q));_d(o)}}
+  {const _d=DIALOG.mkhilda;DIALOG.mkhilda=o=>{const q=qs.gorgath;if(q.st===1&&q.n===1.5){if(countItem('golemszilank')>=3){takeN('golemszilank',3);giveItem('koszivorune');q.n=2;takeItem('gorgathdarab');renderQuests();showDialog('Rúnakovács Hilda','Három ércgólem-szilánk... A rúna megvan. Ha a bánya kőkörében az ébresztő kőre teszed, Gorgath feljön. Készülj fel: beás a föld alá, cseppköveket ráz le, és érckérget növeszt. A kérget csak egy jó bányász töri fel.');return}
+      showDialog('Rúnakovács Hilda','Kőszívó rúnát akarsz? Ahhoz három ércgólem-szilánk kell, az ércgólemek testéből. A hegyoldalban járnak.');return}_d(o)}}
+  let gor=null;const marks=[];
+  {const [ax,az]=HMV.arena;const g=new THREE.Group();const hit=new THREE.Mesh(new THREE.BoxGeometry(2.6,2.4,2),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=1.2;g.add(hit);g.position.set(HJX+ax,height(HJX+ax,az),az);scene.add(g);
+    interactables.push({mesh:g,type:'kact',name:'Ébresztő kő',action:'Megérintem',hit,wp:{x:HJX+ax,z:az+2.6},act:()=>{const q=qs.gorgath;if(gor&&!gor.depleted){chat('Gorgath már itt van!');return}
+      if(q.st===1&&q.n===2){if(!countItem('koszivorune')){chat('Kőszívó rúna kell az ébresztő kőre.');return}takeItem('koszivorune');summon();return}
+      if(q.st===2){summon();return}chat('Egy rovásos kő, a közepén izzó kristály. A bányászok szerint ébreszt valamit.')}})}
+  function summon(){const [ax,az]=HMV.arena;gor=hvSpawn('gorgath','A',ax+6,az-6);gor.ph='up';gor.bt=10;gor.st=6;gor.crust=false;SFX.play('boss');questBanner('Gorgath, a Kőféreg');chat('A föld megremeg... a kőkör közepén beszakad a talaj, és előtör Gorgath, a Kőféreg!','fight')}
+  const hurt=(n,txt)=>{if(prayers.has('oltalom'))n=Math.floor(n/2);hp=Math.max(0,hp-n);splat(player.position,n);updateHp();if(txt)chat(txt,'fight');if(hp<=0)die()};
+  const mk=(x,z,r,col)=>{const m=new THREE.Mesh(new THREE.RingGeometry(r*0.7,r,20),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.7,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,height(x,z)+0.1,z);scene.add(m);return m};
+  {const _ph=playerHit;playerHit=function(s){if(s.kind==='gorgath'){if(s.ph==='down'){floatText('a föld alatt',s.mesh.position,'#c0a080',-10);return}if(s.crust){const hp0=s.hp;_ph(s);const dm=hp0-s.hp;if(dm>0){s.hp=Math.min(s.maxHp,hp0-Math.ceil(dm*0.25));floatText('érckéreg',s.mesh.position,'#d8b040',-24)}
+        if(!isRanged()&&!isMage()&&lvlFor(xp.mi)>=80&&Math.random()<0.35){s.crust=false;s.mesh.userData.crust.visible=false;SFX.play('mine');chat('Feltöröd Gorgath érckérgét! Most sebezhető.','xp')}else if(Math.random()<0.25)chat('Az érckéreg elnyeli a csapásokat. Közelharcban, jó bányászként feltörheted (80-as Bányászat).','fight');return}}_ph(s)}}
+  {const _md=monsterDie;monsterDie=function(s){_md(s);if(s.kind==='gorgath'){for(const m of marks)scene.remove(m.m);marks.length=0;const q=qs.gorgath;if(q.st===1&&q.n===2){q.n=3;SFX.play('quest');chat('Gorgath, a Kőféreg elesett! Vidd a hírt Dvalin bányamesternek.','xp');renderQuests();saveLocal()}const g=s;setTimeout(()=>{scene.remove(g.mesh);const a=monsters.indexOf(g);if(a>=0)monsters.splice(a,1);const b=interactables.indexOf(g);if(b>=0)interactables.splice(b,1)},4000);gor=null}}}
+  function gorTick(dt){const s=gor;if(!s||s.depleted)return;const m=s.mesh,d=Math.hypot(m.position.x-px,m.position.z-pz);const tm=performance.now()/1000;const sg=m.userData.segs;for(let i=0;i<sg.length;i++)sg[i].position.x=Math.sin(tm*2+i*0.6)*0.25;
+    for(let i=marks.length-1;i>=0;i--){const k=marks[i];k.t-=dt;k.m.material.opacity=0.4+0.4*Math.abs(Math.sin(tm*10));if(k.t<=0){if(!dead&&Math.hypot(px-k.x,pz-k.z)<k.r){hurt(k.dmg(),k.txt)}if(k.rock){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(0.7,0),HMAT(0x6a6660));r.position.set(k.x,height(k.x,k.z)+0.5,k.z);scene.add(r);setTimeout(()=>scene.remove(r),4000)}scene.remove(k.m);marks.splice(i,1)}}
+    if(!s.aggro||dead){return}
+    if(!s.crust&&!s.c70&&s.hp<s.maxHp*0.7){s.c70=true;s.crust=true}if(!s.crust&&!s.c40&&s.hp<s.maxHp*0.4){s.c40=true;s.crust=true}m.userData.crust.visible=s.crust&&s.ph==='up';
+    if(s.ph==='up'){s.bt-=dt;s.st-=dt;if(s.st<=0){s.st=7;for(let k=0;k<3;k++){const x=px+(Math.random()-0.5)*8,z=pz+(Math.random()-0.5)*8;marks.push({x,z,r:1.9,t:1.6,m:mk(x,z,1.9,0xffa040),rock:true,dmg:()=>10+Math.floor(Math.random()*6),txt:'Lezuhan egy cseppkő!'})}chat('Gorgath megrázza a barlangot: cseppkövek hullanak! Lépj ki a jelölt körökből.','fight')}
+      if(s.bt<=0){s.ph='down';s.dt=2.6;s.frozenT=99;m.visible=false;const x=px,z=pz;s.tx=x;s.tz=z;marks.push({x,z,r:3.2,t:2.6,m:mk(x,z,3.2,0xff4020),dmg:()=>14+Math.floor(Math.random()*7),txt:'Gorgath alulról tör fel: beszakad alattad a padló!'});chat('Gorgath a föld alá bújik... a talaj remegni kezd a lábad alatt!','fight');SFX.play('troll')}}
+    else{s.dt-=dt;if(s.dt<=0){s.ph='up';s.bt=12;s.frozenT=0;m.visible=true;m.position.set(s.tx,height(s.tx,s.tz),s.tz);stunT=Math.max(stunT,Math.hypot(px-s.tx,pz-s.tz)<3.2?1.5:0)}}}
+  function step(dt){if(zoneOf(px)!==14)return;rideTick(dt);gorTick(dt);HMV.levers.forEach((l,i)=>l.rotation.z=(leverState()[i]?-0.5:0.5));if(HMV.rune)HMV.rune.rotation.y+=dt}
+  return {step,ride,startRide,useCart,get gor(){return gor},summon,cracks}})();
+{const _wt=walkTo;walkTo=function(x,z,a){if(MVR.ride.on)return false;return _wt(x,z,a)}}
+ACH.push({id:'sinek',name:'Sínember',desc:'Indítsd újra a csillevasutat.',chk:()=>qs.sinek.st===2},{id:'gorgath',name:'Féregölő',desc:'Győzd le Gorgathot, a Kőférget.',chk:()=>!!((stats.bk||{}).gorgath)},{id:'melyseg',name:'A Mélység pereme',desc:'Kerülj a Mélység peremére egy rossz váltóállással.',chk:()=>!!((stats.rail||{}).melyseg)});
 
 // zóna-csoportok: csak az aktuális sziget objektumai és fényei láthatók (a többi 600 egységre van, a ködön túl)
 const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THREE.Group();g.name='zone'+i;zoneGroups.push(g);scene.add(g)}
