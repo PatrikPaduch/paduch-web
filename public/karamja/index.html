@@ -4875,6 +4875,7 @@ Object.assign(QUESTS,{
 });
 // --- Hajnalföld, 1. fázis (v72): az első fő küldetés, új tárgyak és szörnyek ---
 for(const k of['tolgydeszka','kotel','naplolap','krakentinta','hajnallampa'])STACK.add(k);
+QUESTS.nagyvasar={name:'A Nagyvásár',giver:'Vásári ügyintéző (Aranykapu, a rotunda)',desc:'Aranykapu Nagyvására zárva, mert a Kovácsok, a Vadászok és a Hajósok céhe nem tud megegyezni a vásári szabályokban. Valakinek ki kell békítenie őket.',reward:'A Nagyvásár megnyílik (játékosok közti kereskedés, 4 ajánlathely), 1000 érme, 400 Kovácsolás, 600 Vadászat és 600 Hajózás XP',qp:1,obj:q=>`Szerezd meg a három céhmester pecsétjét (a céhházak a város déli részén), és vidd az ügyintézőnek: Kovácsok ${q.m&1?'✔':'✘'}, Vadászok ${q.m&2?'✔':'✘'}, Hajósok ${q.m&4?'✔':'✘'}.`+(q.m===7?' Mind megvan, vissza a rotundába!':'')};
 QUESTS.liszt={name:'Lopott liszt',giver:'Molnár Jakab (Malomdomb, Hajnalvölgy)',desc:'A szalmakalapos szénatolvajok éjjelente kirabolják Jakab malmait. Öt lisztes zsák tűnt el, és a falu kenyere velük együtt.',reward:'2500 érme, 1500 Tolvajlás XP, 5 kenyér, a malom kenyere fele áron',qp:1,obj:q=>`Hozz vissza öt lisztes zsákot a szénatolvajoktól (a búzamezőkön, szalmakalapban): ${countItem('lisztzsak')}/5.`};
 QUESTS.hajnal={name:'Hajnal a láthatáron',giver:'Révkapitány Ármin (Halászrév)',desc:'Hét napja futott be egy hajó kelet felől: legénység nélkül, a kormány lekötve, a napló megperzselve. Az utolsó olvasható sor: „ott, ahol a nap kel, már nem kel fel”.',
   reward:'Hajnalföld, Hajózás 10. szint, a Hajnalcsillag szlúp, 2 × 5000 XP lámpa, hajóút Halászrév és Hajnalrév között',qp:3,obj:q=>hjObj(q)};
@@ -7622,6 +7623,152 @@ const AKL=(()=>{const [CX,CZ]=AK.C,R=Math.random,pick=a=>a[(R()*a.length)|0],W=(
   for(const o of[...walkers,...statics,...kids])hjSlim(o.mesh);
   return {step,walkers,N,E,statics}})();
 var AKL_SELL;
+// ================= A Nagyvásár: „A Nagyvásár” küldetés + a játékosok közti kereskedés felülete =================
+Object.assign(ITEMS,{cehlada:{name:'Céhláda',icon:'📦'},fuvarlevel:{name:'Fuvarlevél',icon:'📜'}});
+QREQ.nagyvasar=()=>true;QREADY.nagyvasar=()=>qs.nagyvasar.m===7;(NPCQ.akclerk||(NPCQ.akclerk=[])).push('nagyvasar');
+for(const [k,o] of[['otto',AK.npc.otto],['kordelia',AK.npc.kordelia],['zsigmond',AK.npc.zsigmond]])o.dialog='ak'+k;
+// a céhmesterek: mindegyiknél egy jó érv kell (a rossz válasz megsérti), utána egy próba
+const AKGUILD=(()=>{const bad=(S,t)=>()=>S(t);
+  function master(o,bit,intro,opts,goodIdx,goodTxt,test){const S=say(o.name),q=qs.nagyvasar;
+    if(q.st!==1){S(q.st===2?'A Nagyvásár nyitva, ahogy megbeszéltük. A céh állja a szavát.':o.lines[0]);return}
+    if(q.m&bit){S('A pecsétem már nálad van. Vidd az ügyintézőnek!');return}
+    if(q.a&bit){test(S,q);return}
+    S(intro,opts.map((t,i)=>({t:t[0],f:i===goodIdx?()=>{q.a=(q.a||0)|bit;S(goodTxt,[{t:'Rendben.',f:()=>test(S,q)}])}:bad(S,t[1])})))}
+  const seal=(S,q,bit,txt)=>{q.m|=bit;S(txt);chat('Megkaptad egy céh pecsétjét a Nagyvásár alapító levelére. ('+[1,2,4].filter(b=>q.m&b).length+'/3)','xp');SFX.play('coin');renderQuests();saveLocal()};
+  DIALOG.akotto=o=>master(o,1,'A pecsétemet akarod? A Nagyvásárban bárki árulhatna bélyeg nélküli, silány kardot. Mondj egy jó okot, miért írjam alá!',
+    [['A bélyeget a vásár üti rá, de a bélyegdíj a céhé marad.'],['A vásár mindenkié, a céhek ideje lejárt.','Kifelé a műhelyemből! A céhek nélkül ez a város nem állna.'],['Fizetek érte ezer érmét.','Megvesztegetni akarsz? A Kovácsok céhét? Szégyelld magad!']],0,
+    'Hm. A bélyegdíj a céhé... Ez nem is rossz. De előbb lássam, hogy értesz a fémhez: hozz öt vasrudat!',
+    (S,q)=>{if(countItem('vasrud')<5){S(`Öt vasrúd, ahogy mondtam. Eddig ${countItem('vasrud')} van nálad.`);return}takeN('vasrud',5);addXp('sm',400,player.position);seal(S,q,1,'Szép, egyenletes rudak. Rendben, a Kovácsok céhe aláírja. Itt a pecsétem!')});
+  DIALOG.akkordelia=o=>master(o,2,'A vadászok attól félnek, hogy a vásár letöri a bőr és a szárny árát. Miért írnám alá?',
+    [['A vásár a sárkánybőrt Karamjától Koronaföldig bárkinek eladja. Nagyobb piac, jobb ár.'],['A vadászok fizessenek helypénzt, az igazságos.','Helypénzt? A mi zsákmányunkért? Ezt a Kovácsok találták ki, igaz?'],['Ki venne egyáltalán vadászzsákmányt?','Te soha nem láttál még griffkarmot, ugye? Menj innen.']],0,
+    'Nagyobb piac... Igaz, ami igaz. Mutasd meg, hogy van kereslet a ritka zsákmányra: hozz három szitakötőszárnyat a hajnalvölgyi mocsarakból!',
+    (S,q)=>{if(countItem('szitakotoszarny')<3){S(`Három szitakötőszárny. Eddig ${countItem('szitakotoszarny')} van nálad. A Napfolyó nádasaiban zümmögnek.`);return}takeN('szitakotoszarny',3);addXp('sl',600,player.position);seal(S,q,2,'Gyönyörű szárnyak, egy sem szakadt. A Vadászok céhe veled tart. Itt a pecsétem!')});
+  DIALOG.akzsigmond=o=>master(o,4,'A Hajósok céhe szállít mindent ebben a városban. Ha a vásár saját szekereket indít, mi éhen halunk. Mit ajánlasz?',
+    [['A vásár minden áruját a Hajósok céhe szállítja, rögzített díjért.'],['Szekéren olcsóbb, a hajózásnak vége.','Vége? A hajózásnak? Fiam, a Napfolyó évszázadok óta visz mindent. Kifelé!'],['Úszni fognak az áruk, ha kell.','Ez vicc akart lenni? Nem nevetek.']],0,
+    'Rögzített díj, minden árura... Ez tisztességes. De előbb bizonyítsd, hogy a vásár megbízható: vidd el ezt a céhládát Bodor kapitánynak Hajnalrévbe, és hozd vissza a fuvarlevelet!',
+    (S,q)=>{if(countItem('fuvarlevel')>0){takeItem('fuvarlevel');addXp('ha',600,player.position);seal(S,q,4,'A fuvarlevél, Bodor aláírásával! Hajnalrév megkapta a kötelet és a szöget. A Hajósok céhe aláírja. Itt a pecsétem!');return}
+      if(countItem('cehlada')<1&&!q.lada){if(!giveItem('cehlada'))return;q.lada=1;S('Itt a láda. Óvatosan, kötél és hajószög van benne. Bodor kapitány a hajnalrévi kikötőben vár.');return}
+      if(countItem('cehlada')<1){giveItem('cehlada');S('Elhagytad a ládát? Na, itt egy másik. Ezt most ne veszítsd el!');return}
+      S('A láda Bodor kapitánynak megy, Hajnalrévbe. A kikötőben találod.')});
+  {const _b=DIALOG.bodor;DIALOG.bodor=function(o){const q=qs.nagyvasar;if(q&&q.st===1&&countItem('cehlada')>0){takeItem('cehlada');giveItem('fuvarlevel');showDialog(o.name,'Zsigmond ládája? Végre! Hetek óta várjuk ezt a kötelet és a szöget. Itt a fuvarlevél, aláírtam. Mondd meg neki: a Hajósok céhe pontos volt, mint mindig.');return}return _b.call(this,o)}}
+  return {master}})();
+// --- a vásári ügyintéző: a küldetés, majd a Nagyvásár ---
+DIALOG.akclerk=o=>{const S=say('Vásári ügyintéző'),q=qs.nagyvasar;
+  if(q.st===2){S('Üdv a Nagyvásárban! A rotunda pultjainál a kontinens minden kalandora kereskedik egymással.',[{t:'Kereskedni szeretnék.',f:geOpen},{t:'Hogyan működik?',f:()=>S('Feladsz egy ajánlatot: mit, mennyit, mennyiért. Ha egy másik kalandor ugyanezt keresi vagy kínálja, a vásár összeköti az ajánlatokat. Ha negyvenöt másodpercig senki sem jelentkezik, a Vásári Ügynökség beszáll, de ő csak olcsón vesz és drágán ad.')},{t:'Semmit, köszönöm.'}]);return}
+  if(sq(S,'nagyvasar',{offer:'A Nagyvásár zárva, amíg a három céh meg nem egyezik a vásári szabályokban. A Kovácsok, a Vadászok és a Hajósok mesterei napok óta veszekednek. Egy kívülálló talán rendet tehetne köztük. Megpróbálod?',yes:'Kibékítem a céheket.',
+    after:'Kovácsmester Ottó, Vadászmester Kordélia és Hajóskapitány Zsigmond a céhházaiknál várnak, a város déli részén. Mindhárom pecsét kell az alapító levélre!',ready:()=>q.m===7,
+    done:'Mindhárom pecsét! A Kovácsok, a Vadászok és a Hajósok... egy levélen! Ilyet még nem láttam. A Nagyvásár megnyílik, és az első helyet neked foglaljuk.',thanks:'Nyissuk ki a vásárt!'}))return;
+  S('A Nagyvásár zárva.')};
+QREQ.nagyvasar=()=>true;
+{const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='nagyvasar'){setCoins(coins+1000);chat('A Nagyvásár megnyílt előtted! A rotunda ügyintézőinél kereskedhetsz a többi kalandorral.','xp')}}}
+ACH.push({id:'nagyvasar',name:'Vásárbíró',desc:'Békítsd ki Aranykapu három céhét, és nyisd meg a Nagyvásárt.',chk:()=>qs.nagyvasar.st===2},{id:'gekotes',name:'Első üzlet',desc:'Köss üzletet a Nagyvásárban.',chk:()=>!!stats.gekotes});
+
+// ---------------- a Nagyvásár ablaka ----------------
+const GE=(()=>{let el=null,tab='o',offers=[],max=6,setup=null,piac=null,busy=false,timer=null,lastDone={},bgT=0;
+  const slots=()=>(qs.hamis&&qs.hamis.st===2)?6:4;
+  const tradeable=id=>ITEMS[id]&&SELL[id]!==undefined&&SELL[id]>0;
+  const guide=id=>Math.max(1,Math.round((SELL[id]||1)*1.25));
+  const fmt=n=>(+n).toLocaleString('hu');
+  async function api(path,body){try{const r=await fetch(API+path,{method:body?'POST':'GET',headers:Object.assign({'X-Save-Code':saveCode},body?{'Content-Type':'application/json'}:{}),body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>null);if(!r.ok)return {hiba:(j&&j.hiba)||('Hiba: '+r.status)};return j}catch(e){return {hiba:'A Nagyvásár most nem érhető el (nincs kapcsolat).'}}}
+  const css=`#ge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(660px,96%);max-height:92%;overflow:auto;background:linear-gradient(#4a3f30,#3a3126);border:3px solid #1a140c;box-shadow:0 0 0 2px #7a6440,0 10px 40px #000;color:#ff981f;font:bold 13px Trebuchet MS,sans-serif;z-index:8;display:none;box-sizing:border-box;padding:0 0 12px}
+  #ge .gh{display:flex;align-items:center;gap:10px;padding:8px 12px;background:linear-gradient(#2e261c,#241d15);border-bottom:2px solid #1a140c}
+  #ge .gt{font-size:18px;letter-spacing:2px;color:#ffcf40;text-shadow:0 2px 0 #000;flex:1}#ge .gt i{font-style:normal;margin-right:6px}
+  #ge .tb{padding:4px 12px;border:1px solid #1a140c;background:#3a3024;color:#c8a050;cursor:pointer;border-radius:3px}#ge .tb.on{background:#6a5634;color:#ffdf70}
+  #ge .gx{cursor:pointer;color:#e85030;font-size:18px;padding:0 4px}
+  #ge .gs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px}
+  #ge .sl{background:#2c241b;border:2px solid #1a140c;box-shadow:inset 0 0 0 1px #5a4a32;min-height:128px;padding:8px;box-sizing:border-box;position:relative;display:flex;flex-direction:column;gap:5px}
+  #ge .sl .k{font-size:11px;color:#a08a60}#ge .sl.lock{opacity:.55;align-items:center;justify-content:center;text-align:center;color:#a08a60}
+  #ge .bb{display:flex;gap:6px;margin-top:auto}#ge button{font:bold 12px Trebuchet MS;padding:5px 8px;background:linear-gradient(#6a5634,#4a3c24);color:#ffcf40;border:1px solid #1a140c;border-radius:3px;cursor:pointer}
+  #ge button:hover{filter:brightness(1.25)}#ge button.v{background:linear-gradient(#3a7a2a,#245a1a);color:#e8ffd0}#ge button.e{background:linear-gradient(#a8601a,#7a4010);color:#fff0d0}#ge button.big{font-size:15px;padding:8px 18px;background:linear-gradient(#e8b030,#a87010);color:#2a1a00}
+  #ge button:disabled{filter:grayscale(1) brightness(.7);cursor:default}
+  #ge .it{display:flex;align-items:center;gap:6px;color:#ffdf90}#ge .it img,#ge .it .ic{width:28px;height:28px}
+  #ge .bar{height:12px;background:#3a0b0b;border:1px solid #000;position:relative;overflow:hidden}#ge .bar b{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#e8a020,#a86010);transition:width .6s}
+  #ge .bar.done b{background:linear-gradient(#40c030,#208010)}#ge .bar.cx b{background:linear-gradient(#c03020,#801010)}
+  #ge .sl.ready{animation:gepulse 1.2s infinite}@keyframes gepulse{50%{box-shadow:inset 0 0 0 1px #5a4a32,0 0 12px #ffcf40}}
+  #ge .su{padding:12px 16px;display:flex;flex-direction:column;gap:10px}#ge .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  #ge input{font:bold 13px Trebuchet MS;background:#1e1810;color:#ffdf90;border:1px solid #6a5634;padding:5px 7px;width:110px}
+  #ge .pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:5px;max-height:220px;overflow:auto}
+  #ge .pick div{background:#2c241b;border:1px solid #1a140c;padding:4px;cursor:pointer;display:flex;align-items:center;gap:5px;color:#e8d0a0;font-size:12px}#ge .pick div:hover{background:#4a3c28}
+  #ge .card{display:flex;gap:12px;align-items:center;background:#2c241b;border:1px solid #1a140c;padding:8px}#ge .card .ic{font-size:34px}#ge .card img{width:44px;height:44px}
+  #ge .mut{color:#a08a60;font-weight:normal;font-size:12px}#ge table{width:100%;border-collapse:collapse;font-size:12px}#ge td,#ge th{padding:4px 6px;border-bottom:1px solid #2a2218;text-align:left}#ge th{color:#ffcf40}
+  #ge .note{margin:0 12px;padding:6px 10px;background:#2a2016;border-left:3px solid #c8902a;color:#d8c090;font-weight:normal}`;
+  function build(){if(el)return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);el=document.createElement('div');el.id='ge';
+    el.innerHTML='<div class="gh"><span class="gt"><i>⚖</i>NAGYVÁSÁR</span><span class="tb on" data-t="o">Ajánlataim</span><span class="tb" data-t="p">Piac</span><span class="gx" title="Bezár">✕</span></div><div class="gb"></div>';
+    el.onmousedown=e=>e.stopPropagation();el.onwheel=e=>e.stopPropagation();el.querySelector('.gx').onclick=close;
+    el.querySelectorAll('.tb').forEach(b=>b.onclick=()=>{tab=b.dataset.t;setup=null;el.querySelectorAll('.tb').forEach(x=>x.classList.toggle('on',x===b));if(tab==='p')loadPiac();render()});
+    document.getElementById('ui')?document.getElementById('ui').appendChild(el):document.body.appendChild(el)}
+  const icon=id=>`<span class="ic">${iconImg(id)}</span>`;
+  function render(){if(!el)return;const b=el.querySelector('.gb');
+    if(setup)return renderSetup(b);
+    if(tab==='p')return renderPiac(b);
+    const n=slots();let h='<div class="gs">';
+    for(let i=0;i<6;i++){const o=offers[i];
+      if(i>=n&&!o){h+='<div class="sl lock">🔒<br>A „Hamis érmék” után nyílik meg.</div>';continue}
+      if(!o){h+=`<div class="sl"><div class="k">${i+1}. hely: üres</div><div class="mut">Mit szeretnél?</div><div class="bb"><button class="v" data-a="v">Vétel</button><button class="e" data-a="e">Eladás</button></div></div>`;continue}
+      const pct=Math.round(o.kesz/o.db*100),ready=o.at_targy>0||o.at_erme>0,cls=o.allapot===1?'done':o.allapot===2?'cx':'';
+      h+=`<div class="sl${ready?' ready':''}"><div class="k">${o.tipus==='v'?'<span style="color:#7ad860">VÉTEL</span>':'<span style="color:#ffa040">ELADÁS</span>'} · ${o.allapot===1?'teljesült':o.allapot===2?'visszavonva':'folyamatban'}</div>
+        <div class="it">${icon(o.targy)}<span>${ITEMS[o.targy]?ITEMS[o.targy].name:o.targy}<br><span class="mut">${fmt(o.db)} db · ${fmt(o.ar)} érme/db</span></span></div>
+        <div class="bar ${cls}"><b style="width:${o.allapot===2?100:pct}%"></b></div><div class="mut">${fmt(o.kesz)}/${fmt(o.db)} kész${ready?` · átvehető: ${o.at_targy?fmt(o.at_targy)+' db ':''}${o.at_erme?fmt(o.at_erme)+' érme':''}`:''}</div>
+        <div class="bb">${ready?`<button data-c="${o.id}">Átvétel</button>`:''}${o.allapot===0?`<button data-x="${o.id}">Visszavon</button>`:''}</div></div>`}
+    h+='</div>';const anyReady=offers.some(o=>o.at_targy>0||o.at_erme>0);
+    h+=`<div class="note">${anyReady?'<button data-all="1" style="float:right">Mindet átveszem</button>':''}Ha nem akad partner, a <b>Vásári Ügynökség</b> 45 másodperc után beszáll: olcsón vesz, drágán ad. Jobb árat a többi kalandortól kapsz.</div>`;
+    b.innerHTML=h;
+    b.querySelectorAll('[data-a]').forEach(x=>x.onclick=()=>{setup={tipus:x.dataset.a,id:null,n:1,ar:0,q:''};render()});
+    b.querySelectorAll('[data-c]').forEach(x=>x.onclick=()=>collect(+x.dataset.c));
+    b.querySelectorAll('[data-x]').forEach(x=>x.onclick=()=>cancel(+x.dataset.x));
+    const all=b.querySelector('[data-all]');if(all)all.onclick=async()=>{for(const o of offers.slice())if(o.at_targy>0||o.at_erme>0)await collect(o.id,true);refresh()}}
+  function renderSetup(b){const s=setup,id=s.id;
+    if(!id){let list;if(s.tipus==='e'){const seen=new Set();list=inv.filter(x=>x&&tradeable(x.id)&&!seen.has(x.id)&&seen.add(x.id)).map(x=>x.id)}
+      else{const q=s.q.trim().toLowerCase();list=Object.keys(ITEMS).filter(k=>tradeable(k)&&(!q||ITEMS[k].name.toLowerCase().includes(q))).sort((a,b)=>ITEMS[a].name.localeCompare(ITEMS[b].name,'hu')).slice(0,60)}
+      b.innerHTML=`<div class="su"><div class="row"><button data-back>◀ Vissza</button><span>${s.tipus==='e'?'Mit adsz el? Válassz a táskádból:':'Mit szeretnél venni?'}</span>${s.tipus==='v'?'<input data-q placeholder="keresés…" style="width:180px">':''}</div>
+        <div class="pick">${list.map(k=>`<div data-id="${k}">${icon(k)}<span>${ITEMS[k].name}${s.tipus==='e'?` <span class="mut">×${countItem(k)}</span>`:''}</span></div>`).join('')||'<span class="mut">Nincs eladható tárgy a táskádban. (Ami a boltokban eladható, az itt is.)</span>'}</div></div>`;
+      b.querySelector('[data-back]').onclick=()=>{setup=null;render()};const qi=b.querySelector('[data-q]');if(qi){qi.value=s.q;qi.focus();qi.setSelectionRange(s.q.length,s.q.length);qi.oninput=()=>{s.q=qi.value;render()};qi.onkeydown=e=>e.stopPropagation()}
+      b.querySelectorAll('[data-id]').forEach(x=>x.onclick=()=>{s.id=x.dataset.id;s.ar=guide(s.id);s.n=s.tipus==='e'?countItem(s.id):1;render()});return}
+    const g=guide(id),mk=piac&&piac.items.find(x=>x.targy===id),tot=s.n*s.ar,have=countItem(id);
+    const okN=s.tipus==='e'?s.n>=1&&s.n<=have:s.n>=1,okC=s.tipus==='v'?tot<=coins:true;
+    b.innerHTML=`<div class="su"><div class="row"><button data-back>◀ Vissza</button><span>${s.tipus==='e'?'ELADÁS':'VÉTEL'}</span></div>
+      <div class="card">${icon(id)}<div><div style="color:#ffdf90;font-size:15px">${ITEMS[id].name}</div><div class="mut">Bolti érték: ${fmt(SELL[id])} érme · Irányár: ${fmt(g)} érme</div>
+      <div class="mut">${mk?`A piacon most: legjobb vételi ajánlat ${mk.vetel?fmt(mk.vetel):'nincs'}, legolcsóbb eladó ${mk.eladas?fmt(mk.eladas):'nincs'}`:'A piacon most nincs rá nyitott ajánlat.'}</div>
+      <div class="mut">Az Ügynökség ${s.tipus==='e'?`megveszi, ha legfeljebb ${fmt(Math.floor(g*0.8))} érmét kérsz`:`eladja, ha legalább ${fmt(Math.ceil(g*1.3))} érmét adsz`}.</div></div></div>
+      <div class="row">Mennyiség: <button data-n="-1">−</button><input data-in value="${s.n}"><button data-n="1">+</button><button data-ns="1">1</button><button data-ns="10">10</button><button data-ns="100">100</button>${s.tipus==='e'?`<button data-ns="${have}">Mind (${have})</button>`:''}</div>
+      <div class="row">Ár / db: <button data-p="0.95">−5%</button><input data-ip value="${s.ar}"><button data-p="1.05">+5%</button><button data-pg>Irányár</button></div>
+      <div class="row" style="justify-content:space-between"><span>Összesen: <span style="color:#ffdf70;font-size:16px">${fmt(tot)}</span> érme ${okC?'':'<span style="color:#e85030">(nincs ennyi érméd)</span>'}${okN?'':'<span style="color:#e85030"> (nincs ennyi a táskádban)</span>'}</span>
+      <button class="big" data-go ${okN&&okC&&!busy?'':'disabled'}>Ajánlat feladása</button></div></div>`;
+    const set=()=>{render()};b.querySelector('[data-back]').onclick=()=>{s.id=null;render()};
+    b.querySelectorAll('[data-n]').forEach(x=>x.onclick=()=>{s.n=Math.max(1,s.n+ +x.dataset.n);set()});b.querySelectorAll('[data-ns]').forEach(x=>x.onclick=()=>{s.n=Math.max(1,+x.dataset.ns);set()});
+    b.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{s.ar=Math.max(1,Math.round(s.ar*+x.dataset.p)+(+x.dataset.p>1?1:-1)*(s.ar<20?1:0));set()});b.querySelector('[data-pg]').onclick=()=>{s.ar=g;set()};
+    for(const [k,f] of[['[data-in]','n'],['[data-ip]','ar']]){const i=b.querySelector(k);i.onkeydown=e=>e.stopPropagation();i.onchange=()=>{s[f]=Math.max(1,Math.min(f==='n'?1e6:1e7,Math.floor(+i.value.replace(/\D/g,''))||1));set()}}
+    b.querySelector('[data-go]').onclick=()=>place()}
+  function renderPiac(b){if(!piac){b.innerHTML='<div class="su mut">A piac betöltése…</div>';return}if(piac.hiba){b.innerHTML=`<div class="su">${piac.hiba}</div>`;return}
+    const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'most':m<60?m+' perce':Math.round(m/60)+' órája'};
+    b.innerHTML=`<div class="su"><div class="row" style="justify-content:space-between"><span>Nyitott ajánlatok</span><button data-r>Frissítés</button></div>
+      <table><tr><th>Tárgy</th><th>Legjobb vétel</th><th>Legolcsóbb eladás</th><th></th></tr>${piac.items.filter(x=>ITEMS[x.targy]).map(x=>`<tr><td><span class="it">${icon(x.targy)}${ITEMS[x.targy].name}</span></td><td>${x.vetel?fmt(x.vetel)+' <span class="mut">('+fmt(x.nv)+' db)</span>':'<span class="mut">nincs</span>'}</td><td>${x.eladas?fmt(x.eladas)+' <span class="mut">('+fmt(x.ne)+' db)</span>':'<span class="mut">nincs</span>'}</td>
+      <td>${x.eladas?`<button class="v" data-b="${x.targy}" data-pr="${x.eladas}">Veszek</button>`:''}${x.vetel&&countItem(x.targy)?`<button class="e" data-s="${x.targy}" data-pr="${x.vetel}">Eladok</button>`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">Most senki nem kínál semmit. Légy te az első!</td></tr>'}</table>
+      <div>Legutóbbi kötések</div><table>${piac.kotesek.filter(x=>ITEMS[x.targy]).map(x=>`<tr><td class="mut">${ago(x.ido)}</td><td><span class="it">${icon(x.targy)}${fmt(x.db)} × ${ITEMS[x.targy].name}</span></td><td>${fmt(x.ar)} érme/db</td><td class="mut">${x.ugynok?'Ügynökség':'kalandorok'}</td></tr>`).join('')||'<tr><td class="mut">Még nem volt kötés.</td></tr>'}</table></div>`;
+    b.querySelector('[data-r]').onclick=()=>loadPiac();
+    b.querySelectorAll('[data-b],[data-s]').forEach(x=>x.onclick=()=>{if(offers.length>=slots()){chat('Nincs szabad helyed a Nagyvásárban.');return}const id=x.dataset.b||x.dataset.s;setup={tipus:x.dataset.b?'v':'e',id,n:x.dataset.b?1:countItem(id),ar:+x.dataset.pr,q:''};tab='o';el.querySelectorAll('.tb').forEach(t=>t.classList.toggle('on',t.dataset.t==='o'));render()})}
+  async function loadPiac(){piac=await api('/ge/piac');if(piac&&!piac.items&&!piac.hiba)piac={hiba:'A piac most nem érhető el.'};render()}
+  async function refresh(){const r=await api('/ge/mine');if(r&&r.offers){offers=r.offers;max=r.max||6;notify();stats.geNyitott=offers.filter(o=>o.allapot===0).length}render()}
+  function notify(){for(const o of offers){const k=o.id,was=lastDone[k];if(was!==undefined&&o.kesz>was){chat(`Nagyvásár: ${o.tipus==='v'?'megvetted':'eladtad'}: ${fmt(o.kesz)}/${fmt(o.db)} × ${ITEMS[o.targy]?ITEMS[o.targy].name:o.targy}.`,'xp');SFX.play('coin')}lastDone[k]=o.kesz}}
+  function refund(s){if(s.tipus==='e'){for(let i=0;i<s.n;i++)kGive(s.id)}else setCoins(coins+s.n*s.ar);renderInv()}
+  async function place(){const s=setup;if(busy||!s||!s.id)return;if(offers.length>=slots()){chat('Nincs szabad helyed a Nagyvásárban.');return}
+    if(s.tipus==='e'){if(countItem(s.id)<s.n){chat('Nincs ennyi a táskádban.');return}takeN(s.id,s.n)}else{if(coins<s.n*s.ar){chat('Nincs elég érméd.');return}setCoins(coins-s.n*s.ar)}
+    busy=true;saveLocal();render();const r=await api('/ge/offer',{tipus:s.tipus,targy:s.id,db:s.n,ar:s.ar,ertek:SELL[s.id]||0});busy=false;
+    if(!r||!r.offer){refund(s);saveLocal();chat((r&&r.hiba)||'A Nagyvásár most nem érhető el.');render();return}
+    chat(`Nagyvásár: ajánlat feladva (${s.tipus==='v'?'vétel':'eladás'}: ${fmt(s.n)} × ${ITEMS[s.id].name}, ${fmt(s.ar)} érme/db).`,'xp');SFX.play('coin');
+    if(r.offer.kesz>0)stats.gekotes=1;lastDone[r.offer.id]=0;setup=null;await refresh()}
+  async function collect(id,quiet){if(busy)return;busy=true;const r=await api('/ge/collect',{id});busy=false;if(!r||r.hiba){chat((r&&r.hiba)||'Hiba az átvételnél.');return}
+    let bankN=0;for(let i=0;i<(r.db|0);i++){if(!giveItem(r.targy)){bank[r.targy]=(bank[r.targy]||0)+1;bankN++}}if(r.erme)setCoins(coins+r.erme);
+    if(r.db||r.erme){stats.gekotes=1;chat(`Nagyvásár: átvetted: ${r.db?fmt(r.db)+' × '+(ITEMS[r.targy]?ITEMS[r.targy].name:r.targy):''}${r.db&&r.erme?' és ':''}${r.erme?fmt(r.erme)+' érme':''}${bankN?` (${bankN} db a bankodba került)`:''}.`,'xp');SFX.play('coin')}
+    renderInv();saveLocal();if(!quiet)refresh()}
+  async function cancel(id){if(busy)return;busy=true;const r=await api('/ge/cancel',{id});busy=false;if(!r||r.hiba){chat((r&&r.hiba)||'Hiba a visszavonásnál.');return}chat('Nagyvásár: ajánlat visszavonva. A maradékot átveheted.');refresh()}
+  function open(){build();el.style.display='block';tab='o';setup=null;el.querySelectorAll('.tb').forEach(x=>x.classList.toggle('on',x.dataset.t==='o'));render();refresh();loadPiac();clearInterval(timer);timer=setInterval(()=>{if(!el||el.style.display==='none')return;
+      const [cx,cz]=AK.C;if(Math.hypot(px-HJX-cx-AK.rotunda[0],pz-cz-AK.rotunda[1])>22){close();return}if(!setup)refresh()},5000)}
+  function close(){if(el)el.style.display='none';clearInterval(timer);timer=null;setup=null}
+  // háttérben percenként rákérdezünk, ha van nyitott ajánlat: teljesülésről chatüzenet jön, bárhol is jár a játékos
+  setInterval(()=>{if(!stats.geNyitott||(el&&el.style.display==='block'))return;refresh()},60000);
+  return {open,close,refresh,get offers(){return offers},api,isOpen:()=>!!el&&el.style.display==='block'}})();
+function geOpen(){if(!(qs.nagyvasar&&qs.nagyvasar.st===2)){DIALOG.akclerk({});return}hideDialog();GE.open()}
 // kamera-takarás: ami a kamera és a játékos közé esik (fa, ház, torony, fal, sövény), áttetszővé halványul
 const OCC={list:[],zone:-1,t:9,act:new Set(),hit:new Set(),box:new THREE.Box3(),ray:new THREE.Ray(),v:new THREE.Vector3(),tgt:new THREE.Vector3(),dir:new THREE.Vector3(),
   skip:new Set(['monster','npc','player','monkey','crab','sheep','puppy','genie','fire','fish','clue','dig','digsite','shell','herb','plot'])};
