@@ -6429,7 +6429,7 @@ const HAJO=(()=>{const lin=c=>new THREE.Color(c).convertSRGBToLinear(),MC={},F=c
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(col_,3));geo.computeVertexNormals();
     const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide}));
     const sh=new THREE.Shape();for(let i=0;i<=N;i++){const p=P[i][0];i?sh.lineTo(p[0]*0.96,p[2]):sh.moveTo(p[0]*0.96,p[2])}for(let i=N;i>=0;i--){const p=P[i][0];sh.lineTo(-p[0]*0.96,p[2])}
-    const dk=new THREE.Mesh(new THREE.ShapeGeometry(sh),F(opts.deck??0xa8844e));dk.rotation.x=Math.PI/2;dk.position.y=-0.1;
+    const dk=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshLambertMaterial({color:lin(opts.deck??0xa8844e),flatShading:true,side:THREE.DoubleSide}));dk.rotation.x=Math.PI/2;dk.position.y=-0.1;
     const g=new THREE.Group();g.add(m);g.add(dk);g.userData.P=P;g.userData.sheer=sheer;g.userData.hullMesh=m;return g}
   function rail(g,P,c,h=0.25){for(const sd of[-1,1])for(let i=0;i<P.length-1;i++){const a=P[i][0],b=P[i+1][0];seg(g,[a[0]*sd,a[1]+h,a[2]],[b[0]*sd,b[1]+h,b[2]],0.05,c,4);if(i%2===0)seg(g,[a[0]*sd,a[1],a[2]],[a[0]*sd,a[1]+h,a[2]],0.035,c,4)}}
   function sqSail(g,w,h,x,y,z,col,emb,belly=0.35){const geo=new THREE.PlaneGeometry(w,h,6,4),p=geo.attributes.position;for(let i=0;i<p.count;i++){const u=p.getX(i)/(w/2),v=p.getY(i)/(h/2);p.setZ(i,belly*(1-u*u)*(1-v*v*0.5))}geo.computeVertexNormals();const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:lin(col),side:THREE.DoubleSide,flatShading:true}));m.position.set(x,y,z);g.add(m);
@@ -6884,7 +6884,7 @@ function hjSync(){const q=qs.hajnal,done=q.st===2;
 function hjBoard(){const q=qs.hajnal;if(q.st===1&&q.n===3){chat('Kifutsz a Hajnalcsillaggal. Kelet felé! Kattints a tengerre, arra kormányzol. A Ködfal a szigetek mögött kezdődik.','xp');startVoyage(12,null,true);return}
   showDialog('Hajnalcsillag',`A saját szlúpod (${HAJO.ST[myboat.style||'A'].name}). Hova?`,[{t:'⛵ Saját kormánnyal kifutok',f:()=>startVoyage(zoneOf(px),null,true)},{t:'→ Hajnalrév (egyenesen)',f:()=>sail(14)},{t:'Mégsem.'}])}
 // --- a tengeren: a hajó modellje, a Ködfal, a sirályok, a kraken ---
-function hjShipSet(own){if(!OCEAN.bship)OCEAN.bship=OCEAN.ship;let s=OCEAN.bship;if(own){const st=myboat.style||'A';if(!OCEAN.hship||OCEAN.hship.userData.style!==st){if(OCEAN.hship)scene.remove(OCEAN.hship);OCEAN.hship=HAJO.ship(st,1);OCEAN.hship.userData.keep=true;scene.add(OCEAN.hship)}s=OCEAN.hship}
+function hjShipSet(own){if(!OCEAN.bship)OCEAN.bship=OCEAN.ship;let s=OCEAN.bship;if(own){const st=myboat.style||'A';if(!OCEAN.hship||OCEAN.hship.userData.style!==st){if(OCEAN.hship)scene.remove(OCEAN.hship);OCEAN.hship=HAJO.ship(st,1);OCEAN.hship.userData.keep=true;OCEAN.hship.position.set(px,0.25,pz);scene.add(OCEAN.hship)}s=OCEAN.hship}
   for(const o of[OCEAN.bship,OCEAN.hship])if(o&&o!==s)o.visible=false;s.visible=true;s.position.set(px,0.25,pz);OCEAN.ship=s}
 const _hjOBuild=oBuild;oBuild=function(){const was=OCEAN.built;_hjOBuild();if(was||OCEAN.kf)return;
   // a Ködfal: puha, gomolygó ködfalak a sávban, végig északtól délig
@@ -6935,8 +6935,8 @@ function hjFogUI(on,msg,noBtn){let el=document.getElementById('hjGull');if(!on){
     for(const [d,tx] of[['bal','⬅ Balra'],['egyenes','⬆ Egyenesen'],['jobb','Jobbra ➡']]){const b=document.createElement('button');b.textContent=tx;b.style.cssText='margin:0 4px;padding:6px 12px;background:#5a4020;color:#ffe87a;border:1px solid #d8b040;border-radius:4px;font-family:Trebuchet MS;font-size:14px;cursor:pointer';b.onclick=e=>{e.stopPropagation();hjGullAnswer(d)};B.appendChild(b)}}
   el.style.display='block';el.querySelector('#hjGullM').textContent=msg||'';const asking=voyage&&voyage.fog&&voyage.fog.dir;el.querySelector('#hjGullB').style.display=noBtn?'none':'block';el.querySelectorAll('#hjGullB button').forEach(b=>{b.disabled=!asking;b.style.opacity=asking?1:0.45});if(!asking)el.querySelector('#hjGullT').textContent=''}
 // a tengeri köd a fal közelében
-const _hjFogC=new THREE.Color(0xd8dee6);function hjSeaFog(){const lx=px-OX;const k=lx<KF.x0-70||lx>KF.x1+50?0:lx<KF.x0?(lx-KF.x0+70)/70:lx>KF.x1?1-(lx-KF.x1)/50:1;if(k<=0)return;
-  scene.fog.color.lerp(_hjFogC,k*0.85);scene.background.lerp(_hjFogC,k*0.85);scene.fog.near=lerp(scene.fog.near,16,k);scene.fog.far=lerp(scene.fog.far,72,k)}
+const _hjFogC=new THREE.Color(0xb8c4d0);function hjSeaFog(){const lx=px-OX;const k0=lx<KF.x0-70||lx>KF.x1+50?0:lx<KF.x0?(lx-KF.x0+70)/70:lx>KF.x1?1-(lx-KF.x1)/50:1;if(k0<=0)return;let k=k0;if(voyage&&voyage.fog&&voyage.fog.kr===1)k*=0.55;
+  scene.fog.color.lerp(_hjFogC,k*0.75);scene.background.lerp(_hjFogC,k*0.8);scene.fog.near=lerp(scene.fog.near,22,k);scene.fog.far=lerp(scene.fog.far,95,k)}
 // --- kalózok Hajnalrévben, a küldetés vége ---
 function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.k||0)+1;renderQuests();if(q.k>=3){q.n=6;SFX.play('quest');chat('Az utolsó ködkalóz is elesik. Hajnalrév szabad! Beszélj Kikötőmester Bodorral a révhivatal előtt.','xp');renderQuests()}}}
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
