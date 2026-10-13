@@ -4231,7 +4231,7 @@ function itemIcon(k){
     const M={sarkanykard:['sword','#d83020','#3a2a1a'],ezustkard:['sword','#e8e8f4','#4a4a8a'],viharkard:['sword','#80c8ff','#2a2a6a'],
       pet_jegorias:['pet','#a8dcf4','#ffffff','ice'],pet_vulkankiraly:['pet','#8a3a20','#ff8a20','flame'],pet_kalozkapitany:['pet','#e0b890','#202020','hat'],pet_farao:['pet','#e0d8b8','#f0c020','band'],pet_erdoorzo:['pet','#6a8a3a','#8aca4a','leaf'],
       pet_lavaspirit:['pet','#ff6a10','#ffd040','flame'],pet_zephyra:['pet','#4ab0d0','#e0f0ff','wings'],pet_varur:['pet','#8a8a90','#f0c020','crown'],pet_zoldsarkany:['pet','#3a9a3a','#a0e060','wings'],pet_vampirur:['pet','#4a3a5a','#c02020','cape'],
-      pet_mocsarihidra:['pet','#3a7a3a','#8ac050','horns'],pet_kokolosszus:['pet','#7a7a80','#a0a0a8','rock'],
+      pet_mocsarihidra:['pet','#3a7a3a','#8ac050','horns'],pet_kokolosszus:['pet','#7a7a80','#a0a0a8','rock'],pet_korvin:['pet','#22222c','#d8b040','crown'],
       arenasisak:['helm','#b0a080','#e8dcb0','#c02020'],griffsisak:['helm','#d0a040','#fff0a0','#f0f0f0'],tabornokisisak:['helm','#9a9aa0','#e0e0e8','#2a4aa8'],
       vadaszsisak:['cap','#6a4a2a','#4a3018','#c02020'],medvesapka:['cap','#5a3a20','#7a5a3a'],borsapka:['cap','#8a5a2a','#6a4018'],gnomsapka:['cone','#d02828','#a01818'],kincseskalap:['tophat','#3a2a1a','#f0c020'],
       arenakopeny:['cape','#a82020','#f0c020'],egikopeny:['cape','#6aa8f0','#ffffff'],druidakopeny:['cape','#3a6a2a','#8aca5a'],ejkopeny:['cape','#1e1e3e','#6a6aa0'],koronakopeny:['cape','#8a1a2a','#f0c020'],
@@ -6696,6 +6696,42 @@ const HREGT={};
     {const [x,z]=U(0.36,0.55);HREGT.glade=[x,z];const g=G();const cm=new THREE.MeshLambertMaterial({color:lin(0x60d0ff),emissive:lin(0x2a8ac0)}),cm2=new THREE.MeshLambertMaterial({color:lin(0xb080ff),emissive:lin(0x6a3ac0)});
       for(let i=0;i<46;i++){const a=i*2.399,r=2+Math.sqrt(i)*2.1,m=G();const st=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,0.5+(i%3)*0.3,5),S(0xe8e0d0));st.position.y=0.3;m.add(st);const cp=new THREE.Mesh(new THREE.SphereGeometry(0.3+(i%4)*0.12,7,5,0,6.283,0,1.6),i%3?cm:cm2);cp.position.y=0.55+(i%3)*0.3;m.add(cp);m.position.set(Math.cos(a)*r,0,Math.sin(a)*r);g.add(m)}
       for(const m of g.children){m.position.y=height(HJX+x+m.position.x,z+m.position.z)}g.position.set(HJX+x,0,z);scene.add(g);KL.add(HJX+x,1.5,z,0x60d0ff,1.2,18,{on:()=>night>0.25})}}
+  // ---------- HOLLÓERDŐ (v75): Korvin óriásfenyője a fészekkel, a Hollótanács fája, az íjkészítő műhely, a hollóboszorkák kunyhója ----------
+  {const [hx,hz]=HP.hollo,Lm=ML;
+    // Korvin fenyője: a fészek a törzs mellett, egy vastag ágon ül; alatta tüskés gallyrakás zárja el a földet
+    {const P0=[hx+95,hz-50],N=[hx+95,hz-40],h0=height(HJX+P0[0],P0[1]),hN=height(HJX+N[0],N[1]),NY=hN+22;const g=G();
+      cyl(g,0.8,2.8,58,0x4a3022,0,29,0,10);for(let i=0;i<7;i++){const a=i*2.4,y=10+i*3.2;const b=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.35,6,5),S(0x3a2618));b.position.set(Math.cos(a)*2.5,y,Math.sin(a)*2.5);b.rotation.z=Math.cos(a)*1.2;b.rotation.x=-Math.sin(a)*1.2;g.add(b)}
+      for(let i=0;i<9;i++){const r=11-i*1.05,y=34+i*3;const c=cone(g,r,6.5,i%2?0x1e3a26:0x24482c,0,y,0,9);c.rotation.y=i*0.4}
+      // a fészek a vastag ág végén
+      Lm.seg(g,[0,NY-h0-6,0],[0,NY-h0-0.8,10],1.1,0.8,0x4a3022,7);Lm.seg(g,[0.6,NY-h0-12,0.8],[1.5,NY-h0-1.2,8],0.6,0.45,0x3a2618,6);Lm.seg(g,[-0.8,NY-h0-10,0.6],[-2,NY-h0-1,8.5],0.55,0.4,0x3a2618,6);
+      const nest=new THREE.Group();nest.position.set(0,NY-h0,10);g.add(nest);const fl=new THREE.Mesh(new THREE.CylinderGeometry(6.6,5.4,0.9,18),S(0x5a4428));fl.position.y=-0.15;nest.add(fl);
+      for(let k=0;k<3;k++){const t=new THREE.Mesh(new THREE.TorusGeometry(6.6+k*0.25,0.55,5,22),S([0x4a3a24,0x5a4628,0x3a2c1a][k]));t.rotation.x=Math.PI/2;t.position.y=0.35+k*0.32;nest.add(t)}
+      for(let i=0;i<40;i++){const a=i*0.157*1.618*6.283,r=6.3+(i%5)*0.15;const st=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,2.4,4),S(i%2?0x6a5434:0x4a3a24));st.position.set(Math.cos(a)*r,0.8,Math.sin(a)*r);st.rotation.set(Math.sin(i)*1.2,a,1.3+Math.cos(i*1.7)*0.3);nest.add(st)}
+      for(let i=0;i<9;i++){const a=i*0.7,r=1.5+(i%4)*1.1;const bn=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.9,5),S(0xe8e0c8));bn.position.set(Math.cos(a)*r,0.35,Math.sin(a)*r);bn.rotation.z=1.5;bn.rotation.y=a;nest.add(bn)}
+      for(let i=0;i<14;i++){const a=i*2.3,r=2+(i%5)*0.8;const c=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.04,8),new THREE.MeshLambertMaterial({color:lin(0xe8c040),emissive:lin(0x5a4010)}));c.position.set(Math.cos(a)*r,0.33+(i%3)*0.05,Math.sin(a)*r);nest.add(c)}
+      // három ülőág a fészek körül (ide száll fel Korvin)
+      const perches=[];for(const a of[-0.5,1.6,3.6]){const ex=Math.cos(a)*10.5,ez=10+Math.sin(a)*10.5,ey=NY-h0+4.2;Lm.seg(g,[Math.cos(a)*4,NY-h0-4,10+Math.sin(a)*4],[ex,ey,ez],0.5,0.3,0x3a2618,6);const kn=new THREE.Mesh(new THREE.SphereGeometry(0.6,6,5),S(0x3a2618));kn.position.set(ex,ey,ez);g.add(kn);perches.push([N[0]+ex,N[1]+ez-10,NY+4.7])}
+      // tüskés gallyrakás a fészek alatt (a földön nem lehet a fészek alá menni; fent ez a fészek pereme)
+      for(let i=0;i<44;i++){const side=i%4,t=((i>>2)/10)*13.6-6.8;const lx=side<2?(side?6.2:-6.2):t,lz=side<2?t:(side===2?6.2:-6.2);const st=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.25,3.4,5),S(i%3?0x4a3a28:0x3a2c1c));st.position.set(lx,1.2,lz+10);st.rotation.set(Math.sin(i*1.3)*0.9,i,Math.cos(i*0.7)*0.9);g.add(st);if(i%3===0){const th=new THREE.Mesh(new THREE.IcosahedronGeometry(0.9,0),S(0x2a3a20));th.position.set(lx,0.8,lz+10);th.scale.y=0.7;g.add(th)}}
+      // kötéllétra a fészek déli pereméig
+      const L0=[N[0],N[1]+7.8];{const lad=new THREE.Group();lad.position.set(0,0,17.8);g.add(lad);const hL=NY-hN;const tilt=Math.atan2(1.4,hL);for(const s of[-1,1]){const rp=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,hL+0.4,4),S(0xb8a070));rp.position.set(s*0.45,hL/2+(hN-h0),-0.7);rp.rotation.x=-tilt;lad.add(rp)}for(let k=1;k<hL/0.7;k++){const y=k*0.7;const rg=new THREE.Mesh(new THREE.BoxGeometry(1,0.07,0.12),S(0x6a4a2a));rg.position.set(0,y+(hN-h0),-y/hL*1.4);lad.add(rg)}}
+      put(g,P0[0],P0[1],0);g.userData.noOcc=true;
+      colAdd(HJX+P0[0],P0[1],2.4,2.4,0,'fenyo');colAdd(HJX+N[0]+6.2,N[1],0.6,6.8,0,'galy');colAdd(HJX+N[0]-6.2,N[1],0.6,6.8,0,'galy');colAdd(HJX+N[0],N[1]+6.2,6.8,0.6,0,'galy');colAdd(HJX+N[0],N[1]-6.2,6.8,0.6,0,'galy');
+      FLOORS.push({x:HJX+N[0],z:N[1],hw:6.6,hd:6.6,c:1,s:0,y0:NY+0.35,y1:NY+0.35});
+      HREGT.korvin={N,NY:NY+0.35,P0,perches,L0,top:[N[0],N[1]+4.6]};HPOI.push([N[0],N[1]-4,18]);KL.add(HJX+N[0],NY+2,N[1],0xffd070,0.6,10,{on:()=>night>0.3})}
+    // a Hollótanács fája: göcsörtös, hét ággal, mindegyiken egy holló; tövében a tolloltár
+    {const C=[hx-34,hz+22];const g=G();Lm.seg(g,[0,0,0],[0,7,0],1.5,1.0,0x4a3a2a,8);for(let i=0;i<5;i++){const a=i*1.26;Lm.seg(g,[0,0.4,0],[Math.cos(a)*3,0,Math.sin(a)*3],0.7,0.3,0x3e3022,5)}
+      const tips=[];for(let i=0;i<7;i++){const a=i/7*6.283+0.2,len=4+(i%3)*0.8,y0=5+(i%3)*1.3;const e=[Math.cos(a)*len,y0+2.2+(i%2)*0.8,Math.sin(a)*len];Lm.seg(g,[0,y0,0],[Math.cos(a)*len*0.5,y0+1.5,Math.sin(a)*len*0.5],0.45,0.3,0x4a3a2a,5);Lm.seg(g,[Math.cos(a)*len*0.5,y0+1.5,Math.sin(a)*len*0.5],e,0.3,0.14,0x4a3a2a,5);tips.push(e)}
+      box(g,2.6,0.9,1.4,0x7a7a74,0,0.45,3.2);for(let i=0;i<7;i++){const sl=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.06,0.5),S(0x2a2a28));sl.position.set(-1.05+i*0.35,0.93,3.2);g.add(sl)}
+      put(g,C[0],C[1],0);g.scale.setScalar(1.35);colAdd(HJX+C[0],C[1],2.1,2.1,0,'tanacsfa');HPOI.push([C[0],C[1],13]);colAdd(HJX+C[0],C[1]+4.3,1.75,0.95,0,'oltar');
+      HREGT.council={C,tips:tips.map(([x,y,z])=>[C[0]+x*1.35,y*1.35+height(HJX+C[0],C[1]),C[1]+z*1.35]),altar:[C[0],C[1]+3.2*1.35]}}
+    // az íjkészítő műhely és a gyógyfüves stand
+    {const [x,z]=[hx-30,hz-25];H(x,z,face(x,z,hx,hz),'vadasz',{sign:0x3a6a2a});HREGT.bowyer=[x,z];const g=G();for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.05,4,12,Math.PI*0.9),S(0x6a4a2a));b.rotation.z=Math.PI/2;b.position.set(-1.2+i*0.6,1.6,0);g.add(b)}box(g,3.4,0.15,0.15,0x5a3a20,0,2.6,0);for(const s of[-1,1])box(g,0.15,2.7,0.15,0x5a3a20,s*1.7,1.35,0);
+      const [rx,rz]=rot(x,z,0,6.5,face(x,z,hx,hz));put(g,rx+3,rz,face(x,z,hx,hz))}
+    // a hollóboszorkák kunyhója a mélyerdőben: görbe ház, üst, koponyás karók
+    {const [x,z]=[hx-100,hz+65];H(x,z,0.6,'mocsar');HREGT.witch=[x,z];HPOI.push([x,z,15]);const g=G();cyl(g,1.1,0.8,1.0,0x1a1a1a,0,0.5,0,10);const brew=new THREE.Mesh(new THREE.CircleGeometry(0.9,12),glow(0x60ff60));brew.rotation.x=-Math.PI/2;brew.position.y=1.02;g.add(brew);
+      for(let i=0;i<5;i++){const a=i/5*6.283;box(g,0.12,2.6,0.12,0x3a2a1a,Math.cos(a)*5,1.3,Math.sin(a)*5);const sk=new THREE.Mesh(new THREE.SphereGeometry(0.25,6,5),S(0xe8e0c8));sk.position.set(Math.cos(a)*5,2.7,Math.sin(a)*5);g.add(sk)}
+      const [bx,bz]=rot(x,z,0,7,0.6);put(g,bx,bz,0);KL.add(HJX+bx,1.6,bz,0x60ff60,1.2,10);colAdd(HJX+bx,bz,1.1,1.1,0,'ust');HREGT.cauldron=[bx,bz]}}
   // ---------- SÓDERDŐ: Gyökérváros cölöpházai a deltában, pallóhidak, kenuk, a félig elsüllyedt templom ----------
   {const [cx,cz]=HP.gyok;HREGT.gyok=[cx,cz];for(let i=0;i<6;i++){const a=i/6*6.283+0.3,x=cx+Math.cos(a)*15,z=cz+Math.sin(a)*15;house(HJX+x,z,6,5,face(x,z,cx,cz),{style:'mocsar'})}
     {const g=G();box(g,7,0.3,7,0x7a5a34,0,1.9,0);for(const sx of[-1,1])for(const sz of[-1,1])cyl(g,0.2,0.25,3,0x5a3a20,sx*3,0.5,sz*3,6);cone(g,5.5,3,0x9a8a4a,0,4.2,0,6);for(let i=0;i<6;i++)cyl(g,0.12,0.12,2.2,0x5a3a20,Math.cos(i)*3,3,Math.sin(i)*3,5);put(g,cx,cz,0);HREGT.gyokhall=[cx,cz]}
@@ -7281,7 +7317,7 @@ function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
   kGive('hajnallampa');kGive('hajnallampa');addXp('ha',1000,p);chat('Megkaptad: Hajózás 10. szint, a Hajnalcsillag a tiéd, és két hajnali tudáslámpa (5000 XP egyenként, Horgászat, Kovácsolás vagy Hajózás). Mostantól hajó jár Halászrév és Hajnalrév között.','xp');hjSync()}
 // --- percenkénti/képkockánkénti teendők ---
-function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);AKQ.step(dt);hvMonTick(dt);
+function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);AKQ.step(dt);HFL.step(dt);hvMonTick(dt);
   // a torony lépcsőjén a lap: csak éjjel, ha ég a lámpa
   HJR.lhpage.mesh.visible=q.st===1&&q.n===0&&!((q.m||0)&2)&&night>0.45&&!!stats.kfeny;
   if(zn===14){const L=HJR.light;const lit=night>0.2;L.piv.visible=lit;if(lit)L.piv.rotation.y+=dt*0.7;
@@ -7577,6 +7613,133 @@ QREQ.liszt=()=>combatLevel()>=35;QREADY.liszt=()=>countItem('lisztzsak')>=5;(NPC
   showDialog('Molnár Jakab',qs.liszt.st===2?'Fele áron, ahogy ígértem! Mit adhatok?':'Lisztet, kenyeret? A pékem a ház mellett süt.',[{t:'Mit árulsz?',f:()=>openShop(qs.liszt.st===2?[['kenyer',5,1],['buza',2,1],['buzamag',1,1]]:[['kenyer',9,1],['buza',4,1],['buzamag',2,1]],'JAKAB MALMA')},{t:'Szép a malmod.',f:()=>showDialog('Molnár Jakab','Háromszáz éves a nagymalom. A vitorláit minden tavasszal újravarrjuk.')}])}}
 {const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='liszt'){setCoins(coins+2500);addXp('th',1500,p);for(let i=0;i<5;i++)kGive('kenyer')}}}
 ACH.push({id:'liszt',name:'A malom hőse',desc:'Hozd vissza Molnár Jakab öt zsák lisztjét.',chk:()=>qs.liszt.st===2},{id:'hidtroll',name:'Hídvámszedő',desc:'Győzd le a lesben álló folyami trollt.',chk:()=>!!((stats.kk||{}).folyamitroll)});
+// ================= HOLLÓERDŐ SZÖRNYEI (v75): hollóraj, tüskés vaddisznó, holdfarkas, fakéregőr, hollóboszorka és Korvin, a Hollókirály =================
+const HFM=(()=>{const L=ML,{Rn,lin,flat,glow,blob,at,seg,ball,box,cone,chain,sh,quad}=L;
+  const featherMat=(c)=>new THREE.MeshLambertMaterial({color:lin(c),side:THREE.DoubleSide,flatShading:true});
+  // egy holló: test, fej, csőr, két szárny (a szárnyakat a raj és Korvin csapkodja)
+  function raven(sc=1,eye=0x111111){const g=new THREE.Group();const b=blob(0.22,1,0.85,1.6,(x,y,z)=>y>0.5?0x1a1a22:0x101016,1,0.1);at(b,0,0,0);g.add(b);const hd=ball(g,0.14,0x141418,0,0.1,0.3,7);const bk=cone(g,0.06,0.22,0x3a3a40,0,0.07,0.47,4);bk.rotation.x=Math.PI/2;
+    for(const s of[-1,1])ball(g,0.03,eye===0x111111?eye:glow(eye),s*0.07,0.14,0.38,4);const t=cone(g,0.12,0.36,0x101016,0,0.02,-0.42,4);t.rotation.x=-Math.PI/2;t.scale.set(1.4,0.3,1);
+    const wings=[];for(const s of[-1,1]){const w=new THREE.Group();w.position.set(s*0.15,0.05,0);const p=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.36),featherMat(0x16161c));p.rotation.x=-Math.PI/2;p.position.x=s*0.31;w.add(p);g.add(w);wings.push([w,s])}
+    g.scale.setScalar(sc);g.userData.wings=wings;return g}
+  function swarm(o){const g=new THREE.Group();const hit=new THREE.Mesh(new THREE.SphereGeometry(1.2,8,6),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=1.6;g.add(hit);const birds=[];
+    for(let i=0;i<o.n;i++){const r=raven(0.9+Rn()*0.3,o.eye);const a=i/o.n*6.283,rad=0.5+Rn()*1.0;r.position.set(Math.cos(a)*rad,1.2+Rn()*1.2,Math.sin(a)*rad);g.add(r);birds.push({r,a,rad,h:r.position.y,sp:1.5+Rn()*1.5})}
+    g.userData.body=hit;g.userData.birds=birds;return sh(g)}
+  function boar(o){const g=quad({c1:o.c1,c2:o.c2,belly:o.belly,len:1.15,h:0.78,w:1.35,hs:1.25,snout:1.1,nose:0x2a1a14,eye:o.eye,earL:0.7,leg:1.2,tailN:2,tailR:0.05,fur:0.26,chest:1.2});
+    const h=g.userData.head;for(const s of[-1,1])chain(h,[[s*0.12,-0.12,0.42],[s*0.2,-0.05,0.55],[s*0.18,0.12,0.58]],[0.045,0.035,0.012],[0xf0e8d0]);
+    for(let i=0;i<13;i++){const z=0.75-i*0.13,y=0.78+0.42-Math.abs(i-4)*0.02;const sp=cone(g,0.05,0.38+((i*7)%4)*0.08,o.spine,0,y,z,4);sp.rotation.x=-0.35-i*0.03;for(const s of[-1,1]){const s2=cone(g,0.035,0.26,o.spine,s*0.18,y-0.12,z,4);s2.rotation.z=-s*0.6;s2.rotation.x=-0.4}}
+    if(o.scars)for(let i=0;i<3;i++)box(g,0.03,0.02,0.4,0x8a4a3a,0.3,0.95-i*0.08,0.1+i*0.15);g.scale.setScalar(o.sc||1.25);return sh(g)}
+  function moonwolf(o){const g=quad({c1:o.c1,c2:o.c2,belly:o.belly,len:1.2,h:0.85,w:0.95,hs:1.05,snout:1.35,nose:0x1a1a24,eye:o.eye,earL:1.3,leg:0.95,tailN:4,tailR:0.085,tailUp:-0.03,tailLen:0.18,tailTip:o.tip,fur:0.3,neckUp:1.1});
+    const mm=new THREE.MeshBasicMaterial({color:lin(o.mark),transparent:true,opacity:0.85});for(const s of[-1,1]){const c=new THREE.Mesh(new THREE.TorusGeometry(0.16,0.03,4,10,Math.PI*1.2),mm);c.position.set(s*0.4,0.95,0.05);c.rotation.y=s*Math.PI/2;g.add(c)}
+    const hc=new THREE.Mesh(new THREE.TorusGeometry(0.09,0.02,4,10,Math.PI*1.3),mm);hc.position.set(0,0.2,0.05);hc.rotation.z=0.4;g.userData.head.add(hc);
+    for(let i=0;i<10;i++){const m=cone(g,0.06,0.22,o.c2,(Rn()-0.5)*0.3,1.22,0.55-i*0.1,4);m.rotation.x=-0.8}
+    const l=new THREE.PointLight(o.eye,0.6,6);l.position.set(0,1.3,0.8);g.add(l);g.scale.setScalar(o.sc||1.3);return sh(g)}
+  function treant(o){const g=new THREE.Group();const bark=(x,y,z)=>Rn()<0.18?o.moss:(Math.abs(Math.sin(x*9+z*7))<0.25?o.dark:o.bark);
+    const body=blob(0.9,0.9,1.6,0.8,bark,2,0.18);at(body,0,2.6,0);g.add(body);const face=new THREE.Group();face.position.set(0,3.1,0.62);g.add(face);
+    for(const s of[-1,1]){box(face,0.32,0.18,0.1,0x0a0604,s*0.24,0.12,0);ball(face,0.08,glow(o.eye),s*0.24,0.12,0.04,5)}box(face,0.5,0.12,0.1,0x0a0604,0,-0.35,0);
+    for(const s of[-1,1]){const pts=[[s*0.7,3.2,0],[s*1.4,2.9,0.2],[s*1.75,2.1,0.4],[s*1.8,1.4,0.5]];chain(g,pts,[0.32,0.24,0.18,0.12],[o.bark,o.dark]);for(let k=0;k<4;k++)seg(g,[s*1.8,1.4,0.5],[s*(1.8+(Rn()-0.3)*0.5),0.9+Rn()*0.3,0.5+(Rn()-0.5)*0.6],0.08,0.03,o.dark,4)}
+    for(const s of[-1,1]){chain(g,[[s*0.4,1.6,0],[s*0.6,0.9,0.15],[s*0.7,0.1,0.25]],[0.36,0.3,0.24],[o.bark]);for(let k=0;k<3;k++){const r=seg(g,[s*0.7,0.12,0.25],[s*(0.7+Math.cos(k*2.1)*0.6),0.03,0.25+Math.sin(k*2.1)*0.6],0.14,0.05,o.dark,4)}}
+    for(let i=0;i<9;i++){const a=i/9*6.283,c=blob(0.6+Rn()*0.4,1,0.8,1,(x,y,z)=>Rn()<0.3?o.leaf2:o.leaf,1,0.25);at(c,Math.cos(a)*0.9,4.0+Rn()*0.7,Math.sin(a)*0.8-0.1);g.add(c)}const top=blob(0.9,1,0.8,1,o.leaf,1,0.25);at(top,0,4.7,-0.1);g.add(top);
+    for(let i=0;i<6;i++){const sh2=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,4),flat(o.shroom));sh2.position.set((Rn()-0.5)*1.2,1.8+Rn()*1.2,0.5+Rn()*0.2);sh2.scale.y=0.5;g.add(sh2)}
+    g.userData.body=body;g.scale.setScalar(o.sc||1);return sh(g)}
+  function witch(o){const g=humanoid({skin:0x9aa89a,hair:0x1a1a1a,shirt:o.robe,sleeves:o.robe,pants:o.robe,boots:0x1a1a1a,hairStyle:'long'});const u=g.userData;
+    g.children.forEach(m=>{if(m.isMesh&&m.position.y>2.05&&m.position.y<2.7)m.visible=m.position.y<2.2});
+    {const rb=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.72,1.7,10),flat(o.robe));rb.position.y=0.95;g.add(rb);const hem=new THREE.Mesh(new THREE.CylinderGeometry(0.73,0.8,0.25,10),flat(o.robe2));hem.position.y=0.15;g.add(hem);for(let i=0;i<8;i++){const a=i/8*6.283;const t=cone(g,0.12,0.3,o.robe2,Math.cos(a)*0.72,0.02,Math.sin(a)*0.72,3);t.rotation.x=Math.PI}}
+    // hollókoponya-maszk csőrrel
+    const sk=blob(0.27,1,1,1.1,0xe8e0cc,1,0.08);at(sk,0,2.38,0.05);g.add(sk);const bk=cone(g,0.12,0.6,0xd8d0bc,0,2.3,0.45,5);bk.rotation.x=Math.PI/2+0.25;for(const s of[-1,1]){box(g,0.1,0.08,0.05,0x0a0a0a,s*0.12,2.42,0.29);ball(g,0.035,glow(o.eye),s*0.12,2.42,0.31,4)}
+    const hood=blob(0.36,1.05,1.1,1.1,o.robe2,1,0.1);at(hood,0,2.45,-0.08);g.add(hood);
+    for(let i=0;i<16;i++){const a=-1.4+i/15*2.8;const f=cone(g,0.09,0.55,i%3?0x16161c:0x2a2a36,Math.sin(a)*0.55,1.85,Math.cos(a)*0.3-0.05,3);f.rotation.z=-Math.sin(a)*1.2;f.rotation.x=0.4}
+    const w=new THREE.Group();w.position.set(0,-0.95,0.1);w.rotation.x=-0.2;u.armR.add(w);seg(w,[0,-0.5,0],[0,2.1,0],0.05,0.04,0x3a2a1a,5);const sk2=ball(w,0.13,0xe8e0cc,0,2.2,0,6);const sb=cone(w,0.05,0.22,0xd8d0bc,0,2.18,0.15,4);sb.rotation.x=Math.PI/2;
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6),glow(o.orb));orb.position.set(0,2.45,0);w.add(orb);const l=new THREE.PointLight(o.orb,0.8,5);l.position.set(0,2.4,0);w.add(l);g.userData.orb=orb;
+    const rv=raven(0.75);rv.position.set(-0.42,2.0,-0.05);rv.rotation.y=0.3;g.add(rv);return sh(g)}
+  function korvin(o){const g=humanoid({skin:0x1a1a22,hair:0x101016,shirt:0x16161c,sleeves:0x16161c,pants:0x101016,boots:0x0a0a0e});const u=g.userData;
+    g.children.forEach(m=>{if(m.isMesh&&m.position.y>2.05)m.visible=false});
+    box(g,0.95,1.7,0.66,0x121218,0,1.0,0);box(g,1.1,0.4,0.72,0x1e1e28,0,0.2,0);
+    for(let r=0;r<4;r++)for(let i=0;i<12;i++){const a=-1.5+i/11*3;const f=cone(g,0.1,0.6,(i+r)%3?0x14141a:0x24243a,Math.sin(a)*(0.5+r*0.04),1.95-r*0.32,Math.cos(a)*0.34-0.02,3);f.rotation.z=-Math.sin(a)*1.1;f.rotation.x=0.5}
+    // hollófej: nagy csőr, vörös szemek, korona
+    const hd=blob(0.34,1,1.05,1.15,(x,y,z)=>y>0.3?0x1a1a24:0x101016,2,0.1);at(hd,0,2.45,0.05);g.add(hd);const bk=cone(g,0.15,0.75,0x2a2a30,0,2.36,0.62,5);bk.rotation.x=Math.PI/2;bk.scale.set(1,1,0.7);const bk2=cone(g,0.11,0.55,0x1a1a20,0,2.28,0.55,5);bk2.rotation.x=Math.PI/2+0.15;
+    for(const s of[-1,1]){const e=ball(g,0.06,glow(0xff2020),s*0.15,2.55,0.3,6)}const cr=new THREE.Group();cr.position.set(0,2.78,0.02);g.add(cr);const ring=new THREE.Mesh(new THREE.CylinderGeometry(0.27,0.3,0.14,10,1,true),flat(0xd8b040));ring.material.side=THREE.DoubleSide;cr.add(ring);for(let i=0;i<7;i++){const a=i/7*6.283;const sp=cone(cr,0.05,0.24,0xe8c860,Math.cos(a)*0.28,0.16,Math.sin(a)*0.28,4);ball(cr,0.035,0x8a1a2a,Math.cos(a)*0.28,0.3,Math.sin(a)*0.28,4)}
+    // szárnyak a hátán
+    const wings=[];for(const s of[-1,1]){const w=new THREE.Group();w.position.set(s*0.35,1.85,-0.3);g.add(w);for(let k=0;k<7;k++){const f=new THREE.Mesh(new THREE.PlaneGeometry(0.42,1.5-k*0.08),featherMat(k%2?0x16161c:0x22222e));f.position.set(s*(0.35+k*0.36),-0.45-k*0.06,0);f.rotation.z=s*(0.15+k*0.08);w.add(f)}seg(w,[0,0,0],[s*2.4,0.2,0],0.07,0.03,0x101016,4);w.rotation.y=s*0.35;wings.push([w,s])}
+    // karom-jogar
+    const st=new THREE.Group();st.position.set(0,-0.95,0.1);st.rotation.x=-0.3;u.armL.add(st);seg(st,[0,-0.4,0],[0,1.9,0],0.05,0.045,0x2a1a10,5);for(let k=0;k<3;k++){const c=cone(st,0.04,0.3,0x2a2a30,Math.cos(k*2.1)*0.1,2.0,Math.sin(k*2.1)*0.1,4);c.rotation.z=Math.cos(k*2.1)*0.6}const gem=new THREE.Mesh(new THREE.OctahedronGeometry(0.12,0),glow(0x9a40ff));gem.position.y=2.05;st.add(gem);
+    g.scale.setScalar(1.55);g.userData.wings=wings;g.userData.body=g.userData.body||hd;return sh(g)}
+  const B={
+    holloraj:{A:()=>swarm({n:9,eye:0x111111}),B:()=>swarm({n:12,eye:0xff3030})},
+    tuskesvaddiszno:{A:()=>boar({c1:0x4a3a30,c2:0x2e241e,belly:0x6a5a4a,spine:0xc8b8a0,eye:0x111111}),B:()=>boar({c1:0x3a3a36,c2:0x24221e,belly:0x5a5048,spine:0xe8e0d0,eye:0xffa020,scars:true,sc:1.45})},
+    holdfarkas:{A:()=>moonwolf({c1:0xc8d4e8,c2:0x8a9ab8,belly:0xe8eef8,eye:0x80d0ff,mark:0xa0e8ff,tip:0x5a6a8a}),B:()=>moonwolf({c1:0x5a6a8a,c2:0x2a3450,belly:0x8a9ab8,eye:0xd0e8ff,mark:0xe8f4ff,tip:0x1a2034,sc:1.55})},
+    fakeregor:{A:()=>treant({bark:0x5a4030,dark:0x3a2818,moss:0x4a7a3a,leaf:0x2a5a30,leaf2:0x3a6a3a,eye:0xffb030,shroom:0xd8c8a0}),B:()=>treant({bark:0x6a6050,dark:0x4a4038,moss:0x6a8a4a,leaf:0x8a5a2a,leaf2:0xb8742a,eye:0xff6020,shroom:0xc84a3a,sc:1.15})},
+    holloboszorka:{A:()=>witch({robe:0x2a1a34,robe2:0x1a1024,eye:0x80ff60,orb:0x60ff60})},
+    korvin:{A:()=>korvin({})}};
+  return {B,raven}})();
+Object.assign(ITEMS,{hollotoll:{name:'Hollótoll',icon:'🪶'},gyanta:{name:'Fenyőgyanta',icon:'🟧'},holdagyar:{name:'Holdfarkas-agyar',icon:'🦷'},vaddisznotuske:{name:'Vaddisznótüske',icon:'📍'},
+  holloij:{name:'Holló-íj',icon:'🏹',gear:{slot:'weapon',hit:9,acc:0.3,ranged:true,col:0x1a1a22}},korvinkorona:{name:'Korvin koronája',icon:'👑',gear:{slot:'head',def:0.09}},
+  pet_korvin:{name:'Kis holló',icon:'🐦‍⬛',pet:'boss',boss:'korvin'}});
+for(const k of['hollotoll','gyanta','holdagyar','vaddisznotuske'])STACK.add(k);Object.assign(SELL,{hollotoll:6,gyanta:14,holdagyar:45,vaddisznotuske:9,holloij:1800,korvinkorona:1200});
+Object.assign(MON,{
+  holloraj:{name:'Hollóraj',level:56,hp:84,maxHit:7,acc:0.72,speed:6.5,aggroD:8,aggroN:11,build:(v)=>HFM.B.holloraj[v||'A'](),drops:[['hollotoll',0.9],['hollotoll',0.5]],swarm:true},
+  tuskesvaddiszno:{name:'Tüskés vaddisznó',level:58,hp:120,maxHit:11,acc:0.68,speed:5.5,aggroD:7,aggroN:9,build:(v)=>HFM.B.tuskesvaddiszno[v||'A'](),drops:[['vaddisznotuske',0.7],['nyershus',0.8]],charge:true},
+  holdfarkas:{name:'Holdfarkas',level:62,hp:118,maxHit:12,acc:0.74,speed:7,aggroD:10,aggroN:12,sl:55,build:(v)=>HFM.B.holdfarkas[v||'A'](),drops:[['holdagyar',0.4],['farkasbor',0.5]],nightOnly:true},
+  fakeregor:{name:'Fakéregőr',level:66,hp:190,maxHit:14,acc:0.66,speed:2.6,aggroD:6,aggroN:7,sl:58,build:(v)=>HFM.B.fakeregor[v||'A'](),drops:[['gyanta',0.7],['tiszafaronk',0.35]],fireWeak:true},
+  holloboszorka:{name:'Hollóboszorka',level:68,hp:150,maxHit:13,acc:0.74,speed:4.5,aggroD:9,aggroN:11,sl:60,build:()=>HFM.B.holloboszorka.A(),drops:[['hollotoll',0.8],['runa',0.6],['imaital',0.08]],curse:true},
+  korvin:{name:'Korvin, a Hollókirály',level:74,hp:430,maxHit:15,acc:0.76,speed:4,aggroD:5,aggroN:5,build:()=>HFM.B.korvin.A(),drops:[['hollotoll',1],['holloij',0.06],['korvinkorona',0.04]]}});
+Object.assign(HVV,{'holloraj:B':{name:'Vérszemű hollóraj',hp:96,maxHit:8},'tuskesvaddiszno:B':{name:'Öreg tüskés kan',hp:150,maxHit:13},'holdfarkas:B':{name:'Holdfarkas-falkavezér',hp:160,maxHit:14,level:66},'fakeregor:B':{name:'Őszi fakéregőr',hp:210}});
+BOSSES.push('korvin');
+// ================= HOLLÓERDŐ élete és harca (v75) =================
+const HFL=(()=>{const L=[];let korvin=null;const K=HREGT.korvin;
+  function spawnAll(){const R=kRng(7501);const forest=(x,z)=>{const t=hjT(z);return t>0.28&&t<0.395};
+    const find=(test,n,cb)=>{let k=0,got=0;while(got<n&&k<5000){k++;const t=0.28+R()*0.115,u=0.05+R()*0.9,[x,z]=hjU(t,u),h=hjHeight(x,z);if(h<1.2||h>16||hTown(x,z)||!forest(x,z)||hjRoadDist(x,z)<6||hjRiv(x,z)<14)continue;if(Math.hypot(x-K.N[0],z-K.N[1])<20)continue;if(!test(x,z,h,t,u))continue;cb(x,z);got++}};
+    const [hx,hz]=HP.hollo,near=(x,z,cx,cz,a,b)=>{const d=Math.hypot(x-cx,z-cz);return d>a&&d<b};
+    find((x,z)=>near(x,z,hx,hz,40,170),5,(x,z)=>L.push(hvSpawn('holloraj','A',x,z)));
+    find((x,z)=>!near(x,z,hx,hz,0,200),3,(x,z)=>L.push(hvSpawn('holloraj','B',x,z)));
+    find((x,z,h,t,u)=>u>0.5,6,(x,z)=>L.push(hvSpawn('tuskesvaddiszno','A',x,z)));
+    find((x,z,h,t,u)=>u<0.5&&!near(x,z,hx,hz,0,90),2,(x,z)=>L.push(hvSpawn('tuskesvaddiszno','B',x,z)));
+    // holdfarkas-falkák: két farkas és egy falkavezér, a holdfényes tisztás körül és a mélyerdőben
+    const packs=[[HREGT.glade[0]+40,HREGT.glade[1]+10]];find((x,z)=>!near(x,z,hx,hz,0,180),2,(x,z)=>packs.push([x,z]));
+    for(const [x,z] of packs)for(let i=0;i<3;i++){const a=i*2.1;const o=hvSpawn('holdfarkas',i===2?'B':'A',x+Math.cos(a)*4,z+Math.sin(a)*4);o.night=true;L.push(o)}
+    find((x,z,h,t,u)=>!near(x,z,hx,hz,0,110)&&t<0.36,5,(x,z)=>L.push(hvSpawn('fakeregor','A',x,z)));
+    find((x,z,h,t,u)=>t>0.36,2,(x,z)=>L.push(hvSpawn('fakeregor','B',x,z)));
+    {const [wx,wz]=HREGT.witch;for(let i=0;i<4;i++){const a=i*1.57+0.4;L.push(hvSpawn('holloboszorka','A',wx+Math.cos(a)*13,wz+Math.sin(a)*13))}}
+    korvin=hvSpawn('korvin','A',K.N[0],K.N[1]);korvin.seaY=K.NY;korvin.kph='land';korvin.kt=9;L.push(korvin);HS.movers=null}
+  {const _sa=hvSpawnAll;hvSpawnAll=function(){if(HVMON.done)return;_sa();spawnAll()}}
+  // --- különleges harci szabályok ---
+  {const _ph=playerHit;playerHit=function(s){const d=s.d||{};
+    if(s.kind==='korvin'&&s.kph==='fly'){floatText('a magasban!',s.mesh.position,'#c0c0d0',-10);return}
+    if(d.swarm&&!isRanged()){const hp0=s.hp;_ph(s);if(s.hp>0&&s.hp<hp0){const back=Math.ceil((hp0-s.hp)/2);s.hp+=back;if(Math.random()<0.3)chat('A raj szétrebben a kardod elől: közelharcban csak fél sebzést kap. A varázslat és a nyíl jobb ellene.','fight')}return}
+    if(d.fireWeak&&isMage()&&activeSpell==='tuzgolyo'){const hp0=s.hp;_ph(s);if(s.hp>0&&s.hp<hp0){const extra=hp0-s.hp;s.hp=Math.max(0,s.hp-extra);floatText('🔥 ×2',s.mesh.position,'#ff8a20',-24);if(s.hp<=0)monsterDie(s)}return}
+    _ph(s)}}
+  const hurt=(n,txt,col='#ff6a10')=>{if(prayers.has('oltalom'))n=Math.floor(n/2);hp=Math.max(0,hp-n);splat(player.position,n);updateHp();if(txt)chat(txt,'fight');if(hp<=0)die()};
+  const shadows=[];function castShadow(){const y=floorAt(px,pz);const g=new THREE.Group();const c=new THREE.Mesh(new THREE.CircleGeometry(2.2,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.45,depthWrite:false}));c.rotation.x=-Math.PI/2;g.add(c);
+    const birds=[];for(let i=0;i<6;i++){const b=HFM.raven(1.1);g.add(b);birds.push(b)}g.position.set(px,(y!==null?y:height(px,pz))+0.08,pz);scene.add(g);shadows.push({g,c,birds,t:0,x:px,z:pz});SFX.play('bat')}
+  function tickShadows(dt){for(let i=shadows.length-1;i>=0;i--){const s=shadows[i];s.t+=dt;s.c.material.opacity=0.35+Math.min(0.4,s.t*0.25);s.birds.forEach((b,k)=>{const a=s.t*3+k*1.05;b.position.set(Math.cos(a)*1.8,3-s.t*0.8,Math.sin(a)*1.8);b.rotation.y=-a;for(const [w,sd] of b.userData.wings)w.rotation.z=sd*Math.sin(s.t*30+k)*0.7});
+      if(s.t>=1.9){if(!dead&&Math.hypot(px-s.x,pz-s.z)<2.2)hurt(8+Math.floor(Math.random()*6),'A hollóraj lecsap rád! (Lépj ki a sötét körből, mielőtt leérnek.)');scene.remove(s.g);shadows.splice(i,1)}}}
+  function korvinTick(dt){const s=korvin;if(!s||s.depleted){for(const sh of shadows)scene.remove(sh.g);shadows.length=0;return}const m=s.mesh;
+    const onNest=floorAt(px,pz)!==null&&Math.hypot(px-HJX-K.N[0],pz-K.N[1])<8;
+    for(const [w,sd] of m.userData.wings)w.rotation.z=s.kph==='fly'?sd*(0.2+Math.sin(performance.now()/90)*0.5):sd*0.12;
+    if(!s.aggro||!onNest||dead){if(s.kph==='fly'){s.kph='land';s.frozenT=0;s.seaY=K.NY}if(!s.aggro){m.position.x=HJX+K.N[0];m.position.z=K.N[1]}if(s.hp<s.maxHp&&!s.aggro)s.hp=Math.min(s.maxHp,s.hp+dt*3);return}
+    s.kt-=dt;
+    if(s.kph==='land'){if(s.kt<=0){s.kph='fly';s.kt=6.5;s.st=0.6;const p=K.perches[(Math.random()*3)|0];m.position.set(HJX+p[0],p[2],p[1]);s.seaY=p[2];s.frozenT=99;s.perch=p;if(fight===s)fight=null;chat('Korvin felrebben egy ágra, és hollórajt küld rád!','fight');SFX.play('bat')}}
+    else{m.position.set(HJX+s.perch[0],s.perch[2],s.perch[1]);m.rotation.y=Math.atan2(px-m.position.x,pz-m.position.z);s.st-=dt;if(s.st<=0){s.st=2.4;castShadow()}
+      if(s.kt<=0){s.kph='land';s.kt=9;s.frozenT=0;s.seaY=K.NY;const a=Math.random()*6.283;m.position.set(HJX+K.N[0]+Math.cos(a)*2.5,K.NY,K.N[1]+Math.sin(a)*2.5);chat('Korvin leszáll a fészekre. Most támadj!','fight');floatText('!',m.position,'#ffd040',-30)}}
+    if(!s.m50&&s.hp<s.maxHp*0.5){s.m50=true;chat('Korvin károg: két hollóboszorka száll le a fészekre!','fight');SFX.play('boss');for(const sx of[-1,1]){const o=hvSpawn('holloboszorka','A',K.N[0]+sx*3,K.N[1]-2);o.temp=true;o.aggro=true;o.seaY=K.NY;o.home={x:HJX+K.N[0],z:K.N[1]};tempMons.push(o)}}}
+  {const _md=monsterDie;monsterDie=function(s){_md(s);if(s.kind==='korvin'){s.kph='land';s.m50=false;s.seaY=K.NY;s.frozenT=0;for(const sh of shadows)scene.remove(sh.g);shadows.length=0;for(const m of tempMons.filter(t=>t.kind==='holloboszorka'&&t.seaY))m.depleted=true,m.mesh.visible=false;stats.korvinKill=(stats.korvinKill||0)+1}}}
+  // --- a kötéllétra a fészekhez ---
+  const ladder=(x,z,name,act,yLift=0)=>{const g=new THREE.Group();const hit=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.6,1.4),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=1.3;g.add(hit);g.position.set(HJX+x,yLift||height(HJX+x,z),z);scene.add(g);const o={mesh:g,type:'kact',name,action:name==='Kötéllétra'?'Felmászok':'Lemászok',hit,wp:{x:HJX+x,z},act};interactables.push(o);return o};
+  ladder(K.L0[0],K.L0[1],'Kötéllétra',()=>{if(lvlFor(xp.ag)<55){chat('A kötéllétra himbálózik a szélben. Ehhez 55-ös Ügyesség kell.');return}chat('Felmászol a kötéllétrán a hollók fészkéhez...','xp');addXp('ag',30,player.position);px=HJX+K.top[0];pz=K.top[1]-1;placeAt(player,px,pz);player.position.y=K.NY;target=null;route=[];if(!stats.korvinSeen){stats.korvinSeen=1;chat('A fészekben arany csillog. A legmagasabb ágon egy koronás holló ül, és figyel.','fight')}},0);
+  ladder(K.top[0],K.top[1],'Létra lefelé',()=>{if(floorAt(px,pz)===null){chat('A létra teteje fent van a fészeknél.');return}px=HJX+K.L0[0];pz=K.L0[1]+1.2;placeAt(player,px,pz);target=null;route=[];chat('Lemászol a kötéllétrán.')},K.NY);
+  // --- holdfarkasok: csak éjjel, a többi szörny különlegességei ---
+  let cT=0;const council=[];{for(const [x,y,z] of HREGT.council.tips){const r=HFM.raven(1.25);r.position.set(HJX+x,y+0.2,z);r.rotation.y=Math.random()*6;scene.add(r);council.push({r,ph:Math.random()*6})}}
+  function step(dt){if(zoneOf(px)!==14)return;tickShadows(dt);korvinTick(dt);const tm=performance.now()/1000;
+    for(const c of council){if(Math.hypot(c.r.position.x-px,c.r.position.z-pz)>80)continue;c.ph+=dt;const k=Math.sin(c.ph*1.3);c.r.rotation.x=k>0.92?0.5:0;for(const [w,sd] of c.r.userData.wings)w.rotation.z=sd*(k>0.97?Math.sin(tm*30)*0.6:0.05)}
+    for(const s of L){if(s.depleted||s===korvin)continue;const m=s.mesh,d=Math.hypot(m.position.x-px,m.position.z-pz);if(d>150)continue;
+      if(s.night){const isNight=night>0.45;if(!isNight&&!s.aggro){if(m.visible){m.visible=false;s.d.aggroD0=s.d.aggroD0||s.d.aggroD;s.d.aggroD=0;s.d.aggroN=0}continue}if(isNight&&!m.visible){m.visible=true;s.d.aggroD=s.d.aggroD0||10;s.d.aggroN=12}}
+      if(m.userData.birds){s.flyH=0.4;for(const b of m.userData.birds){b.a+=dt*b.sp;b.r.position.x=Math.cos(b.a)*b.rad;b.r.position.z=Math.sin(b.a)*b.rad;b.r.position.y=b.h+Math.sin(tm*3+b.a)*0.25;b.r.rotation.y=-b.a;for(const [w,sd] of b.r.userData.wings)w.rotation.z=sd*Math.sin(tm*22+b.a*3)*0.7}}
+      if(s.d.charge&&s.aggro&&!dead){s.ct=(s.ct==null?5:s.ct)-dt;if(s.chg){s.chg-=dt;const ax=px-m.position.x,az=pz-m.position.z,l=Math.hypot(ax,az)||1;m.position.x+=ax/l*16*dt;m.position.z+=az/l*16*dt;m.rotation.y=Math.atan2(ax,az);if(l<1.6||s.chg<=0){s.chg=0;if(l<1.8){if(target||route.length){floatText('félreugrasz!',player.position,'#a0ffa0',-20)}else hurt(Math.ceil(s.d.maxHit*1.5),`${s.name} nekiront, és feldönt! (Mozogj, amikor nekifut.)`)}}}
+        else if(s.ct<=0&&d>3.5&&d<13){s.ct=7;s.chg=1.2;chat(`${s.name} lehajtja a fejét, és nekiront!`,'fight');SFX.play('troll')}}
+      if(s.d.curse&&s.aggro&&!dead&&d<11){s.cu=(s.cu==null?4:s.cu)-dt;if(s.cu<=0){s.cu=9;prp=Math.max(0,prp-6);renderPrayers();floatText('☠ átok',player.position,'#a0ff60',-30);hurt(3+Math.floor(Math.random()*4),`${s.name} átkot szór rád: elszívja az imapontjaidat.`,'#a0ff60')}if(m.userData.orb)m.userData.orb.scale.setScalar(1+Math.sin(tm*6)*0.25)}}}
+  // --- Druida Rozina a tanácsfa mellett ---
+  {const [cx,cz]=HREGT.council.C;const o=npc(HJX+cx+3.5,cz+5.5,'Druida Rozina',[],{skin:0xe0c8a8,hair:0xc8c8c0,shirt:0x3a5a3a,sleeves:0x2a3a2a,pants:0x2a3a2a,boots:0x2a1a0a,hairStyle:'long'},'hfrozina');hjSlim(o.mesh);HREGT.rozina=o}
+  DIALOG.hfrozina=o=>{const S=say(o.name);S('Üdv Hollótanyán. Rozina vagyok, a Hollótanács szolgája. A hét holló a tanácsfán ül, és mindent lát, ami az erdőben történik.',[{t:'Mit tudsz Korvinról?',f:()=>S('Korvin egykor a tanács legöregebb hollója volt. Ma már nem a miénk: a Fogyatkozók megvették a hűségét. A legmagasabb fenyőn fészkel, keletre innen. Aki kötéllétrán felmászik hozzá, annak ügyesnek kell lennie, és erősnek.')},{t:'Milyen veszélyek vannak az erdőben?',f:()=>S('Hollórajok, tüskés vaddisznók, a fakéregőrök, akik csak a tűztől félnek. Éjjel a holdfarkasok vadásznak falkában, nappal nem látod őket. Nyugaton, a mélyerdőben a hollóboszorkák kunyhója áll. Kerüld el.')},{t:'Viszontlátásra.'}])};
+  return {step,L,get korvin(){return korvin},shadows}})();
 
 // zóna-csoportok: csak az aktuális sziget objektumai és fényei láthatók (a többi 600 egységre van, a ködön túl)
 const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THREE.Group();g.name='zone'+i;zoneGroups.push(g);scene.add(g)}
