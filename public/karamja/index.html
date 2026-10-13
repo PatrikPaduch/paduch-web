@@ -6796,10 +6796,15 @@ const AK={C:HP.ak,R:88,gates:[],bridges:[],land:[]};
   // koncentrikus utcagyűrűk a tér körül; a házak a tér felé néznek. A csatornától nyugatra az óváros okker favázas házai (B),
   // keleten és északon a fehér stukkó negyed (A), a belső gyűrűn a köves, árkádos polgárházak (C)
   const avenue=(x,z)=>AK.gates.some(g=>{const L=Math.hypot(g[0]-8,g[1]);const t=clamp(((x-8)*(g[0]-8)+z*g[1])/(L*L),0,1);return Math.hypot(x-8-(g[0]-8)*t,z-g[1]*t)<6.5});
+  const aveD=(x,z)=>Math.min(...AK.gates.map(g=>{const L=Math.hypot(g[0]-8,g[1]);const t=clamp(((x-8)*(g[0]-8)+z*g[1])/(L*L),0,1);return Math.hypot(x-8-(g[0]-8)*t,z-g[1]*t)}));
+  // a csatorna középvonala z szerint (városi koordinátában); ettől nyugatra az óváros saját sikátorhálót kap
+  const CANX={};for(let z=-92;z<=92;z+=2){let b=0,br=1e9;for(let x=-90;x<=60;x+=0.5){const r=riv(x,z);if(r<br){br=r;b=x}}CANX[z]=b}
+  const canX=z=>{const z0=clamp(Math.floor(z/2)*2,-92,90),t=(z-z0)/2;return CANX[z0]+(CANX[z0+2]-CANX[z0])*t};
+  const OLD=(x,z)=>x<canX(z)-4;
   // az óvárosi kocsma (Az Arany Kupa) és a kikötői raktár a csatorna mellett: az első szabad hely a nyugati parton
   {let done=0;for(let a=2.0;a<4.4&&done<1;a+=0.05)for(const r of[60,46,74]){const x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>45)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',sign:0xa83a1a});AK.land.push([x,z,8]);AK.tavern=[x,z];done=1;break}}
   {let done=0;for(let a=0.3;a<2.8&&done<1;a+=0.05)for(const r of[60,46,74]){if(done)break;const x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>60)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',bars:true,sign:0x6a5a3a});AK.land.push([x,z,8]);AK.depot=[x,z];done=1}}
-  for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step);for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34)continue;
+  for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step);for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34||OLD(x,z))continue;
     const west=riv(x,z)<60&&x<-8,st=r===46?'varrock':west?'varrock':'aldarin';H(x,z,Math.atan2(8-x,-z),st,r===46?{bars:true}:undefined)}}
   // a megmaradt foghíjas telkekre: kút, piaci standok, szekér hordókkal, virágos kiskert padokkal
   {let k=0;const stall=(x,z,ry)=>{const g=new THREE.Group();const c=[0xc83a3a,0x2a6ab0,0xd8a030,0x3a8a4a][k%4];for(const sx of[-1,1])for(const sz of[-1,1])B(g,0.15,2.6,0.15,0x6a4a2a,sx*1.5,1.3,sz*1);
@@ -6807,16 +6812,44 @@ const AK={C:HP.ak,R:88,gates:[],bridges:[],land:[]};
       for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5),S([0xc83a2a,0xe8c040,0x8ac040,0xe87a20][(i+k)%4]));m.position.set(-1.1+i*0.55,1.02,0.3);g.add(m)}B(g,0.7,0.4,0.6,0x8a6a3a,-0.8,1.1,-0.3);B(g,0.7,0.4,0.6,0x8a6a3a,0.6,1.1,-0.3);return g};
     const garden=(x,z,ry)=>{const g=new THREE.Group();B(g,5,0.35,3.6,stone(0xb8b0a0),0,0.17,0);B(g,4.4,0.2,3,0x4a7a2a,0,0.4,0);for(let i=0;i<12;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.18,5,4),S([0xe84a6a,0xf0d040,0xf0f0f0,0xa060d0][i%4]));m.position.set(-1.9+(i%6)*0.76,0.6,i<6?-1.1:1.1);g.add(m)}
       const t=TREEV.get('tolgy',HJX+CX+x,CZ+z);t.g.scale.setScalar(0.45);g.add(t.g);for(const s of[-1,1]){B(g,1.8,0.12,0.5,0x7a5434,0,0.5,s*2.4);B(g,1.8,0.5,0.1,0x7a5434,0,0.8,s*2.62)}return g};
-    for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step)*2;for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34||!ok(x,z))continue;
+    for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step)*2;for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34||OLD(x,z)||!ok(x,z))continue;
       const ry=Math.atan2(8-x,-z),t=k%4;let g;if(t===1){HVB.well(CX+x,CZ+z);AK.land.push([x,z,2.5]);colAdd(HJX+CX+x,CZ+z,1.3,1.3,0,'aranykapu');k++;continue}
       else if(t===2){g=HVB.cart(CX+x,CZ+z,ry+1.2,'barrel');colFromGroup(g,'aranykapu');AK.land.push([x,z,2.5]);k++;continue}
       g=t===0?stall(x,z,ry):garden(x,z,ry);g.position.set(x,0,z);g.rotation.y=ry;g.position.set(0,0,0);place(g,x,z,ry,1);AK.land[AK.land.length-1][2]=2.5;k++}}}
   // fasor a sugárutak mentén és padok
-  {const g=new THREE.Group();for(const gt of AK.gates){for(let k=0.3;k<0.85;k+=0.12){const x=8+(gt[0]-8)*k,z=gt[1]*k,nx=-gt[1],nz=gt[0]-8,l=Math.hypot(nx,nz);for(const s of[-1,1]){const tx=x+nx/l*s*5.2,tz=z+nz/l*s*5.2;if(riv(tx,tz)<12)continue;const t=TREEV.get('tolgy',HJX+CX+tx,CZ+tz);t.g.scale.setScalar(0.5);t.g.position.set(tx,0,tz);g.add(t.g);B(g,1.6,0.5,1.6,stone(0xc8c0b0),tx,0.25,tz)}}}
+  {const g=new THREE.Group();for(const gt of AK.gates){for(let k=0.3;k<0.85;k+=0.12){const x=8+(gt[0]-8)*k,z=gt[1]*k,nx=-gt[1],nz=gt[0]-8,l=Math.hypot(nx,nz);for(const s of[-1,1]){const tx=x+nx/l*s*5.2,tz=z+nz/l*s*5.2;if(riv(tx,tz)<12||OLD(tx,tz))continue;const t=TREEV.get('tolgy',HJX+CX+tx,CZ+tz);t.g.scale.setScalar(0.5);t.g.position.set(tx,0,tz);g.add(t.g);B(g,1.6,0.5,1.6,stone(0xc8c0b0),tx,0.25,tz)}}}
     for(const m of g.children)m.position.y=height(HJX+CX+m.position.x,CZ+m.position.z)-height(HJX+CX,CZ)+m.position.y;place(g,0,0,0,1,false)}
   // nyomornegyed a délnyugati kapu mellett: összetákolt kunyhók
   {const g=new THREE.Group();for(let i=0;i<6;i++){const k=new THREE.Group();const c=[0x7a6a52,0x6a5a44,0x8a7a5a][i%3];B(k,3,2.2,2.6,planks(c),0,1.1,0);const r=B(k,3.6,0.12,3.2,0x5a5048,0,2.4,0);r.rotation.z=0.25;B(k,0.8,1.5,0.1,0x2a1a10,0.4,0.75,1.32);k.position.set((i%3)*4.6,0,Math.floor(i/3)*4.8);k.rotation.y=(i*0.37)%0.6;g.add(k)}
     const sa=AK.gates.find(gg=>gg[2]>2.3&&gg[2]<2.6)||[-62,52];place(g,sa[0]*0.72+6,sa[1]*0.72-4,0.4,1)}
+  // ---------- az óváros: sűrű, szabálytalan házcsoportok a csatornától nyugatra ----------
+  // Mohó elhelyezés finom rácson, négy irányban. Egy 1 egységes foglaltsági rácson minden új háznál újraszámoljuk,
+  // hogy a főutakról (a kapukhoz futó sugárutakról) minden eddigi ajtó és az új ajtó is elérhető marad-e.
+  {const X0=-94,Z0=-94,GW=110,GH=189,G=new Uint8Array(GW*GH),gi=(x,z)=>{const i=Math.floor(x-X0),j=Math.floor(z-Z0);return i<0||j<0||i>=GW||j>=GH?-1:i+j*GW};
+    const onBridge=(x,z)=>AK.bridges.some(b=>{const sx=Math.sin(b[2]),cz=Math.cos(b[2]),dx=x-b[0],dz=z-b[1],a=dx*sx+dz*cz,p=-dx*cz+dz*sx;return Math.abs(a)<b[3]/2+2&&Math.abs(p)<2.3});
+    const lands=AK.land.filter(p=>!p.br&&!(p[0]===0&&p[1]===0));
+    for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){const x=X0+i+0.5,z=Z0+j+0.5;let b=Math.hypot(x,z)>R-3.5;if(!b&&riv(x,z)<9&&!onBridge(x,z))b=true;if(!b&&lands.some(p=>Math.hypot(p[0]-x,p[1]-z)<p[2]*(p[2]===2.5?1.1:0.8)))b=true;G[i+j*GW]=b?1:0}
+    const seeds=[];for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){const x=X0+i+0.5,z=Z0+j+0.5;if(!G[i+j*GW]&&(aveD(x,z)<2.5||x>canX(z)+12))seeds.push(i+j*GW)}
+    const Q=new Int32Array(GW*GH),V=new Uint8Array(GW*GH);const flood=()=>{V.fill(0);let h=0,t=0;for(const s0 of seeds)if(!G[s0]){V[s0]=1;Q[t++]=s0}while(h<t){const c=Q[h++],i=c%GW;for(const n of[c-1,c+1,c-GW,c+GW]){if(n<0||n>=GW*GH||V[n]||G[n])continue;if((n===c-1&&i===0)||(n===c+1&&i===GW-1))continue;V[n]=1;Q[t++]=n}}};
+    const doors=[],INF=1.2;let HW=3.25,HD=2.75;
+    const rect=(x,z,ry,inf,f)=>{const c=Math.cos(ry),sn=Math.sin(ry),ex=HW+inf,ez=HD+inf;for(let lx=-ex;lx<=ex+0.01;lx+=0.7)for(let lz=-ez;lz<=ez+0.01;lz+=0.7){const k=gi(x+lx*c+lz*sn,z-lx*sn+lz*c);if(f(k)===false)return false}return true};
+    const no=()=>false;const fits=(x,z,ry)=>{const c=Math.cos(ry),sn=Math.sin(ry);for(const sx of[-1,0,1])for(const sz of[-1,0,1]){const wx=x+sx*HW*c+sz*HD*sn,wz=z-sx*HW*sn+sz*HD*c;if(!OLD(wx,wz))return no('old');if(riv(wx,wz)<10.5)return no('riv');if(Math.hypot(wx,wz)>R-5.5)return no('R');if(aveD(wx,wz)<5.6)return no('ave');if(hjRoadDist(CX+wx,CZ+wz)<4)return no('road')}
+      return rect(x,z,ry,INF,k=>k>=0&&!G[k])||no('grid')};
+    let n=0;const signs=[0xa83a1a,0x3a6a2a,0x2a4a8a,0x8a6a1a],placed=[];
+    for(const [hw,hd,st] of[[3.25,2.75,1.5],[2.6,2.3,1]]){HW=hw;HD=hd;
+    for(let z=-86;z<=86;z+=st)for(let x=-88;x<=40;x+=st){if(!OLD(x,z))continue;
+      for(let o=0;o<4;o++){const ry=((n+o+Math.round(z))%4)*Math.PI/2+(((x*7+z*3)|0)%5-2)*0.02;if(!fits(x,z,ry))continue;
+        const df=gi(x+Math.sin(ry)*(HD+1.6),z+Math.cos(ry)*(HD+1.6));if(df<0||G[df]){no('dfront');continue}
+        const mark=[];rect(x,z,ry,0.9,k=>{if(k>=0&&!G[k]){G[k]=1;mark.push(k)}});flood();
+        if(!V[df]||doors.some(d=>!V[d])){no(V[df]?'cut':'unreach');for(const k of mark)G[k]=0;continue}
+        doors.push(df);placed.push([x,z,ry,HW*2,HD*2]);AK.land.push([x,z,2.5]);n++;break}}}
+    placed.forEach(([x,z,ry,w,d],k)=>{house(HJX+CX+x,CZ+z,w,d,ry,Object.assign({style:'varrock'},k%9===4?{sign:signs[k%4]}:{}))});
+    // hordók és ládák a házfalak mellett, csak ha egyetlen ajtót sem vágnak el
+    {const g=new THREE.Group();let k=0;placed.forEach(([x,z,ry,w,d],pi)=>{if(pi%5===2||pi%5===4)return;const c=Math.cos(ry),sn=Math.sin(ry),side=pi%2?1:-1,lx=side*(w/2+1.3),lz=-d/2+0.9;const wx=x+lx*c+lz*sn,wz=z-lx*sn+lz*c;
+      const cells=[];for(let a=-0.4;a<=0.4;a+=0.4)for(let b2=-0.4;b2<=0.4;b2+=0.4){const q=gi(wx+a,wz+b2);if(q<0||G[q])return;if(!cells.includes(q))cells.push(q)}for(const q of cells)G[q]=1;flood();if(doors.some(dd=>!V[dd])){for(const q of cells)G[q]=0;return}
+      const h=height(HJX+CX+wx,CZ+wz)-height(HJX+CX,CZ);if(k%2===0){for(const [ox,oz] of[[0,0],[0.75,0.3]]){const br=Cy(g,0.36,0.4,0.95,planks(0x7a4a24),wx+ox,h+0.47,wz+oz,9)}}else{B(g,0.9,0.8,0.9,planks(0x8a6a3a),wx,h+0.4,wz);B(g,0.6,0.55,0.6,planks(0x7a5a2a),wx+0.1,h+1.07,wz,0.4)}k++});
+      place(g,0,0,0,1,true,height(HJX+CX,CZ));const lp=AK.land[AK.land.length-1];if(lp&&lp[0]===0&&lp[1]===0)AK.land.pop();AK.oldProps=k}
+    AK.oldTown=n}
   // utcai lámpások, virágládák a tér körül
   {const g=new THREE.Group();for(let i=0;i<12;i++){const a=i/12*6.283;lampP(g,14+Math.cos(a)*29,Math.sin(a)*29,3.2,0)}place(g,0,0,0,1,false)}
 })();
@@ -7570,6 +7603,8 @@ const AKL=(()=>{const [CX,CZ]=AK.C,R=Math.random,pick=a=>a[(R()*a.length)|0],W=(
   for(const row of idx)for(let i=0;i<row.length;i++)link(row[i],row[(i+1)%row.length]);
   const near=(x,z,row)=>{let b=-1,bd=1e9;for(const k of row){if(k<0)continue;const d=Math.hypot(N[k][0]-x,N[k][1]-z);if(d<bd){bd=d;b=k}}return b};
   for(let ri=0;ri<idx.length-1;ri++)for(const k of idx[ri]){if(k<0)continue;link(k,near(N[k][0],N[k][1],idx[ri+1]))}
+  // a sugárutak mentén is járnak (így az óváros főutcáján is)
+  for(const [gx,gz] of AK.gates){let prev=-1;for(let t=0.12;t<0.93;t+=0.09){const x=8+(gx-8)*t,z=gz*t;if(!okP(x,z)){prev=-1;continue}N.push([x,z]);E.push([]);const id=N.length-1;if(prev>=0)link(prev,id);for(const row of idx){const k=near(x,z,row);if(k>=0&&Math.hypot(N[k][0]-x,N[k][1]-z)<7)link(id,k)}prev=id}}
   // a hidak két végét is összekötjük a legközelebbi csomópontokkal
   for(const [x,z,ry,L] of AK.bridges){const ends=[1,-1].map(e=>[x+Math.sin(ry)*e*(L/2+2),z+Math.cos(ry)*e*(L/2+2)]);const ids=ends.map(([ex,ez])=>{N.push([ex,ez]);E.push([]);return N.length-1});link(ids[0],ids[1]);for(const id of ids){const all=[...N.keys()].filter(k=>k!==ids[0]&&k!==ids[1]).sort((a,b)=>Math.hypot(N[a][0]-N[id][0],N[a][1]-N[id][1])-Math.hypot(N[b][0]-N[id][0],N[b][1]-N[id][1]));for(const k of all.slice(0,3))link(id,k)}}
   const live=[...N.keys()].filter(k=>E[k].length>0);
