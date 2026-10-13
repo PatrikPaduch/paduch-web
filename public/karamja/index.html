@@ -472,7 +472,7 @@ function hjRaw(x,z){const t=hjT(z);if(t<-0.02||t>1.02)return -6;const e=hjEdge(t
   // Napfolyó és a hidak
   const rv=hjRiv(x,z);if(rv<20&&t>0.15){if(hjMainRoadDist(x,z)<4.5)h=clamp(h,1.4,1.8);else{h=lerp(h,Math.min(h,2.2),smooth(clamp((20-rv)/9,0,1)));if(rv<8)h=lerp(h,-1.2,smooth(clamp((8-rv)/3,0,1)))}}
   // fennsíkok: Hajnalrév, a leendő Aranykapu
-  const fl=(c,r,f,hh)=>{const d=Math.hypot(x-c[0],z-c[1]);if(d<r)h=lerp(h,hh,smooth(Math.min(1,(r-d)/f)))};fl(HP.port,46,18,2.6);fl(HT.hoveg,34,12,3.2);fl(HP.hollo,38,14,3.6);fl(HP.gyok,26,10,1.7);fl(HP.hamu,46,18,15);fl([HP.port[0]+44,HP.port[1]],40,16,2.65);fl(HP.ak,95,30,4.2);
+  const fl=(c,r,f,hh)=>{const d=Math.hypot(x-c[0],z-c[1]);if(d<r)h=lerp(h,hh,smooth(Math.min(1,(r-d)/f)))};fl(HP.port,46,18,2.6);fl(HT.hoveg,34,12,3.2);fl(HP.hollo,38,14,3.6);fl(HP.gyok,26,10,1.7);fl(HP.hamu,46,18,15);fl([HP.port[0]+44,HP.port[1]],40,16,2.65);fl(HP.ak,95,30,4.2);{const dk=Math.hypot(x-HP.ak[0],z-HP.ak[1]);if(dk<104){const r2=hjRiv(x,z);if(r2<10.5){const k=smooth(clamp((104-dk)/10,0,1));h=lerp(h,r2<8.5?-1.2:lerp(-1.2,4.2,(r2-8.5)/2),k)}}}
   h=Math.min(h,coast);if(t>0.86){const hv=hjVolcH(x,z);if(hv>-50)h=Math.max(h,Math.min(hv,dc*0.45-0.7))}
   {const qx=HP.port[0]-44,qz=Math.abs(z-HP.port[1]);if(qz<46&&x>qx-40&&x<qx+75){const k=smooth(clamp((46-qz)/8,0,1))*smooth(clamp((qx+75-x)/14,0,1));h=x>qx?lerp(h,Math.max(h,lerp(1.35,2.6,smooth(clamp((x-qx)/26,0,1)))),k):lerp(h,Math.min(h,-2.2),k*smooth(clamp((x-qx+40)/10,0,1)))}}
   return Math.max(h,-6)}
@@ -6721,6 +6721,104 @@ const HREGT={};
     {const [x,z]=U(0.965,0.4);const g=G();const nest=new THREE.Mesh(new THREE.TorusGeometry(2.4,0.9,6,14),S(0x4a3a2a));nest.rotation.x=Math.PI/2;nest.position.y=0.6;g.add(nest);for(let i=0;i<3;i++){const e=new THREE.Mesh(new THREE.SphereGeometry(0.75,10,8),S([0xa82a1a,0xd8a030,0x2a5a3a][i]));e.scale.y=1.3;e.position.set(-0.8+i*0.8,1.2,(i%2)*0.5-0.2);g.add(e)}for(let i=0;i<8;i++){const b=box(g,0.2,0.2,1.8,0xe8e0cc,Math.cos(i)*3.5,0.2,Math.sin(i)*3.5);b.rotation.y=i}put(g,x,z,0);HREGT.nest=[x,z]}}
 })();
 
+// ================= ARANYKAPU, a főváros (v74): fal, kapuk, csatorna hét híddal, negyedek, Nagyvásár, óratorony, palota, pénzverde, céhházak =================
+const AK={C:HP.ak,R:88,gates:[],bridges:[],land:[]};
+(function aranykapu(){const [CX,CZ]=AK.C,{F,stone,brick,tiles,planks,glow}=SX2,S=c=>HMAT(c);const GOLD=0xd8b040,GOLD2=0xe8c860;
+  const B=(g,w,h,d,m,x,y,z,ry=0)=>{const o=SX2.B(g,w,h,d,m,x,y,z);o.rotation.y=ry;return o};const Cy=(g,r0,r1,h,m,x,y,z,s=12)=>SX2.Cy(g,r0,r1,h,m,x,y,z,s);const seg=(g,a,b,r,c,s=5)=>SX2.seg(g,a,b,r,c,s);
+  const cone=(g,r,h,m,x,y,z,s=12,ry=0)=>{const o=new THREE.Mesh(new THREE.ConeGeometry(r,h,s),typeof m==='number'?F(m):m);o.position.set(x,y,z);o.rotation.y=ry;g.add(o);return o};
+  const sph=(g,r,m,x,y,z,part=1)=>{const o=new THREE.Mesh(new THREE.SphereGeometry(r,16,10,0,6.283,0,Math.PI/2*part),typeof m==='number'?F(m):m);o.position.set(x,y,z);g.add(o);return o};
+  const gable=(g,w,d,h,m,x,y,z,ry=0,over=0.3)=>{const k=new THREE.Group();k.position.set(x,y,z);k.rotation.y=ry;g.add(k);const a=Math.atan2(h,w/2),L=(w/2+over)/Math.cos(a);for(const s of[-1,1]){const r=B(k,L,0.18,d+over*2,m,s*(w/2+over)/2,h-Math.tan(a)*(w/2+over)/2,0);r.rotation.z=-s*a}return k};
+  const gableWall=(g,w,h,m,x,y,z,ry=0)=>{const sh=new THREE.Shape();sh.moveTo(-w/2,0);sh.lineTo(w/2,0);sh.lineTo(0,h);sh.closePath();const o=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.2,bevelEnabled:false}),typeof m==='number'?F(m):m);o.position.set(x,y,z);o.rotation.y=ry;g.add(o);return o};
+  const arch=(g,r,t,m,x,y,z,ry=0)=>{const o=new THREE.Mesh(new THREE.TorusGeometry(r,t,5,14,Math.PI),typeof m==='number'?F(m):m);o.position.set(x,y,z);o.rotation.y=ry;g.add(o);return o};
+  const merlons=(g,x0,z0,x1,z1,y,m,step=1.0,sz=0.5)=>{const L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.round(L/step));for(let i=0;i<=n;i+=1){if(i%2)continue;const t=i/n;B(g,sz,sz*0.9,sz,m,x0+(x1-x0)*t,y+sz*0.45,z0+(z1-z0)*t)}};
+  const banner=(g,c,x,y,z,h=1.6,w=0.7,emb=GOLD)=>{B(g,w,h,0.05,c,x,y,z);B(g,w*0.5,w*0.5,0.06,emb,x,y+h*0.15,z+0.01);const tp=new THREE.Mesh(new THREE.ConeGeometry(w/2,w*0.5,3),F(c));tp.rotation.set(Math.PI/2,0,Math.PI);tp.position.set(x,y-h/2-w*0.12,z);g.add(tp)};
+  const lampP=(g,x,z,h=2.4,y0=0)=>{Cy(g,0.06,0.08,h,0x2a2a2e,x,y0+h/2,z,6);B(g,0.32,0.4,0.32,glow(0xffd890),x,y0+h+0.15,z);cone(g,0.28,0.3,0x2a2a2e,x,y0+h+0.5,z,4,Math.PI/4)};
+  const win=(g,x,y,z,w=0.5,h=0.8,frame=0xe8dcc0,ry=0,archT=false)=>{B(g,w,h,0.06,0x23324a,x,y,z,ry);B(g,w+0.14,0.08,0.1,frame,x,y-h/2-0.04,z,ry);if(archT){const a=new THREE.Mesh(new THREE.CircleGeometry(w/2,10,0,Math.PI),F(0x23324a));a.position.set(x,y+h/2,z+0.031);a.rotation.y=ry;g.add(a)}};
+  // a csoportot a helyére tesszük (a zóna és a darab a helye szerint dől el), ütközőt regisztrálunk, majd összevonjuk az anyagok szerint
+  const place=(g,lx,lz,ry=0,sc=1,col=true,y0=null)=>{g.scale.setScalar(sc);g.rotation.y=ry;const wx=HJX+CX+lx,wz=CZ+lz;g.position.set(wx,y0==null?height(wx,wz):y0,wz);g.updateMatrixWorld(true);if(col)colFromGroup(g,'aranykapu');const bb=new THREE.Box3().setFromObject(g);const rad=Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z)/2;shadowed(g);mergeStatic(g);scene.add(g);if(rad<60)AK.land.push([lx,lz,rad]);return g};
+  const R=AK.R,riv=(lx,lz)=>hjRiv(CX+lx,CZ+lz);
+  // ---------- 1. a városfal: fehér mészkő, pártázat, kerek tornyok kék kúpsisakkal; kapuk a három út és kelet felé ----------
+  const roadAng=HROADS.map((r,ri)=>{let best=null;for(let i=0;i<r.length-1;i++){const [ax,az]=r[i],[bx,bz]=r[i+1],L=Math.hypot(bx-ax,bz-az);for(let k=0;k<=L;k+=0.5){const x=ax+(bx-ax)*k/L,z=az+(bz-az)*k/L,d=Math.hypot(x-CX,z-CZ);if(Math.abs(d-R)<0.6){best=Math.atan2(z-CZ,x-CX)}}}return best}).filter(a=>a!=null);
+  const gateA=[...roadAng,0];const rivA=[];for(let a=0;a<6.283;a+=0.01){const x=Math.cos(a)*R,z=Math.sin(a)*R;if(riv(x,z)<1.2&&!rivA.some(b=>Math.abs(b-a)<0.2))rivA.push(a)}
+  const angD=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
+  {const quarters=[[],[],[],[]];const W=stone(0xece6d8),W2=stone(0xd8d0c0);const step=6.5/R;
+    for(let a=0;a<6.283;a+=step){const am=a+step/2;if(gateA.some(g=>angD(g,am)<0.17)||rivA.some(r=>angD(r,am)<0.1))continue;const q=Math.floor(((am+6.283)%6.283)/1.5708);const x=Math.cos(am)*R,z=Math.sin(am)*R,ry=-am+Math.PI/2;
+      quarters[q].push([x,z,ry]);colAdd(HJX+CX+x,CZ+z,3.3,3.3,0,'aranykapu-fal')}
+    quarters.forEach((list,qi)=>{if(!list.length)return;const am=qi*1.5708+0.785,ox=Math.cos(am)*R,oz=Math.sin(am)*R;const g=new THREE.Group();
+      for(const [x,z,ry] of list){const k=new THREE.Group();k.position.set(x-ox,height(HJX+CX+x,CZ+z)-0.4,z-oz);k.rotation.y=ry;g.add(k);B(k,6.8,7.4,2.4,W,0,3.7,0);for(let i=-3;i<=3;i+=2)B(k,0.6,0.6,2.5,W2,i*0.95,7.7,0);B(k,6.9,0.3,2.6,W2,0,7.2,0)}
+      for(let a=qi*1.5708;a<(qi+1)*1.5708;a+=0.5236){if(gateA.some(g=>angD(g,a)<0.25)||rivA.some(r=>angD(r,a)<0.18))continue;const x=Math.cos(a)*R,z=Math.sin(a)*R,k=new THREE.Group();k.position.set(x-ox,height(HJX+CX+x,CZ+z)-0.4,z-oz);g.add(k);
+        Cy(k,3.0,3.3,11.5,W,0,5.75,0,16);Cy(k,3.4,3.1,0.6,W2,0,11.6,0,16);cone(k,3.5,4.4,0x3a6ab0,0,14.1,0,16);cone(k,0.2,1.0,GOLD,0,16.6,0,6);for(let j=0;j<3;j++)win(k,0,3+j*2.6,3.05,0.5,0.9,0xd8d0c0,0,true);colAdd(HJX+CX+x,CZ+z,3,3,0,'aranykapu-torony')}
+      g.position.set(HJX+CX+ox,0,CZ+oz);g.updateMatrixWorld(true);shadowed(g);mergeStatic(g);scene.add(g)});
+    // kapuk: a sárga zászlós „Napkapu" arany napjelvénnyel (a tájlap A változata, 1,8-szoros méretben)
+    gateA.forEach((a,i)=>{const g=new THREE.Group();for(const s of[-1,1]){B(g,5.2,4.2,1.6,W,s*5.4,2.1,0);merlons(g,s*3,0.65,s*7.8,0.65,4.2,W2,0.62,0.45);Cy(g,1.55,1.7,6.2,W,s*2.4,3.1,0.2,16);Cy(g,1.75,1.55,0.45,W2,s*2.4,6.4,0.2,16);cone(g,1.85,2.4,0x3a6ab0,s*2.4,7.8,0.2,16);cone(g,0.12,0.6,GOLD,s*2.4,9.3,0.2,6);for(let k=0;k<3;k++)win(g,s*2.4,2.4+k*1.3,1.83,0.3,0.55,0xd8d0c0,0,true)}
+      B(g,2.9,2.2,1.7,W,0,4.9,0.2);B(g,3.1,0.25,1.9,W2,0,6.05,0.2);arch(g,1.35,0.2,W2,0,3.4,1.06);for(const s of[-1,1])B(g,0.25,3.5,0.3,0x8a6a40,s*1.3,1.75,0.75);
+      const sun=Cy(g,0.55,0.55,0.1,GOLD,0,5.1,1.08,16);sun.rotation.x=Math.PI/2;for(let k=0;k<10;k++){const r=B(g,0.08,0.45,0.06,GOLD2,Math.cos(k*0.628)*0.8,5.1+Math.sin(k*0.628)*0.8,1.08);r.rotation.z=k*0.628-Math.PI/2}for(const s of[-1,1])banner(g,0xe0b030,s*1.0,4.6,1.1,1.4,0.55,0xffffff);
+      const x=Math.cos(a)*R,z=Math.sin(a)*R;place(g,x,z,Math.atan2(Math.cos(a),Math.sin(a)),1.9,false);for(const s of[-1,1])for(const k of[4.2,6.4,8.6,10.8,13.0]){const tx=x+Math.cos(a+Math.PI/2)*s*k,tz=z+Math.sin(a+Math.PI/2)*s*k;colAdd(HJX+CX+tx,CZ+tz,1.5,1.5,0,'aranykapu-kapu')}AK.gates.push([x,z,a])})}
+  // ---------- 2. hét fehér, háromíves kőhíd a csatornán: lámpások, arany gömbök a hídfőkön ----------
+  {const cand=[];HROADS.forEach(r=>{let best=[1e9];for(let i=0;i<r.length-1;i++){const [ax,az]=r[i],[bx,bz]=r[i+1],L=Math.hypot(bx-ax,bz-az);for(let k=0;k<=L;k+=0.5){const x=ax+(bx-ax)*k/L,z=az+(bz-az)*k/L;if(Math.hypot(x-CX,z-CZ)>R-6)continue;const d=hjRiv(x,z);if(d<best[0])best=[d,x-CX,z-CZ,Math.atan2(bx-ax,bz-az)]}}if(best[0]<2&&!cand.some(c=>Math.hypot(c[0]-best[1],c[1]-best[2])<22))cand.push([best[1],best[2],best[3],26])});
+    const g0=(x,z)=>{const e=2;const gx=(riv(x+e,z)-riv(x-e,z))/(2*e),gz=(riv(x,z+e)-riv(x,z-e))/(2*e);return Math.atan2(gx,gz)};
+    for(let lz=-80;lz<=80&&cand.length<7;lz+=2){let bx=null,bd=1e9;for(let lx=-70;lx<=40;lx+=0.5){const d=riv(lx,lz);if(d<bd){bd=d;bx=lx}}if(bd>1.5||Math.hypot(bx,lz)>R-14)continue;if(cand.some(c=>Math.hypot(c[0]-bx,c[1]-lz)<20))continue;cand.push([bx,lz,g0(bx+3,lz+3),22])}
+    const W=stone(0xece6d8),W2=stone(0xd8d0c0);
+    for(const [x,z,ry,L] of cand.slice(0,7)){const g=new THREE.Group(),Wd=3.2,Ls=L/1.8;B(g,Wd,0.5,Ls,W,0,2.6,0);for(const t of[-1,0,1])arch(g,Ls/6-0.2,0.35,W,0,0.5,t*Ls/3,Math.PI/2);for(const t of[-1.5,-0.5,0.5,1.5])B(g,Wd,2.6,0.8,W,0,1.3,t*Ls/3);
+      for(const s of[-1,1]){B(g,0.2,0.7,Ls,W2,s*1.5,3.2,0);for(let k=0;k<Ls;k++)Cy(g,0.07,0.07,0.55,W2,s*1.5,3.1,-Ls/2+0.5+k,6);for(const t of[-1,0,1])lampP(g,s*1.5,t*Ls/3,1.4,2.85)}for(const t of[-1,1])for(const s of[-1,1]){B(g,0.6,1.0,0.6,W2,s*1.6,3.3,t*(Ls/2-0.3));sph(g,0.3,GOLD,s*1.6,3.8,t*(Ls/2-0.3),2)}
+      const gg=place(g,x,z,ry,1.8,false,-0.9);gg.userData.noOcc=true;const wx=HJX+CX+x,wz=CZ+z;FLOORS.push({x:wx,z:wz,hw:2.5,hd:L/2+1,c:Math.cos(ry),s:Math.sin(ry),y0:4.55,y1:4.55});AK.bridges.push([x,z,ry,L]);AK.land[AK.land.length-1].br=1}}
+  // ---------- 3. a Nagyvásár: arany kupolás rotunda (A) és mellette a gerendás vásárcsarnok (B) ----------
+  {const g=new THREE.Group(),W=stone(0xece6d8);Cy(g,7.4,7.6,0.4,stone(0xd8d0c0),0,0.2,0,32);for(let i=0;i<16;i++){const a=i/16*6.283;if(i===4||i===12)continue;Cy(g,0.28,0.32,4.2,W,Math.cos(a)*6.4,2.5,Math.sin(a)*6.4,10);Cy(g,0.4,0.3,0.3,GOLD,Math.cos(a)*6.4,4.7,Math.sin(a)*6.4,10)}Cy(g,6.9,6.9,0.8,W,0,5.2,0,32);
+    const d=sph(g,5.6,GOLD,0,5.6,0);d.scale.y=0.65;Cy(g,0.6,0.8,1.0,GOLD2,0,9.4,0,12);const orb=new THREE.Mesh(new THREE.SphereGeometry(0.45,12,10),glow(0xfff0b0));orb.position.y=10.2;g.add(orb);
+    AK.counters=[];for(let i=0;i<8;i++){const a=i/8*6.283+0.2;const bx=Math.cos(a)*3.4,bz=Math.sin(a)*3.4;const k=B(g,2.0,1.1,0.7,0x7a5434,bx,0.95,bz);k.rotation.y=-a+Math.PI/2;const t=B(g,2.1,0.1,0.8,GOLD,bx,1.55,bz);t.rotation.y=-a+Math.PI/2;AK.counters.push(a)}Cy(g,1.0,1.2,2.4,W,0,1.6,0,16);Cy(g,1.25,1.25,0.2,GOLD,0,3.0,0,16);
+    place(g,14,0,0,1.85);AK.rotunda=[14,0];KL.add(HJX+CX+14,19,CZ,0xfff0b0,1.4,30,{on:()=>night>0.25})}
+  {const g=new THREE.Group(),P=planks(0x8a6a44),D=0x5a3a20;B(g,14,0.3,7,stone(0xb8b0a0),0,0.15,0);for(let i=0;i<8;i++)for(const s of[-1,1])Cy(g,0.18,0.2,4.0,D,-6.2+i*1.77,2.2,s*3.0,8);B(g,14,0.3,0.3,D,0,4.2,-3);B(g,14,0.3,0.3,D,0,4.2,3);gable(g,6.6,14,2.6,tiles(0x7a3a2a),0,4.3,0,Math.PI/2,0.4);gableWall(g,6.6,2.6,F(0xe8dcc0),7.0,4.3,0,Math.PI/2);
+    const ck=Cy(g,0.7,0.7,0.1,0xf0e8d8,7.2,5.3,0,16);ck.rotation.z=Math.PI/2;B(g,1.2,1.6,1.2,P,0,7.4,0);cone(g,1.0,1.4,tiles(0x7a3a2a),0,8.9,0,4,Math.PI/4);
+    for(let i=0;i<6;i++){const x=-5.4+i*2.15;B(g,1.6,0.9,0.7,0x7a5434,x,0.75,-1.6);B(g,1.6,0.9,0.7,0x7a5434,x,0.75,1.6);for(let k=0;k<3;k++){const c=[0xc84a2a,0xe8c040,0x6a9a3a,0x8a5a2a,0x3a6a9a][(i+k)%5];B(g,0.3,0.2,0.3,c,x-0.45+k*0.45,1.3,-1.6);B(g,0.3,0.2,0.3,c,x-0.45+k*0.45,1.3,1.6)}}
+    place(g,50,0,Math.PI/2,1.75);AK.hall=[50,0]}
+  // ---------- 4. az óratorony (B): téglatorony négy számlappal és zöld rézsisakkal ----------
+  {const g=new THREE.Group(),W=brick(0x9a5a3a),W2=stone(0xc8bca8);B(g,3.4,1.2,3.4,W2,0,0.6,0);B(g,2.8,10,2.8,W,0,6.2,0);for(let k=0;k<4;k++)win(g,0,2.6+k*1.8,1.42,0.4,0.9,0xc8bca8,0,true);B(g,3.4,3.0,3.4,W2,0,12.6,0);B(g,1.2,2.2,0.3,0x2a1a0e,0,1.1,1.45);
+    AK.hands=[];for(const r of[0,Math.PI/2,Math.PI,-Math.PI/2]){const c=Cy(g,1.15,1.15,0.12,0xf8f4e8,Math.sin(r)*1.72,12.6,Math.cos(r)*1.72,20);c.rotation.order='YXZ';c.rotation.set(Math.PI/2,r,0);const rg=new THREE.Mesh(new THREE.TorusGeometry(1.18,0.1,5,24),F(GOLD));rg.position.set(Math.sin(r)*1.75,12.6,Math.cos(r)*1.75);rg.rotation.y=r;g.add(rg)}
+    B(g,3.6,0.3,3.6,W2,0,14.25,0);cone(g,2.4,5.0,F(0x5a9a88),0,16.9,0,4,Math.PI/4);for(const s of[-1,1])for(const t of[-1,1])cone(g,0.3,1.4,F(0x5a9a88),s*1.6,15.0,t*1.6,4);cone(g,0.1,0.9,GOLD,0,19.7,0,6);
+    const tg=place(g,-14,-26,0.2,1.75);AK.clock=[-14,-26];const hands=new THREE.Group();hands.position.set(HJX+CX-14+Math.sin(0.2)*3.2,tg.position.y+12.6*1.75,CZ-26+Math.cos(0.2)*3.2);hands.rotation.y=0.2;const h1=new THREE.Mesh(new THREE.BoxGeometry(0.12,1.3,0.08),S(0x111111));h1.position.y=0.55;const h2=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.9,0.08),S(0x111111));h2.position.y=0.4;const p1=new THREE.Group(),p2=new THREE.Group();p1.add(h1);p2.add(h2);hands.add(p1,p2);scene.add(hands);AK.clockHands=[p1,p2]}
+  // ---------- 5. a palota a tér északi oldalán: oszlopsoros homlokzat, középtorony arany napkoronggal, két saroktorony ----------
+  {const g=new THREE.Group(),L=stone(0xe0d6c0),L2=stone(0xcfc3a8);B(g,28,9,12,L,0,4.5,0);B(g,28.4,0.5,12.4,L2,0,9.2,0);gable(g,28,12,3.4,tiles(0x3a4a6a),0,9.4,0,Math.PI/2,0.4);for(let i=0;i<10;i++){Cy(g,0.35,0.4,6,L2,-12.6+i*2.8,3,6.6,10);win(g,-12.6+i*2.8+1.4,6.4,6.05,0.7,1.4,0xd0c4aa,0,true)}B(g,28,0.5,2,L2,0,6.25,6.6);
+    for(let k=0;k<5;k++)B(g,10-k*0.3,0.3,1.2,L2,0,0.15+k*0.3,7.6+(4-k)*0.9);B(g,3,4.4,0.3,0x2a1a0e,0,2.2,6.05);for(const s of[-1,1]){Cy(g,3,3.2,15,L,s*14,7.5,0,14);cone(g,3.5,5,0x3a4a6a,s*14,17.4,0,14);cone(g,0.15,1,GOLD,s*14,20.4,0,6);banner(g,0x2a4a8a,s*5,6,6.7,3,1.2)}
+    B(g,7,14,7,L,0,7,-1);cone(g,5.2,6,0x3a4a6a,0,17,-1,4,Math.PI/4);const sun=Cy(g,1.6,1.6,0.2,GOLD,0,11,2.6,20);sun.rotation.x=Math.PI/2;for(let k=0;k<12;k++){const r=B(g,0.2,1.2,0.15,GOLD2,Math.cos(k*0.524)*2.3,11+Math.sin(k*0.524)*2.3,2.62);r.rotation.z=k*0.524-Math.PI/2}
+    place(g,14,-50,0,1.25);AK.palace=[14,-50]}
+  // ---------- 6. pénzverde és a három céhház (Kovácsok, Vadászok, Hajósok) a tér déli oldalán ----------
+  {const g=new THREE.Group(),L=stone(0xd8ccb0);B(g,12,7,9,L,0,3.5,0);B(g,12.4,0.4,9.4,stone(0xbfb39a),0,7.2,0);gable(g,12,9,2.6,tiles(0x5a5a64),0,7.4,0,Math.PI/2,0.3);for(let i=0;i<4;i++)win(g,-4.5+i*3,4,4.55,0.6,1.2,0xbfb39a,0,true);B(g,2,3,0.3,0x2a1a0e,0,1.5,4.55);
+    const sg=Cy(g,1.2,1.2,0.15,GOLD,0,6.2,4.65,18);sg.rotation.x=Math.PI/2;B(g,1,6,1,brick(0x7a4a32),4,9,-2.5);place(g,10,40,Math.PI,1.2);AK.mint=[10,40];HREGT.smoke.push([CX+10-4*1.2,CZ+40+2.5*1.2,12])}
+  AK.guilds=[];for(const [i,[x,z,ry,col,nm]] of[[20,68,Math.PI,0x8a2a1a,'Kovácsok céhe'],[33,62,Math.PI,0x2a6a3a,'Vadászok céhe'],[-24,60,Math.PI/2,0x2a4a8a,'Hajósok céhe']].entries()){house(HJX+CX+x,CZ+z,8,7,ry,{style:'varrock',bars:true,sign:col});AK.guilds.push([x,z,col,nm]);AK.land.push([x,z,7])}
+  campfire(HJX+CX+16,CZ+58,true);{const g=new THREE.Group();B(g,1.4,0.9,0.7,0x2a2a2e,0,0.45,0);B(g,0.6,0.5,0.4,0x3a3a3e,0,0,0);place(g,24,58,0.3,1.2)}
+  bankObj(HJX+CX+31,CZ+17);AK.bank=[31,17];AK.land.push([31,17,3]);
+  // ---------- 7. lakóházak negyedenként: A (fehér stukkó, terrakotta) keleten, B (okker favázas) a nyugati óvárosban, C (kő, árkád) a tér körül ----------
+  const ok=(x,z)=>Math.hypot(x,z)<R-6&&riv(x,z)>13&&hjRoadDist(CX+x,CZ+z)>5&&!AK.land.some(p=>!p.br&&Math.hypot(p[0]-x,p[1]-z)<(p[2]||6)+5.2)&&!AK.bridges.some(b=>{const sx=Math.sin(b[2]),cz=Math.cos(b[2]),t=clamp((x-b[0])*sx+(z-b[1])*cz,-b[3]/2-4,b[3]/2+4);return Math.hypot(x-b[0]-sx*t,z-b[1]-cz*t)<8.5});
+  const H=(x,z,ry,st,o)=>{if(!ok(x,z)||riv(x+Math.sin(ry)*6,z+Math.cos(ry)*6)<12)return;house(HJX+CX+x,CZ+z,6.5,5.5,ry,Object.assign({style:st},o||{}));AK.land.push([x,z,2.5])};
+  // koncentrikus utcagyűrűk a tér körül; a házak a tér felé néznek. A csatornától nyugatra az óváros okker favázas házai (B),
+  // keleten és északon a fehér stukkó negyed (A), a belső gyűrűn a köves, árkádos polgárházak (C)
+  const avenue=(x,z)=>AK.gates.some(g=>{const L=Math.hypot(g[0]-8,g[1]);const t=clamp(((x-8)*(g[0]-8)+z*g[1])/(L*L),0,1);return Math.hypot(x-8-(g[0]-8)*t,z-g[1]*t)<6.5});
+  // az óvárosi kocsma (Az Arany Kupa) és a kikötői raktár a csatorna mellett: az első szabad hely a nyugati parton
+  {let done=0;for(let a=2.0;a<4.4&&done<1;a+=0.05)for(const r of[60,46,74]){const x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>45)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',sign:0xa83a1a});AK.land.push([x,z,8]);AK.tavern=[x,z];done=1;break}}
+  {let done=0;for(let a=0.6;a<2.2&&done<1;a+=0.05){const r=60,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>40)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',bars:true,sign:0x6a5a3a});AK.land.push([x,z,8]);AK.depot=[x,z];done=1}}
+  for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step);for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34)continue;
+    const west=riv(x,z)<60&&x<-8,st=r===46?'varrock':west?'varrock':'aldarin';H(x,z,Math.atan2(8-x,-z),st,r===46?{bars:true}:undefined)}}
+  // a megmaradt foghíjas telkekre: kút, piaci standok, szekér hordókkal, virágos kiskert padokkal
+  {let k=0;const stall=(x,z,ry)=>{const g=new THREE.Group();const c=[0xc83a3a,0x2a6ab0,0xd8a030,0x3a8a4a][k%4];for(const sx of[-1,1])for(const sz of[-1,1])B(g,0.15,2.6,0.15,0x6a4a2a,sx*1.5,1.3,sz*1);
+      for(let i=0;i<6;i++)B(g,0.52,0.08,2.4,i%2?0xf0ece0:c,-1.3+i*0.52,2.7,0,0).rotation.z=0.12;B(g,3,0.9,1.6,planks(0x8a6a44),0,0.45,0);
+      for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5),S([0xc83a2a,0xe8c040,0x8ac040,0xe87a20][(i+k)%4]));m.position.set(-1.1+i*0.55,1.02,0.3);g.add(m)}B(g,0.7,0.4,0.6,0x8a6a3a,-0.8,1.1,-0.3);B(g,0.7,0.4,0.6,0x8a6a3a,0.6,1.1,-0.3);return g};
+    const garden=(x,z,ry)=>{const g=new THREE.Group();B(g,5,0.35,3.6,stone(0xb8b0a0),0,0.17,0);B(g,4.4,0.2,3,0x4a7a2a,0,0.4,0);for(let i=0;i<12;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.18,5,4),S([0xe84a6a,0xf0d040,0xf0f0f0,0xa060d0][i%4]));m.position.set(-1.9+(i%6)*0.76,0.6,i<6?-1.1:1.1);g.add(m)}
+      const t=TREEV.get('tolgy',HJX+CX+x,CZ+z);t.g.scale.setScalar(0.45);g.add(t.g);for(const s of[-1,1]){B(g,1.8,0.12,0.5,0x7a5434,0,0.5,s*2.4);B(g,1.8,0.5,0.1,0x7a5434,0,0.8,s*2.62)}return g};
+    for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step)*2;for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34||!ok(x,z))continue;
+      const ry=Math.atan2(8-x,-z),t=k%4;let g;if(t===1){HVB.well(CX+x,CZ+z);AK.land.push([x,z,2.5]);colAdd(HJX+CX+x,CZ+z,1.3,1.3,0,'aranykapu');k++;continue}
+      else if(t===2){g=HVB.cart(CX+x,CZ+z,ry+1.2,'barrel');colFromGroup(g,'aranykapu');AK.land.push([x,z,2.5]);k++;continue}
+      g=t===0?stall(x,z,ry):garden(x,z,ry);g.position.set(x,0,z);g.rotation.y=ry;g.position.set(0,0,0);place(g,x,z,ry,1);AK.land[AK.land.length-1][2]=2.5;k++}}}
+  // fasor a sugárutak mentén és padok
+  {const g=new THREE.Group();for(const gt of AK.gates){for(let k=0.3;k<0.85;k+=0.12){const x=8+(gt[0]-8)*k,z=gt[1]*k,nx=-gt[1],nz=gt[0]-8,l=Math.hypot(nx,nz);for(const s of[-1,1]){const tx=x+nx/l*s*5.2,tz=z+nz/l*s*5.2;if(riv(tx,tz)<12)continue;const t=TREEV.get('tolgy',HJX+CX+tx,CZ+tz);t.g.scale.setScalar(0.5);t.g.position.set(tx,0,tz);g.add(t.g);B(g,1.6,0.5,1.6,stone(0xc8c0b0),tx,0.25,tz)}}}
+    for(const m of g.children)m.position.y=height(HJX+CX+m.position.x,CZ+m.position.z)-height(HJX+CX,CZ)+m.position.y;place(g,0,0,0,1,false)}
+  // nyomornegyed a délnyugati kapu mellett: összetákolt kunyhók
+  {const g=new THREE.Group();for(let i=0;i<6;i++){const k=new THREE.Group();const c=[0x7a6a52,0x6a5a44,0x8a7a5a][i%3];B(k,3,2.2,2.6,planks(c),0,1.1,0);const r=B(k,3.6,0.12,3.2,0x5a5048,0,2.4,0);r.rotation.z=0.25;B(k,0.8,1.5,0.1,0x2a1a10,0.4,0.75,1.32);k.position.set((i%3)*4.6,0,Math.floor(i/3)*4.8);k.rotation.y=(i*0.37)%0.6;g.add(k)}
+    const sa=AK.gates.find(gg=>gg[2]>2.3&&gg[2]<2.6)||[-62,52];place(g,sa[0]*0.72+6,sa[1]*0.72-4,0.4,1)}
+  // utcai lámpások, virágládák a tér körül
+  {const g=new THREE.Group();for(let i=0;i<12;i++){const a=i/12*6.283;lampP(g,14+Math.cos(a)*29,Math.sin(a)*29,3.2,0)}place(g,0,0,0,1,false)}
+})();
+HPOI.push([AK.C[0],AK.C[1],92]);
+
 // --- szereplők: a tájlapon választott kinézet (Bodor A, Iluska C a kutyájával, Bendegúz B) ---
 function hPerson(look){const g=humanoid(look);g.traverse(m=>{if(m.isMesh&&m.material&&m.material.color&&!m.material.vertexColors&&!m.material.userData.lin){m.material=m.material.clone();m.material.color.convertSRGBToLinear();m.material.userData.lin=1}});return g}
 const hHold=(arm,rx=-1.25)=>{const w=new THREE.Group();w.position.set(0,-0.95,0.1);w.rotation.x=rx;arm.add(w);return w};
@@ -6871,6 +6969,7 @@ function hjPaint(x,z,h,tmp){const t=hjT(z),n=fbm(x*0.06+3,z*0.06+7,2),j=hash(Mat
   if(h<1.15&&!(dom===6&&Math.hypot(x-HP.volc[0],z-HP.volc[1])<70)){const r=dom;if(r===4||(r>0&&r<6&&hjRiv(x,z)<22)){tmp.copy(hc(0x6a6a40)).lerp(hc(0x5a5a3a),n);return}tmp.copy(hc(r===0?0xc8ccd0:r===6?0x3a3434:0xe6d4a0)).lerp(hc(r===0?0xe8eef2:r===6?0x2a2626:0xd8c890),n);return}
   tmp.setRGB(0,0,0);for(const [i,w] of W){hjRegCol(i,x,z,h,t,u,n,j,_hcA);tmp.r+=_hcA.r*w;tmp.g+=_hcA.g*w;tmp.b+=_hcA.b*w}
   const rd=hjRoadDist(x,z);if(rd<3.2&&h>1)tmp.lerp(hc(0x9a7a46),clamp((3.2-rd)/1.2,0,1)*0.85);
+  {const dk=Math.hypot(x-HP.ak[0],z-HP.ak[1]);if(dk<90){if(h>3.3){const lx=x-HP.ak[0]-8,lz=z-HP.ak[1],rr=Math.hypot(lx,lz),ring=[38,53,67,81].some(v=>Math.abs(rr-v)<3),sq=Math.hypot(x-HP.ak[0]-14,z-HP.ak[1])<30;const park=!ring&&!sq&&fbm(x*0.03+7,z*0.03+3,2)>0.66&&dk>40;tmp.lerp(hc(park?(j>0.5?0x6a9a42:0x5a8a3a):sq?(((Math.floor(x/2)+Math.floor(z/2))&1)?0xe0d8c4:0xc8bea8):ring?(j>0.5?0x9a9080:0x8a8070):(j>0.5?0xd0c6b2:0xbcb2a0)),0.92)}else if(h>0.25)tmp.copy(hc(j>0.5?0xa89e8c:0x968c7a))}}
   if(h>1&&x>-450&&x<500&&z>-420&&z<300){for(const f of HFARM){const d=Math.hypot(x-f[0],z-f[1]);if(d<11){tmp.lerp(hc(j>0.5?0x9a8a5a:0x8a7a4a),clamp((11-d)/3,0,1)*0.7);break}}}
   {const dp=Math.hypot(x-HP.port[0],z-HP.port[1]),qx=HP.port[0]-44,dz=Math.abs(z-HP.port[1]);const dx0=x-HP.port[0];const pv=Math.max(clamp((17-dp)/3,0,1),dz<44&&x>qx&&x<qx+13?1:0,dz<3.4&&x>qx&&dx0<70?1:0,Math.abs(dx0)<2.6&&dz<36?1:0,Math.abs(dz-21.5)<2.4&&dx0>8&&dx0<62?1:0,Math.abs(z-HP.port[1]+22)<2.4&&x>qx&&x<qx+24?1:0);
     if(pv>0&&h>1)tmp.lerp(hc(j>0.5?0xbab09c:0xa69c88),pv*0.94)}
@@ -7146,7 +7245,7 @@ function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
   kGive('hajnallampa');kGive('hajnallampa');addXp('ha',1000,p);chat('Megkaptad: Hajózás 10. szint, a Hajnalcsillag a tiéd, és két hajnali tudáslámpa (5000 XP egyenként, Horgászat, Kovácsolás vagy Hajózás). Mostantól hajó jár Halászrév és Hajnalrév között.','xp');hjSync()}
 // --- percenkénti/képkockánkénti teendők ---
-function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);hvMonTick(dt);
+function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);hvMonTick(dt);
   // a torony lépcsőjén a lap: csak éjjel, ha ég a lámpa
   HJR.lhpage.mesh.visible=q.st===1&&q.n===0&&!((q.m||0)&2)&&night>0.45&&!!stats.kfeny;
   if(zn===14){const L=HJR.light;const lit=night>0.2;L.piv.visible=lit;if(lit)L.piv.rotation.y+=dt*0.7;
@@ -7455,6 +7554,74 @@ const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THR
   // később létrehozott, zónához kötött objektumok is a csoportba kerüljenek
   const _add=scene.add.bind(scene);scene.add=function(o){if(o&&!keep.has(o)&&(o.isMesh||o.isGroup||o.isPointLight)&&!o.isInstancedMesh&&!zoneGroups.includes(o)&&!(o.userData&&(o.userData.tail||o.userData.mp))){const zn=zoneOf(o.position.x);if(zoneGroups[zn]){if(zn===12&&!o.userData.kRoot)kPlace(o);else if(zn===14&&!o.userData.kRoot)hPlace(o);else zoneGroups[zn].add(o);return scene}}return _add(o)};
 })();
+// ================= Aranykapu élete =================
+function hjSlim(g){const u=g.userData,L=['legL','legR','armL','armR'];for(const k of[...L,'body','tools'])if(u[k]&&u[k].userData)u[k].userData.keep=1;mergeStatic(g);for(const k of L){const l=u[k];if(!l)continue;l.userData.keep=0;mergeStatic(l);l.userData.keep=1}}
+const AKL=(()=>{const [CX,CZ]=AK.C,R=Math.random,pick=a=>a[(R()*a.length)|0],W=(x,z)=>[HJX+CX+x,CZ+z];
+  const lim=(g,a,b)=>{const u=g.userData;if(u.legL){u.legL.rotation.x=a;u.legR.rotation.x=-a}if(u.armL){u.armL.rotation.x=b;u.armR.rotation.x=-b}};
+  // utcagráf: gyűrűk a tér körül, sugaras összekötők; csak akadálymentes (ütköző és víz nélküli, vagy hídon átmenő) szakaszok maradnak
+  const N=[],E=[];const segOK=(a,b)=>{const [ax,az]=a,[bx,bz]=b,L=Math.hypot(bx-ax,bz-az);for(let k=0;k<=L;k+=0.8){const x=HJX+CX+ax+(bx-ax)*k/L,z=CZ+az+(bz-az)*k/L;if(colHit(x,z,0.45))return false;if(height(x,z)<0.5&&floorAt(x,z)===null)return false}return true};
+  const okP=(x,z)=>{const wx=HJX+CX+x,wz=CZ+z;return !colHit(wx,wz,0.6)&&(height(wx,wz)>0.5||floorAt(wx,wz)!==null)};
+  const rings=[[14,0,24],[8,0,38],[8,0,53],[8,0,67],[8,0,81]];const idx=[];
+  for(const [cx,cz,r] of rings){const row=[];const n=Math.round(6.283*r/9);for(let i=0;i<n;i++){const a=i/n*6.283,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;row.push(okP(x,z)?(N.push([x,z]),E.push([]),N.length-1):-1)}idx.push(row)}
+  const link=(a,b)=>{if(a<0||b<0||a===b||E[a].includes(b))return;if(!segOK(N[a],N[b]))return;E[a].push(b);E[b].push(a)};
+  for(const row of idx)for(let i=0;i<row.length;i++)link(row[i],row[(i+1)%row.length]);
+  const near=(x,z,row)=>{let b=-1,bd=1e9;for(const k of row){if(k<0)continue;const d=Math.hypot(N[k][0]-x,N[k][1]-z);if(d<bd){bd=d;b=k}}return b};
+  for(let ri=0;ri<idx.length-1;ri++)for(const k of idx[ri]){if(k<0)continue;link(k,near(N[k][0],N[k][1],idx[ri+1]))}
+  // a hidak két végét is összekötjük a legközelebbi csomópontokkal
+  for(const [x,z,ry,L] of AK.bridges){const ends=[1,-1].map(e=>[x+Math.sin(ry)*e*(L/2+2),z+Math.cos(ry)*e*(L/2+2)]);const ids=ends.map(([ex,ez])=>{N.push([ex,ez]);E.push([]);return N.length-1});link(ids[0],ids[1]);for(const id of ids){const all=[...N.keys()].filter(k=>k!==ids[0]&&k!==ids[1]).sort((a,b)=>Math.hypot(N[a][0]-N[id][0],N[a][1]-N[id][1])-Math.hypot(N[b][0]-N[id][0],N[b][1]-N[id][1]));for(const k of all.slice(0,3))link(id,k)}}
+  const live=[...N.keys()].filter(k=>E[k].length>0);
+  const say=(o,txt)=>{if(o.sp){o.mesh.remove(o.sp);o.sp.material.map.dispose()}const cv=document.createElement('canvas');cv.width=512;cv.height=64;const x=cv.getContext('2d');x.font='bold 30px Trebuchet MS';x.textAlign='center';x.lineWidth=5;x.strokeStyle='#000';x.strokeText(txt,256,42);x.fillStyle='#ffff00';x.fillText(txt,256,42);
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));s.scale.set(11,1.4,1);s.position.y=3.4/(o.mesh.scale.x||1);s.renderOrder=999;o.mesh.add(s);o.sp=s;o.spT=4.5};
+  const CHAT=['Aranykapu a kontinens szíve!','A Nagyvásár még mindig zárva. A céhek veszekednek.','Láttad az óratornyot? Delelőkor muzsikál.','A pénzverde éjjel is dolgozik. Fura, nem?','A hidakon este meggyújtják a lámpásokat.','Hamis pénzt fogtam ki tegnap. Valaki önti őket.','A palotában a Napkorong régi festménye lóg.','Hajnalrévből jövök, hal kéne?','A Hollóerdőben hollók tanácskoznak, azt mondják.','A nap halványabb, mint régen. Te is érzed?'];
+  const look=(rich)=>({skin:pick([0xe8c39e,0xd8a880,0xc89070,0xf0d0b0,0xa87050]),hair:pick([0x2a1a0a,0x5a3a1a,0xc8a050,0x8a8a8a,0x1a1a1a,0xa04a1a]),shirt:rich?pick([0x6a1a3a,0x2a3a7a,0x1a5a4a,0x7a5a1a]):pick([0xf0ece0,0x8a5a3a,0x5a7a3a,0xc8a050,0x3a5a7a]),sleeves:rich?0xd8b040:pick([0xe8e0c8,0x8a6a4a]),pants:pick([0x3a3a4a,0x4a3a2a,0x2a2a2a]),boots:0x2a1a0a,hairStyle:R()<0.45?'long':undefined,beard:R()<0.3,hat:R()<0.25?pick(['straw','bandana']):undefined});
+  const walkers=[];for(let i=0;i<26&&live.length;i++){const a=pick(live),[x,z]=N[a];const rich=R()<0.3;const o=npc(...W(x,z),rich?pick(['Aranykapui nemes','Nemes hölgy','Gazdag kereskedő']):pick(['Aranykapui polgár','Kézműves','Vízhordó','Kocsis','Inas','Diák','Mosónő','Halárus']),[pick(CHAT),pick(CHAT)],look(rich));o.walk={from:a,to:pick(E[a]),sp:1.4+R()*0.8,ph:R()*6,wait:R()*3};o.noTurn=true;walkers.push(o)}
+  // őrök a kapuknál: kék-arany egyenruha, lándzsa
+  const guardLook={skin:0xd8a880,hair:0x2a1a0a,shirt:0x2a4a8a,sleeves:0xd8b040,pants:0x2a2a34,boots:0x111111,item:'helm'};
+  const spear=o=>{const sp=new THREE.Group();sp.position.set(0,-0.95,0.1);sp.rotation.x=-0.2;o.mesh.userData.armR.add(sp);const sh=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,3.2,5),M(0x6a4a2a));sh.position.y=1;sp.add(sh);const tip=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.4,4),M(0xd8b040));tip.position.y=2.7;sp.add(tip)};
+  for(const [gx,gz,ga] of AK.gates){for(const s of[-1,1]){const x=gx-Math.cos(ga)*6+Math.cos(ga+Math.PI/2)*s*4,z=gz-Math.sin(ga)*6+Math.sin(ga+Math.PI/2)*s*4;const o=npc(...W(x,z),'Kapuőr',['Aranykapu kapui napkeltétől napnyugtáig nyitva állnak.','A Napkapun át jöttél? Akkor a hídvámot már kifizetted.','Rendet tartunk, polgár.'],guardLook);o.mesh.rotation.y=Math.atan2(Math.cos(ga),Math.sin(ga));spear(o)}}
+  // a vásárcsarnok árusai
+  const HALL=[['Fegyverkovács Zoltán',[['bronzkard',30,1],['vaskard',120,1],['acelkard',380,1],['tolgyij',160,1],['nyil',3,10]],'ZOLTÁN FEGYVEREI'],['Páncélos Erzsébet',[['bronzsisak',40,1],['vassisak',140,1],['bronzpajzs',60,1]],'ERZSÉBET PÁNCÉLJAI'],['Ékszerész Benedek',[['zafir',260,1],['smaragd',520,1],['aranyrud',180,1],['tu',5,1]],'BENEDEK ÉKSZERBOLTJA'],
+    ['Rúnaárus Mira',[['runa',3,1],['runa',27,10],['esszencia',3,1]],'MIRA RÚNÁI'],['Szakács Gyula',[['sultpisztrang',28,1],['sultlazac',52,1],['kenyer',9,1],['almabor',15,1]],'GYULA KONYHÁJA'],['Fűszeres Hanna',[['gyogyfu',15,1],['zsalya',11,1],['levendula',18,1],['mandragora',42,1]],'HANNA FŰSZERESE']];
+  AKL_SELL=[];{const [hx,hz]=AK.hall,sc=1.75,c=Math.cos(Math.PI/2),sn=Math.sin(Math.PI/2);HALL.forEach(([nm,list,title],i)=>{const ax=-5.4+i*2.15,az=(i%2?1:-1)*0.6;const lx=hx+(ax*c+az*sn)*sc,lz=hz+(-ax*sn+az*c)*sc;const id='aksell'+i;
+    DIALOG[id]=o=>showDialog(nm,pick(['Aranykapu legjobb portékája!','Nézz körül, ne siess.','A Nagyvásárban talán olcsóbb, de az még zárva.']),[{t:'Mit árulsz?',f:()=>openShop(list.filter(l=>ITEMS[l[0]]),title)},{t:'Semmit.'}]);const o=npc(HJX+CX+lx,CZ+lz,nm,[],look(false),id);AKL_SELL.push(o)})}
+  // a rotunda ügyintézői (a Nagyvásár a v74b-ben nyílik meg)
+  const clerks=[];{const [rx,rz]=AK.rotunda;for(const a of AK.counters.filter((_,i)=>i%2===0)){const o=npc(...W(rx+Math.cos(a)*4.4,rz+Math.sin(a)*4.4),'Vásári ügyintéző',[],{skin:0xe8c39e,hair:0x2a1a0a,shirt:0xe8dcc0,sleeves:0xd8b040,pants:0x2a2a34,boots:0x111111},'akclerk');o.mesh.rotation.y=Math.atan2(Math.cos(a),Math.sin(a));o.noTurn=true;clerks.push(o)}}
+  DIALOG.akclerk=o=>{if(typeof geOpen==='function'&&qs.nagyvasar&&qs.nagyvasar.st===2){geOpen();return}showDialog('Vásári ügyintéző','A Nagyvásár zárva, amíg a három céh meg nem egyezik a vásári szabályokban. A Kovácsok, a Vadászok és a Hajósok mesterei napok óta veszekednek. Talán valaki kívülálló rendet tehetne köztük...')};
+  // nevezetes szereplők: Pénzverő Mester Gáspár (C), Vadászmester Kordélia, a céhmesterek, a hídvámszedő, a koldus, egy csuklyás alak
+  const hp=look=>{const g=humanoid(look);g.traverse(m=>{if(m.isMesh&&m.material&&m.material.color&&!m.material.vertexColors&&!m.material.userData.lin){m.material=m.material.clone();m.material.color.convertSRGBToLinear();m.material.userData.lin=1}});return g};
+  const special=(x,z,name,id,build,ry=0)=>{const g=build();placeAt(g,...W(x,z));g.rotation.y=ry;shadowed(g);scene.add(g);const o={mesh:g,type:'npc',name,action:'Beszélek',hit:g.userData.body,lines:[],li:0,dialog:id};interactables.push(o);npcs.push(o);return o};
+  const L=ML;AK.npc={};
+  AK.npc.gaspar=special(AK.mint[0],AK.mint[1]-7.5,'Pénzverő Mester Gáspár','akgaspar',()=>{const g=hp({skin:0xe0c8b0,hair:0x1a1a1a,shirt:0x1a1a1e,sleeves:0x1a1a1e,pants:0x1a1a1e,boots:0x111111});g.scale.set(0.9,1.08,0.9);L.box(g,0.66,1.0,0.06,0x1a1a1e,0,0.9,-0.22);L.box(g,0.14,0.3,0.04,0xf0f0f0,0,1.85,0.27);
+    const r=new THREE.Mesh(new THREE.TorusGeometry(0.075,0.015,4,10),L.flat(0xd8b040));r.position.set(0.1,2.36,0.27);g.add(r);L.seg(g,[0.1,2.3,0.27],[0.18,1.9,0.27],0.006,0.006,0xd8b040,3);const tall=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.24,0.5,10),L.flat(0x111114));tall.position.set(0,2.78,0);g.add(tall);const br=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.36,0.05,12),L.flat(0x111114));br.position.y=2.53;g.add(br);
+    const w=hHold(g.userData.armL,-1.1);L.box(w,0.4,0.5,0.08,0x3a2a1a,0,0.15,0);L.box(w,0.36,0.46,0.09,0xe8e0c8,0.02,0.15,0);return g},Math.PI);
+  DIALOG.akgaspar=o=>showDialog('Pénzverő Mester Gáspár','Gáspár, a város pénzverője. Minden aranykapui érme átment a kezemen... legalábbis kellene. Mostanában furcsa érmék keringenek. Majd szólok, ha szükségem lesz egy éles szemre.');
+  AK.npc.kordelia=npc(...W(AK.guilds[1][0],AK.guilds[1][1]-7),'Vadászmester Kordélia',['Kordélia vagyok, a Vadászok céhének mestere.','A hetvenes vadászokat várom. A kontinens legveszélyesebb szörnyeit ők kapják.','Ha a céhek végre megegyeznek, a Nagyvásárban a zsákmányodat is eladhatod.'],{skin:0xc89070,hair:0x1a1a1a,shirt:0x2a5a3a,sleeves:0x3a3a2a,pants:0x3a3a2a,boots:0x2a1a0a,hairStyle:'long',item:'bow'});
+  AK.npc.otto=npc(...W(AK.guilds[0][0],AK.guilds[0][1]-7),'Kovácsmester Ottó',['A Kovácsok céhe szerint a vasat és az acélt csak céhbélyeggel lehet árulni.'],{skin:0xd8a880,hair:0x5a3a1a,shirt:0x8a2a1a,sleeves:0x5a5a62,pants:0x3a2a1a,boots:0x2a1a0a,beard:true,item:'pick'});
+  AK.npc.zsigmond=npc(...W(AK.guilds[2][0]+7,AK.guilds[2][1]),'Hajóskapitány Zsigmond',['A Hajósok céhe szállít mindent. Ha mi nem visszük, nem is jut el sehová.'],{skin:0xc89070,hair:0xe8e8e8,shirt:0x2a4a8a,sleeves:0x2a4a8a,pants:0xe8e0c8,boots:0x111111,beard:true,hat:'captain'});
+  {const g=AK.gates.find(gg=>gg[2]>2.7)||AK.gates[0];AK.npc.vam=npc(...W(g[0]-Math.cos(g[2])*9,g[1]-Math.sin(g[2])*9),'Hídvámszedő Pál',['Öt érme a belépés, polgár. Ilyen a szokás.'],{skin:0xe8c39e,hair:0x8a8a8a,shirt:0x6a5a3a,sleeves:0x6a5a3a,pants:0x3a3a3a,boots:0x2a1a0a,hat:'bandana',bandana:0xd8b040})}
+  AK.npc.koldus=npc(...W(14,-27),'Vak koldus',['Egy érmét a vak koldusnak, jó uram...','Én nem látok semmit. De hallok mindent.'],{skin:0xc8a888,hair:0x8a8a8a,shirt:0x6a6058,sleeves:0x6a6058,pants:0x4a4038,boots:0x3a3028,beard:true});{const u=AK.npc.koldus.mesh.userData;if(u.legL){u.legL.rotation.x=-1.45;u.legR.rotation.x=-1.45}AK.npc.koldus.mesh.position.y-=0.55;AK.npc.koldus.noTurn=true}
+  {const a=AK.gates.find(gg=>gg[2]>2.3&&gg[2]<2.6)||[-62,52];AK.npc.csuklyas=special(a[0]*0.72+10,a[1]*0.72+2,'Csuklyás alak','akcsuklyas',()=>{const g=hp({skin:0xe0c8b0,hair:0x2a1a2a,shirt:0x3a1a3a,sleeves:0x2a1a2a,pants:0x2a1a2a,boots:0x111111,hairStyle:'long'});L.box(g,0.78,1.9,0.58,0x2a1a2a,0,0.95,0.02);const m1=new THREE.Mesh(new THREE.CircleGeometry(0.24,16,-Math.PI/2,Math.PI),L.flat(0xe8c040));m1.position.set(0,2.32,0.28);g.add(m1);const m2=new THREE.Mesh(new THREE.CircleGeometry(0.24,16,Math.PI/2,Math.PI),L.flat(0xc8c8d8));m2.position.set(0,2.32,0.28);g.add(m2);return g},0.6)}
+  DIALOG.akcsuklyas=o=>showDialog('Csuklyás alak','...A nap elfárad, vándor. Egyszer mindenki megpihen a sötétben. Menj tovább, amíg még látod az utat.');
+  // a hídvám: első belépéskor öt érme (a „Hamis érmék" után ingyen)
+  let vamT=0;
+  // gyerekek és galambok a téren
+  const kids=[];for(let i=0;i<3;i++){const o=npc(...W(14+8,0),pick(['Kisfiú','Kislány']),['Fogócska!','Hihi!'],look(false));o.mesh.scale.setScalar(0.62);o.kid={a:i*2.1,r:17+i*1.5,sp:0.6+i*0.1};o.noTurn=true;kids.push(o)}
+  const pig=[];const pm=M(0x8a8a96);for(let i=0;i<14;i++){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5),pm);b.scale.set(1,0.9,1.5);g.add(b);const h=new THREE.Mesh(new THREE.SphereGeometry(0.09,6,5),M(0x5a6a7a));h.position.set(0,0.12,0.2);g.add(h);const a=R()*6.283,r=16+R()*10;placeAt(g,...W(14+Math.cos(a)*r,Math.sin(a)*r),0.15);g.rotation.y=R()*6;scene.add(g);pig.push({g,h,ph:R()*6,fly:0})}
+  function step(dt){if(zoneOf(px)!==14)return;const lx=px-HJX-CX,lz=pz-CZ;const d0=Math.hypot(lx,lz);if(d0>170)return;const nt=night>0.55;
+    if(d0<R0&&!stats.akvam&&!(qs.hamis&&qs.hamis.st===2)){vamT+=dt;if(vamT>0.5){stats.akvam=1;if(coins>=5){setCoins(coins-5);chat('Hídvámszedő Pál: „Öt érme a belépés, polgár. Köszönöm!” (−5 érme)','xp')}else chat('Hídvámszedő Pál: „Nincs öt érméd? Na jó, most az egyszer beengedlek.”','xp')}}
+    for(const o of walkers){const w=o.walk,m=o.mesh;if(o.spT>0){o.spT-=dt;if(o.spT<=0&&o.sp){m.remove(o.sp);o.sp=null}}const dp=Math.hypot(px-m.position.x,pz-m.position.z),want=dp<62&&!(nt&&walkers.indexOf(o)%3!==0);if(m.visible!==want&&dp>30)m.visible=want;if(!m.visible)continue;
+      if(w.wait>0){w.wait-=dt;lim(m,0,0);continue}const [tx,tz]=N[w.to],dx=HJX+CX+tx-m.position.x,dz=CZ+tz-m.position.z,d=Math.hypot(dx,dz);
+      if(d<0.3){const nx=E[w.to].filter(k=>k!==w.from);w.from=w.to;w.to=nx.length?pick(nx):pick(E[w.to]);if(R()<0.2){w.wait=1.5+R()*4;if(R()<0.4&&Math.hypot(px-m.position.x,pz-m.position.z)<26)say(o,pick(o.lines))}continue}
+      const s=Math.min(d,w.sp*dt);m.position.x+=dx/d*s;m.position.z+=dz/d*s;const fy=floorAt(m.position.x,m.position.z);m.position.y=fy!==null?Math.max(fy,height(m.position.x,m.position.z)):height(m.position.x,m.position.z);m.rotation.y=Math.atan2(dx,dz);w.ph+=dt*w.sp*3.2;lim(m,Math.sin(w.ph)*0.55,Math.sin(w.ph)*0.4)}
+    cullT-=dt;if(cullT<0){cullT=0.5;for(const o of statics){const v=Math.hypot(px-o.mesh.position.x,pz-o.mesh.position.z)<70;if(o.mesh.visible!==v)o.mesh.visible=v}}
+    for(const o of kids){const K=o.kid,m=o.mesh;K.a+=dt*K.sp;const x=HJX+CX+14+Math.cos(K.a)*K.r,z=CZ+Math.sin(K.a)*K.r;m.position.set(x,height(x,z),z);m.rotation.y=Math.atan2(-Math.sin(K.a),Math.cos(K.a));lim(m,Math.sin(K.a*14)*0.7,Math.sin(K.a*14)*0.6)}
+    for(const p of pig){p.ph+=dt;if(!p.fly){p.h.position.y=0.12-Math.max(0,Math.sin(p.ph*3))*0.08;if(Math.hypot(p.g.position.x-px,p.g.position.z-pz)<3){p.fly=2.5;p.vx=(p.g.position.x-px);p.vz=(p.g.position.z-pz)}}else{p.fly-=dt;p.g.position.x+=p.vx*dt*1.5;p.g.position.z+=p.vz*dt*1.5;p.g.position.y+=(p.fly>1.2?6:-6)*dt;if(p.fly<=0){p.fly=0;p.g.position.y=height(p.g.position.x,p.g.position.z)+0.15}}}
+    if(AK.clockHands){const h=dayT*24;AK.clockHands[1].rotation.z=-(h%12)/12*6.283;AK.clockHands[0].rotation.z=-(h%1)*6.283}}
+  const R0=AK.R-3;let cullT=0;const statics=npcs.filter(o=>!walkers.includes(o)&&!kids.includes(o)&&Math.hypot(o.mesh.position.x-HJX-CX,o.mesh.position.z-CZ)<95);
+  // rajzhívás-takarékosság: az alakok mozdulatlan részeit végtagonként egy-egy hálóba vonjuk össze (a test külön marad a kattintáshoz)
+  for(const o of[...walkers,...statics,...kids])hjSlim(o.mesh);
+  return {step,walkers,N,E,statics}})();
+var AKL_SELL;
 // kamera-takarás: ami a kamera és a játékos közé esik (fa, ház, torony, fal, sövény), áttetszővé halványul
 const OCC={list:[],zone:-1,t:9,act:new Set(),hit:new Set(),box:new THREE.Box3(),ray:new THREE.Ray(),v:new THREE.Vector3(),tgt:new THREE.Vector3(),dir:new THREE.Vector3(),
   skip:new Set(['monster','npc','player','monkey','crab','sheep','puppy','genie','fire','fish','clue','dig','digsite','shell','herb','plot'])};
