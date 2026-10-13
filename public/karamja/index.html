@@ -4875,6 +4875,7 @@ Object.assign(QUESTS,{
 });
 // --- Hajnalföld, 1. fázis (v72): az első fő küldetés, új tárgyak és szörnyek ---
 for(const k of['tolgydeszka','kotel','naplolap','krakentinta','hajnallampa'])STACK.add(k);
+QUESTS.liszt={name:'Lopott liszt',giver:'Molnár Jakab (Malomdomb, Hajnalvölgy)',desc:'A szalmakalapos szénatolvajok éjjelente kirabolják Jakab malmait. Öt lisztes zsák tűnt el, és a falu kenyere velük együtt.',reward:'2500 érme, 1500 Tolvajlás XP, 5 kenyér, a malom kenyere fele áron',qp:1,obj:q=>`Hozz vissza öt lisztes zsákot a szénatolvajoktól (a búzamezőkön, szalmakalapban): ${countItem('lisztzsak')}/5.`};
 QUESTS.hajnal={name:'Hajnal a láthatáron',giver:'Révkapitány Ármin (Halászrév)',desc:'Hét napja futott be egy hajó kelet felől: legénység nélkül, a kormány lekötve, a napló megperzselve. Az utolsó olvasható sor: „ott, ahol a nap kel, már nem kel fel”.',
   reward:'Hajnalföld, Hajózás 10. szint, a Hajnalcsillag szlúp, 2 × 5000 XP lámpa, hajóút Halászrév és Hajnalrév között',qp:3,obj:q=>hjObj(q)};
 Object.assign(ITEMS,{tolgydeszka:{name:'Tölgydeszka',icon:'🪵'},kotel:{name:'Kötél',icon:'🪢'},kalapacs:{name:'Kalapács',icon:'🔨'},naplolap:{name:'Megperzselt naplólap',icon:'📜'},
@@ -5811,7 +5812,7 @@ function animate(now){
       if(s.frozenT>0){s.frozenT-=dt}else if(d>1.6){const dx=px-m.position.x,dz=pz-m.position.z;const sp=Math.min(s.d.speed*dt,d-1.5),ox=m.position.x,oz=m.position.z;m.position.x+=dx/d*sp;m.position.z+=dz/d*sp;if(COLG&&colHit(m.position.x,m.position.z,0.6)&&!colHit(ox,oz,0.6)){m.position.x=ox;m.position.z=oz}m.rotation.y=Math.atan2(dx,dz);mv=true}
       else{m.rotation.y=Math.atan2(px-m.position.x,pz-m.position.z);if(s.frozenT>0){s.frozenT-=dt}else{s.atkT-=dt;if(s.atkT<=0){monsterHit(s);s.atkT=2.4}}}
     }else mv=wander(s,2,dt,14,(x,z)=>{const h=height(x,z),zx=zoneOf(x);return zx===3?h<6:zx===12?(h>0.7&&!kOnWall(x-KX,z)):zx===14?h>0.7:h>3});
-    m.position.y=s.seaY!=null?s.seaY:height(m.position.x,m.position.z);
+    m.position.y=s.seaY!=null?s.seaY:height(m.position.x,m.position.z)+(s.flyH||0);
     if(s.burnT>0){s.burnT-=dt;s.burnTick=(s.burnTick||0)-dt;if(s.burnTick<=0){s.burnTick=1;s.hp=Math.max(0,s.hp-1);splat(m.position,1);if(s.hp<=0){s.burnT=0;monsterDie(s);continue}}}
     if(s.kind==='snake'){const segs=m.userData.segs;for(let i=0;i<segs.length;i++)segs[i].position.x=Math.sin(t*(mv?9:2)+i*0.9)*0.22}
     if(s.kind==='scorpion')m.rotation.z=mv?Math.sin(t*14)*0.05:0;
@@ -6939,10 +6940,11 @@ function hjPopulate(c){const R=kRng(c.i*7919+c.j*104729+914);const L={mang:[],or
   hInst(c,KGEO.crystal,HJM.vein,L.vein,{sy:0.5});hInst(c,KGEO.crystal,HJM.ice,L.ice,{sy:1.6,shadow:true});hInst(c,KGEO.crystal,HJM.obs,L.obs,{sy:2.2,shadow:true});hInst(c,KGEO.bush,mats.leaf,L.bush,{shadow:true});
   hInst(c,KGEO.trunk,mats.trunk,L.fill,{dy:2,shadow:true});hInst(c,KGEO.can,TREEV.vmat,L.fill,{dy:2.6,shadow:true});hInst(c,KGEO.trunk,mats.trunk,L.fillD,{dy:2,shadow:true});hInst(c,KGEO.canD,TREEV.vmat,L.fillD,{dy:2.4,shadow:true})}
 // ---- betöltés: a 250 egységen belüli darabok; tickenként egy lépés, ugráskor a közeliek azonnal ----
-HS.update=function(dt){if(zoneOf(px)!==14)return;
+HS.update=function(dt){if(zoneOf(px)!==14)return;hvSpawnAll();
   if(KL.pool.length&&KL.pool[0].parent!==zoneGroups[14])for(const l of KL.pool)zoneGroups[14].add(l);
   if(this.cur&&hjChunkStep(this.cur,performance.now()+5)){this.cur.g.visible=true;this.cur=null}
   if(Math.hypot(px-(this.lx||0),pz-(this.lz||0))>60)this.prime=true;this.lx=px;this.lz=pz;this.t+=dt;if(this.t<0.25&&!this.prime)return;this.t=0;
+  if(!this.movers)this.movers=monsters.filter(m=>m.hvz).map(m=>m.mesh);for(const m of this.movers){if(!m.parent)continue;const c=hChunkAt(m.position.x,m.position.z);if(m.parent!==c.g)c.g.add(m)}
   const lx=px-HJX,lz=pz;let budget=1;const prime=this.prime;this.prime=false;
   for(const c of this.chunks){const d=Math.hypot(Math.max(c.x0-lx,0,lx-c.x0-HCH),Math.max(c.z0-lz,0,lz-c.z0-HCH));
     if(d<KVIS){const must=prime&&d<130;if(!c.mesh&&must){hjBuildChunk(c);if(this.cur===c)this.cur=null}else if(!c.mesh&&budget>0&&!this.cur){this.cur=c;budget--}if(c.mesh&&!c.pop&&(must||budget>0)){c.pop=true;hjPopulate(c);if(!must)budget--}c.g.visible=!!c.mesh}else c.g.visible=false}
@@ -7144,7 +7146,7 @@ function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
   kGive('hajnallampa');kGive('hajnallampa');addXp('ha',1000,p);chat('Megkaptad: Hajózás 10. szint, a Hajnalcsillag a tiéd, és két hajnali tudáslámpa (5000 XP egyenként, Horgászat, Kovácsolás vagy Hajózás). Mostantól hajó jár Halászrév és Hajnalrév között.','xp');hjSync()}
 // --- percenkénti/képkockánkénti teendők ---
-function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);
+function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);hvMonTick(dt);
   // a torony lépcsőjén a lap: csak éjjel, ha ég a lámpa
   HJR.lhpage.mesh.visible=q.st===1&&q.n===0&&!((q.m||0)&2)&&night>0.45&&!!stats.kfeny;
   if(zn===14){const L=HJR.light;const lit=night>0.2;L.piv.visible=lit;if(lit)L.piv.rotation.y+=dt*0.7;
@@ -7339,6 +7341,107 @@ const HRLIFE=(()=>{const R=Math.random,pick=a=>a[(R()*a.length)|0];
     if(HREGT.circle[2])HREGT.circle[2].rotation.y+=dt;
     for(const p of puffs){p.t+=dt/(p.hmax*0.6);if(p.t>1)p.t-=1;const k=p.t;p.s.position.set(p.x+Math.sin(k*5+p.z)*p.sc*1.5*k,p.y+k*p.hmax,p.z+Math.cos(k*4)*p.sc*k);p.s.scale.setScalar(p.sc*(1.5+k*4));p.s.material.opacity=0.55*(1-k)*Math.min(1,k*6)}}
   return {step}})();
+
+// ================= A HAJNALVÖLGY SZÖRNYEI (6 fajta, 13 kinézet a tájlap választása szerint) =================
+const HVM=(()=>{const L=ML,{Rn,lin,flat,glow,blob,at,seg,ball,box,cone,chain,sh}=L;
+  const weapon=(arm,rx=-1.25)=>{const w=new THREE.Group();w.position.set(0,-0.95,0.1);w.rotation.x=rx;arm.add(w);return w};
+  const hideHead=g=>g.children.forEach(m=>{if(m.isMesh&&m.position.y>2.05)m.visible=false});
+  const wingMat=(c,op=0.45)=>new THREE.MeshLambertMaterial({color:lin(c),transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false});
+  function thief(o){const g=humanoid(o.look);const u=g.userData;
+    if(o.kind==='hood'){const h=cone(g,0.36,0.62,o.hood,0,2.55,-0.02,6);h.rotation.x=-0.12;box(g,0.5,0.18,0.05,0x111111,0,2.27,0.3);for(const s of[-1,1])ball(g,0.035,glow(0xffe080),s*0.09,2.3,0.33,4);const cl=box(g,0.95,1.25,0.08,o.cloak,0,1.5,-0.32);cl.rotation.x=0.08;
+      const w=weapon(u.armR,-1.0);box(w,0.05,0.45,0.09,0xd8d8e0,0,0.3,0);box(w,0.2,0.05,0.07,0x5a3a20,0,0.06,0);const sk=blob(0.2,1,1.1,1,0x9a7a4a,1,0.2);at(sk,-0.32,0.95,0.15);g.add(sk);ball(g,0.06,0xd8b040,-0.3,1.15,0.22,5)}
+    if(o.kind==='straw'){const hat=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.6,0.06,10),flat(0xd8b860));hat.position.set(0,2.58,0);g.add(hat);cone(g,0.28,0.32,0xd8b860,0,2.75,0,8);box(g,0.44,0.42,0.42,0xb89a62,0,2.32,0.02);for(const s of[-1,1])box(g,0.08,0.06,0.03,0x111111,s*0.1,2.38,0.24);box(g,0.2,0.03,0.03,0x3a2a1a,0,2.22,0.24);for(let k=0;k<8;k++){const st=cone(g,0.02,0.25,0xe8cc70,(Rn()-0.5)*0.5,2.1+Rn()*0.2,0.2,3);st.rotation.z=(Rn()-0.5)*2}
+      const w=weapon(u.armR,-0.7);seg(w,[0,-0.4,0],[0,1.4,0],0.035,0.035,0x6a4a2a);for(const s of[-1,0,1])seg(w,[s*0.1,1.35,0],[s*0.12,1.75,0],0.02,0.012,0x8a8a90);const sf=new THREE.Group();sf.position.set(-0.35,1.2,-0.2);g.add(sf);for(let k=0;k<10;k++)seg(sf,[(Rn()-0.5)*0.15,-0.35,(Rn()-0.5)*0.15],[(Rn()-0.5)*0.3,0.45,(Rn()-0.5)*0.3],0.02,0.015,0xe0c060,3);box(sf,0.22,0.06,0.22,0x8a6a2a,0,0,0)}
+    return sh(g)}
+  function dragonfly(o){const g=new THREE.Group(),Y=1.3;const segC=i=>i%2?o.c2:o.c1;const th=blob(0.22,1,0.9,1.2,(x,y,z)=>y>0.4?o.c2:o.c1,1,0.08,o.metal?new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,emissive:lin(o.c1),emissiveIntensity:0.25}):undefined);at(th,0,Y,0);g.add(th);
+    const hd=new THREE.Group();hd.position.set(0,Y+0.02,0.32);g.add(hd);for(const s of[-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8),o.eyeGlow?glow(o.eye):flat(o.eye));e.position.set(s*0.12,0.04,0.05);hd.add(e)}ball(hd,0.1,o.c1,0,-0.06,0.12,6);
+    let p=[0,Y-0.02,-0.18];for(let i=0;i<9;i++){const q=[0,p[1]+0.02-i*0.012,p[2]-0.2];seg(g,p,q,0.075-i*0.004,0.07-i*0.004,segC(i),6);p=q}cone(g,0.03,0.12,o.c2,0,p[1],p[2]-0.04,4).rotation.x=-Math.PI/2;
+    const wings=[];for(const [sz,s0] of[[0.06,1],[-0.12,0.9]])for(const s of[-1,1]){const w=new THREE.Mesh(new THREE.CircleGeometry(0.5,12),o.wingGlow?new THREE.MeshBasicMaterial({color:lin(o.wing),transparent:true,opacity:0.6,side:THREE.DoubleSide,depthWrite:false}):wingMat(o.wing));w.scale.set(1.7*s0,0.35,1);w.rotation.x=-Math.PI/2;w.rotation.z=s*0.12;w.position.set(s*0.82*s0,Y+0.18,sz);g.add(w);wings.push([w,s])}
+    for(const s of[-1,1])for(let k=0;k<3;k++)chain(g,[[s*0.1,Y-0.1,0.12-k*0.12],[s*0.3,Y-0.35,0.18-k*0.15],[s*0.36,Y-0.75,0.2-k*0.15]],[0.02,0.016,0.012],[0x2a2a2a]);
+    g.scale.setScalar(1.6);g.userData.body=th;g.userData.wings=wings;g.userData.fly=true;return sh(g)}
+  function toad(o){const g=new THREE.Group();const cf=(x,y,z)=>y<-0.3?o.belly:(o.pat&&o.pat(x,y,z))||(Rn()<0.22?o.c2:o.c1);const body=blob(0.7,1.15,0.72,1.0,cf,2,0.22);at(body,0,0.62,0);g.add(body);
+    const hd=blob(0.48,1.25,0.6,0.9,cf,2,0.15);at(hd,0,0.82,0.55);g.add(hd);for(const s of[-1,1]){ball(g,0.14,o.c1,s*0.3,1.12,0.65,7);ball(g,0.09,o.eyeGlow?glow(o.eye):o.eye,s*0.32,1.17,0.74,6);box(g,0.03,0.1,0.02,0x111111,s*0.32,1.17,0.825)}
+    box(g,0.8,0.05,0.4,0x5a1a1a,0,0.66,0.78);const tg=new THREE.Group();tg.position.set(0,0.66,0.9);g.add(tg);if(o.tongue){chain(tg,[[0,0,0],[0,-0.11,0.4],[0,-0.26,0.7]],[0.07,0.06,0.05],[0xd85a6a]);ball(tg,0.11,0xd85a6a,0,-0.28,0.75,6)}
+    for(const s of[-1,1]){chain(g,[[s*0.55,0.5,0.35],[s*0.75,0.3,0.5],[s*0.78,0.04,0.62]],[0.12,0.09,0.07],[o.c1]);const ft=blob(0.14,1.4,0.3,1.3,o.c2,1,0.1);at(ft,s*0.8,0.03,0.7);g.add(ft);chain(g,[[s*0.6,0.55,-0.35],[s*1.0,0.45,-0.2],[s*1.0,0.15,-0.45],[s*0.85,0.04,-0.1]],[0.2,0.16,0.1,0.09],[o.c1]);const fb=blob(0.18,1.5,0.3,1.6,o.c2,1,0.1);at(fb,s*0.85,0.03,0.05);g.add(fb)}
+    for(let i=0;i<18;i++){const a=Rn()*6.283,h=0.3+Rn()*0.5;ball(g,0.05+Rn()*0.05,o.wart,Math.cos(a)*0.7,0.62+h*0.6,Math.sin(a)*0.6-0.05,4)}
+    if(o.sacs)for(const s of[-1,1]){const sc=new THREE.Mesh(new THREE.SphereGeometry(0.17,8,6),glow(o.sacs));sc.position.set(s*0.45,0.72,0.8);g.add(sc)}
+    if(o.pad){const pd=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.03,10),flat(0x4a8a3a));pd.position.set(0.15,1.1,-0.1);pd.rotation.z=0.15;g.add(pd);ball(g,0.1,0xf0b0d8,0.25,1.17,-0.05,6);for(let k=0;k<6;k++){const r=cone(g,0.03,0.6,0x7a8a3a,-0.3+(Rn()-0.5)*0.3,1.2,-0.35+(Rn()-0.5)*0.3,3);r.rotation.z=(Rn()-0.5)*0.5}}
+    g.scale.setScalar((o.scale||1.15)*1.25);g.userData.body=body;g.userData.tongue=tg;return sh(g)}
+  function knight(o){const g=humanoid({skin:0xd8b090,hair:0x3a2a1a,shirt:o.armor,sleeves:o.armor,pants:o.legs,boots:0x2a2a2a});hideHead(g);const u=g.userData;box(g,0.86,0.95,0.6,o.armor,0,1.5,0.02);box(g,0.9,0.12,0.64,0x3a2a1a,0,1.05,0.02);box(g,0.3,0.12,0.05,0xd8b040,0,1.05,0.34);for(let k=0;k<3;k++)box(g,0.7-k*0.1,0.06,0.04,o.helm,0,1.75-k*0.22,0.33);
+    box(g,0.5,0.5,0.52,o.helm,0,2.33,0.02);box(g,0.42,0.06,0.06,0x111111,0,2.36,0.28);if(o.visor)for(let k=-2;k<=2;k++)box(g,0.03,0.18,0.02,0x111111,k*0.07,2.25,0.29);if(o.plume){for(let k=0;k<5;k++){const p=cone(g,0.07,0.4,o.plume,0,2.68+k*0.02,0.1-k*0.1,5);p.rotation.x=-0.6-k*0.15}}
+    for(const s of[-1,1]){const pd=blob(0.22,1.25,0.65,1.1,o.helm,1,0.05);at(pd,s*0.5,1.98,0);g.add(pd)}const cp=box(g,0.95,1.5,0.06,o.cape,0,1.35,-0.35);cp.rotation.x=0.1;if(o.ragged)for(let k=0;k<6;k++)cone(g,0.08,0.2,o.cape,-0.4+k*0.16,0.56,-0.39,3).rotation.x=Math.PI;
+    const w=weapon(u.armR,-1.15);if(o.mace){seg(w,[0,0,0],[0,0.85,0],0.035,0.035,0x4a3a2a);ball(w,0.16,0x5a5a62,0,0.95,0,6);for(let k=0;k<6;k++){const sp=cone(w,0.04,0.14,0x8a8a92,Math.cos(k)*0.15,0.95+Math.sin(k*2)*0.1,Math.sin(k)*0.15,4);sp.lookAt(0,0.95,0)}}else{box(w,0.08,1.05,0.03,0xd8d8e0,0,0.6,0);box(w,0.3,0.06,0.07,0x8a6a2a,0,0.06,0)}
+    const sw=new THREE.Group();sw.position.set(0,-0.6,0.18);u.armL.add(sw);box(sw,0.65,0.85,0.08,o.shield,0,0,0);box(sw,0.42,0.42,0.09,o.crest,0,0.05,0.01);if(o.crossed){const x1=box(sw,0.7,0.08,0.1,0x111111,0,0.05,0.02);x1.rotation.z=0.7}
+    g.scale.setScalar(1.05*(o.big||1));return sh(g)}
+  function troll(o){const g=humanoid({skin:o.skin,hair:o.skin,shirt:o.skin,sleeves:o.skin,pants:o.pants,boots:o.skin});hideHead(g);const u=g.userData;const bel=blob(0.55,1.05,1.0,0.85,(x,y)=>y<-0.2?o.skin2:o.skin,2,0.15);at(bel,0,1.45,0.12);g.add(bel);for(const s of[-1,1]){const shd=blob(0.3,1,0.85,1,o.skin,1,0.15);at(shd,s*0.55,1.95,0);g.add(shd)}u.armL.scale.set(1.35,1.45,1.35);u.armR.scale.set(1.35,1.45,1.35);u.body.rotation.x=0.25;
+    const hd=new THREE.Group();hd.position.set(0,2.2,0.32);g.add(hd);hd.add(blob(0.36,1.1,0.9,1.0,(x,y)=>y>0.5&&o.hairC?o.hairC:o.skin,2,0.25));const nose=blob(0.12,1,1,1.8,o.skin2,1,0.1);at(nose,0,-0.02,0.38);hd.add(nose);for(const s of[-1,1]){ball(hd,0.05,glow(o.eye),s*0.13,0.08,0.3,5);cone(hd,0.045,0.16,0xe8e0c8,s*0.1,-0.2,0.3,4);const ear=cone(hd,0.1,0.4,o.skin2,s*0.4,0.05,-0.05,4);ear.rotation.z=-s*1.3}
+    if(o.reeds)for(let k=0;k<14;k++){const r=cone(hd,0.025,0.55,k%3?0x6a8a3a:0x8a9a4a,(Rn()-0.5)*0.5,0.42,(Rn()-0.5)*0.4,3);r.rotation.set((Rn()-0.5)*0.6,0,(Rn()-0.5)*0.6)}
+    if(o.moss)for(let k=0;k<10;k++){const m=blob(0.12,1,0.5,1,0x4a7a2a,1,0.3);at(m,(Rn()-0.5)*0.7,1.4+Rn()*0.8,-0.3+Rn()*0.2);g.add(m)}
+    if(o.rock)for(let k=0;k<14;k++){const r=blob(0.13,1,0.7,1,Rn()<0.5?0x8a8a84:0x6a6a64,1,0.3);at(r,(Rn()-0.5)*0.8,1.1+Rn()*1.0,(Rn()-0.5)*0.5);g.add(r)}if(o.barn)for(let k=0;k<8;k++)cone(g,0.04,0.07,0xe8e0d0,(Rn()-0.5)*0.7,1.2+Rn()*0.9,0.35,5).rotation.x=Math.PI/2;
+    const w=weapon(u.armR,-1.0);if(o.club==='log'){seg(w,[0,-0.1,0],[0,1.4,0],0.09,0.18,0x6a4a2a,7);for(let k=0;k<3;k++)ball(w,0.08,0x4a7a2a,(Rn()-0.5)*0.2,0.9+k*0.2,0.12,4)}else{const pl=box(w,0.4,1.6,0.1,0x8a6a40,0,0.7,0);pl.rotation.z=0.1;box(w,0.42,0.06,0.12,0x3a3a3a,0,0.4,0)}
+    g.traverse(m=>{if(m.isMesh&&m.material&&m.material.isMeshLambertMaterial&&!m.material.vertexColors&&!m.material.userData.lin){const c=m.material.clone();c.color.convertSRGBToLinear();c.userData.lin=1;m.material=c}});g.scale.setScalar(o.scale||1.4);g.userData.body=hd.children[0];return sh(g)}
+  function golem(o){const g=new THREE.Group();const part=(r,sx,sy,sz,x,y,z)=>{let m;if(o.kind==='straw'){m=new THREE.Group();const n=10;for(let k=0;k<n;k++){const a=k/n*6.283;seg(m,[Math.cos(a)*r*sx*0.8,-r*sy,Math.sin(a)*r*sz*0.8],[Math.cos(a)*r*sx,r*sy,Math.sin(a)*r*sz],0.05,0.04,Rn()<0.3?0xc8a040:0xe0c060,3)}m.add(blob(r*0.85,sx,sy,sz,0xd8b850,1,0.1));for(const t of[-0.3,0.3]){const band=new THREE.Mesh(new THREE.TorusGeometry(r*sx*0.9,0.03,4,10),flat(0x8a5a2a));band.rotation.x=Math.PI/2;band.position.y=t*r*sy;m.add(band)}}else m=blob(r,sx,sy,sz,o.cf,1,o.kind==='clay'?0.08:0.3);at(m,x,y,z);g.add(m);return m};
+    const torso=part(0.62,1.1,1.0,0.8,0,1.75,0);part(0.42,1.2,0.7,0.9,0,1.05,0);part(0.3,1,0.9,0.9,0,2.55,0.08);for(const s of[-1,1]){ball(g,0.07,glow(o.eye),s*0.12,2.6,0.34,5);part(0.3,1,0.9,1,s*0.85,2.05,0);part(0.24,0.9,1.6,0.9,s*0.95,1.45,0.05);part(0.27,1.1,0.8,1.1,s*0.98,0.85,0.12);part(0.25,1,1.5,1,s*0.32,0.45,0)}
+    if(o.kind==='clay'){for(let k=0;k<7;k++){const c=box(g,0.03,0.35+Rn()*0.3,0.02,glow(o.eye),(Rn()-0.5)*1.0,1.4+Rn()*0.8,0.5);c.rotation.z=(Rn()-0.5)*1.2}for(let k=0;k<3;k++)box(g,0.5,0.05,0.02,0x3a2a6a,0,1.6+k*0.25,0.51);box(g,0.3,0.3,0.02,0xe8d8b0,0,2.6,0.38)}
+    if(o.kind==='straw'){const sc=new THREE.Group();sc.position.set(1.0,0.85,0.3);g.add(sc);seg(sc,[0,-0.4,0],[0,1.9,0],0.035,0.035,0x6a4a2a);const bl=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.04,3,10,Math.PI*0.6),flat(0xc8c8d0));bl.position.set(-0.2,1.75,0);bl.rotation.z=Math.PI*0.55;sc.add(bl);const hat=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.55,0.05,10),flat(0xd8b860));hat.position.set(0,2.85,0.08);g.add(hat);cone(g,0.25,0.3,0xd8b860,0,3.0,0.08,8);box(g,0.22,0.04,0.02,0x2a1a0a,0,2.45,0.35)}
+    g.scale.setScalar((o.scale||1.05)*1.25);g.userData.body=torso.isMesh?torso:torso.children.find(c=>c.isMesh&&c.geometry.type!=='CylinderGeometry'&&c.geometry.type!=='TorusGeometry')||torso.children[0];return sh(g)}
+  const lk=o=>Object.assign({skin:0xd8a880,hair:0x2a1a0a,boots:0x2a1a0a},o);
+  const B={
+    mezeitolvaj:{A:()=>thief({kind:'hood',hood:0x4a3a2a,cloak:0x3a5a3a,look:lk({shirt:0x4a5a3a,sleeves:0x3a4a2a,pants:0x3a3022})}),B:()=>thief({kind:'straw',look:lk({skin:0xc89070,hair:0x5a3a1a,shirt:0x8a5a3a,sleeves:0xa86a3a,pants:0x5a4a8a,boots:0x3a2a1a})})},
+    szitakoto:{A:()=>dragonfly({c1:0x2a9a7a,c2:0x3a6ad8,eye:0x2a5aa8,wing:0xd8f0ff,vein:0x4a7a8a}),C:()=>dragonfly({c1:0xe0b030,c2:0xb08020,eye:0xfff0a0,eyeGlow:true,wing:0xfff0b0,vein:0xd8a030,wingGlow:true,metal:true})},
+    gazlovarangy:{A:()=>toad({c1:0x5a7a3a,c2:0x3a5a2a,belly:0xd8c890,wart:0x4a6a2a,eye:0xd8b040,tongue:true}),B:()=>toad({c1:0x2a5ab8,c2:0x1a3a8a,belly:0xf0d040,wart:0xf0d040,eye:0x111111,sacs:0xf0e040,tongue:true,pat:(x,y,z)=>(Math.sin(x*9)+Math.cos(z*7)>1.1?0x111118:null),scale:0.95}),C:()=>toad({c1:0x6a5a3a,c2:0x4a3e28,belly:0xa89a70,wart:0x5a4a30,eye:0xc8a030,pad:true,tongue:true,scale:1.3})},
+    rablolovag:{A:()=>knight({armor:0x8a8a90,legs:0x5a5a62,helm:0x9a9aa2,cape:0x8a1a1a,shield:0x6a6a72,crest:0xd8b040,plume:0xc82a2a,crossed:true})},
+    rablovezer:{A:()=>knight({armor:0x2a2a30,legs:0x1e1e22,helm:0x34343a,cape:0x18181c,shield:0x2a2a30,crest:0x8a1a1a,visor:true,mace:true,ragged:true,big:1.15})},
+    folyamitroll:{A:()=>troll({skin:0x5a7a4a,skin2:0x4a6a3a,pants:0x5a4a2a,eye:0xffd040,reeds:true,moss:true,club:'log'}),C:()=>troll({skin:0x7a7a74,skin2:0x6a6a64,pants:0x4a4038,eye:0xff8a30,rock:true,barn:true,club:'plank',scale:1.5})},
+    kobolgolem:{B:()=>golem({kind:'clay',cf:(x,y)=>Rn()<0.2?0xa8603a:0xc07a48,eye:0x7ad8ff}),C:()=>golem({kind:'straw',eye:0xff9a30,scale:1.0})}};
+  return {B}})();
+Object.assign(ITEMS,{lisztzsak:{name:'Lisztes zsák',icon:'🛍'},szitakotoszarny:{name:'Szitakötőszárny',icon:'🪽'},agyag:{name:'Agyag',icon:'🟫'}});
+for(const k of['lisztzsak','szitakotoszarny','agyag'])STACK.add(k);Object.assign(SELL,{szitakotoszarny:25,agyag:6});
+Object.assign(MON,{
+  mezeitolvaj:{name:'Mezei tolvaj',level:42,hp:62,maxHit:7,acc:0.66,speed:6,aggroD:7,aggroN:9,build:(v)=>HVM.B.mezeitolvaj[v||'A'](),drops:[['zafir',0.04],['gyogyital',0.08],['kenyer',0.15]],thief:true},
+  szitakoto:{name:'Óriás szitakötő',level:44,hp:58,maxHit:7,acc:0.7,speed:7.5,aggroD:6,aggroN:8,build:(v)=>HVM.B.szitakoto[v||'A'](),drops:[['szitakotoszarny',0.6]],dodge:0.4},
+  gazlovarangy:{name:'Gázlóvarangy',level:46,hp:78,maxHit:8,acc:0.66,speed:3.5,aggroD:7,aggroN:9,build:(v)=>HVM.B.gazlovarangy[v||'A'](),drops:[['varangylab',0.6]],tongue:true},
+  rablolovag:{name:'Rablólovag',level:50,hp:92,maxHit:9,acc:0.72,speed:5,aggroD:9,aggroN:11,build:()=>HVM.B.rablolovag.A(),drops:[['acelkard',0.06],['acelrud',0.25],['rum',0.2]],shield:0.3},
+  rablovezer:{name:'Rablólovag-vezér',level:54,hp:120,maxHit:11,acc:0.74,speed:5,aggroD:10,aggroN:12,build:()=>HVM.B.rablovezer.A(),drops:[['acelrud',0.5],['zafir',0.15],['smaragd',0.08]],shield:0.4},
+  folyamitroll:{name:'Folyami troll',level:55,hp:130,maxHit:12,acc:0.7,speed:4.5,aggroD:7,aggroN:9,build:(v)=>HVM.B.folyamitroll[v||'A'](),drops:[['nagycsont',0.5],['pisztrang',0.3]],ambush:true},
+  kobolgolem:{name:'Kóbor gólem',level:58,hp:150,maxHit:16,acc:0.62,speed:2.4,aggroD:6,aggroN:8,build:(v)=>HVM.B.kobolgolem[v||'B'](),drops:[['agyag',0.6],['buza',0.2]]}});
+// a változatonkénti eltérések: név, méreg, zsákmány
+const HVV={'gazlovarangy:B':{name:'Kék méregbéka',poison:true,maxHit:7},'szitakoto:C':{name:'Aranyszárnyú szitakötő',hp:66,drops:[['szitakotoszarny',0.8],['aranyrud',0.1]]},'gazlovarangy:C':{name:'Öreg iszapvarangy',hp:96,maxHit:9},'mezeitolvaj:B':{name:'Szénatolvaj'},'folyamitroll:C':{name:'Kőhídi troll',hp:150,maxHit:13},'kobolgolem:C':{name:'Aratógólem',drops:[['buza',0.7]]}};
+function hvSpawn(kind,v,x,z){const base=MON[kind],d=Object.assign({},base,HVV[kind+':'+v]||{});const g=base.build(v);placeAt(g,HJX+x,z);scene.add(g);const o={mesh:g,type:'monster',kind,name:d.name,action:'Megtámadom',hit:g.userData.body||g.children[0],hp:d.hp,maxHp:d.hp,home:{x:HJX+x,z},target:null,wait:Math.random()*3,atkT:0,level:d.level,d,hv:v,hvz:true};monsters.push(o);interactables.push(o);return o}
+const HVMON={done:false,list:[]};
+function hvSpawnAll(){if(HVMON.done)return;HVMON.done=true;const R=kRng(7301),L=HVMON.list;const valley=(x,z)=>{const t=hjT(z);return t>0.405&&t<0.565};
+  const find=(test,n,cb)=>{let k=0,got=0;while(got<n&&k<4000){k++;const t=0.405+R()*0.16,u=0.04+R()*0.92,[x,z]=hjU(t,u),h=hjHeight(x,z);if(h<0.9||hTown(x,z)||!valley(x,z))continue;if(!test(x,z,h,t,u))continue;cb(x,z);got++}};
+  find((x,z)=>{const d=hjRoadDist(x,z);return d>6&&d<14},6,(x,z)=>L.push(hvSpawn('mezeitolvaj','A',x,z)));
+  find((x,z,h,t)=>hjWheat(x,z,t)&&hjCell(x,z)!==2&&hjCell(x,z)!==4,6,(x,z)=>L.push(hvSpawn('mezeitolvaj','B',x,z)));
+  find((x,z)=>{const r=hjRiv(x,z);return r>10&&r<26},6,(x,z)=>L.push(hvSpawn('szitakoto','A',x,z)));
+  find((x,z,h,t)=>{const r=hjRiv(x,z);return r>10&&r<28&&t>0.5},3,(x,z)=>L.push(hvSpawn('szitakoto','C',x,z)));
+  find((x,z,h,t)=>{const r=hjRiv(x,z);return r>9&&r<20&&t<0.48},5,(x,z)=>L.push(hvSpawn('gazlovarangy','A',x,z)));
+  find((x,z,h,t,u)=>t>0.53&&u<0.45&&h<2.6,4,(x,z)=>L.push(hvSpawn('gazlovarangy','B',x,z)));
+  find((x,z,h,t)=>{const r=hjRiv(x,z);return r>9&&r<18&&t>0.48&&t<0.53},3,(x,z)=>L.push(hvSpawn('gazlovarangy','C',x,z)));
+  {const [cx,cz]=HV.tanya;for(let i=0;i<4;i++){const a=i/4*6.283+0.4;L.push(hvSpawn('rablolovag','A',cx+Math.cos(a)*9,cz+Math.sin(a)*9))}L.push(hvSpawn('rablovezer','A',cx-2,cz-3))}
+  for(const [v,x,z,ry,Lb] of[['A',226.3+Math.sin(1.0)*4,-320.4+Math.cos(1.0)*4,1.0,24],['C',120.2,84.2,0.82,30]]){const o=hvSpawn('folyamitroll',v,x,z);o.ends=[1,-1].map(e=>[HJX+x+Math.sin(ry)*e*(Lb/2+4),z+Math.cos(ry)*e*(Lb/2+4)]);o.hide=true;o.mesh.visible=false;o.d.aggroD0=o.d.aggroD;o.d.aggroD=0;L.push(o)}
+  {const [cx,cz]=HV.agyag;for(let i=0;i<4;i++){const a=i*1.57+0.3;L.push(hvSpawn('kobolgolem','B',cx+Math.cos(a)*14,cz+Math.sin(a)*14))}}
+  find((x,z)=>{const d=Math.hypot(x-HV.szuret[0],z-HV.szuret[1]);return d>78&&d<130},4,(x,z)=>L.push(hvSpawn('kobolgolem','C',x,z)));
+  HS.movers=null}
+// harci különlegességek: tolvaj lop és elfut, szitakötő kitér a lövés elől, lovag pajzzsal hárít, varangy magához ránt, troll lesből támad
+const _hvMH=monsterHit;monsterHit=function(s){_hvMH(s);if(s.d&&s.d.thief&&!s.stolen&&Math.random()<0.22&&coins>20){const c=Math.min(coins,10+Math.floor(Math.random()*35));setCoins(coins-c);s.stolen=c;s.flee=4;s.aggro=false;if(fight===s)fight=null;chat(`${s.name} kimarkolt ${c} érmét a zsebedből, és elfut! Kapd el!`,'fight');floatText('-'+c+' érme',player.position,'#ffd040',-16)}};
+const _hvPH=playerHit;playerHit=function(s){const d=s.d||{};if(d.dodge&&isRanged()&&Math.random()<d.dodge){floatText('kitér!',s.mesh.position,'#a0e0ff',-10);SFX.play('miss');return}
+  if(d.shield&&!isRanged()&&Math.random()<d.shield){floatText('hárít!',s.mesh.position,'#d0d0e0',-10);SFX.play('smith');return}_hvPH(s)};
+const _hvMD=monsterDie;monsterDie=function(s){if(s.hvz&&!s.temp){if(s.stolen){setCoins(coins+s.stolen);chat(`Visszaszerezted a ${s.stolen} érmédet.`,'xp');s.stolen=0}
+    if(s.kind==='mezeitolvaj'&&s.hv==='B'&&qs.liszt&&qs.liszt.st===1&&countItem('lisztzsak')<5&&Math.random()<0.55){giveItem('lisztzsak');chat('A szénatolvaj zsákjából egy lisztes zsák kerül elő: Jakab malmából!','xp');renderQuests()}
+    if(s.kind==='folyamitroll')setTimeout(()=>{s.hide=true;s.mesh.visible=false;s.d.aggroD=0},26000)}_hvMD(s)};
+function hvMonTick(dt){if(!HVMON.done)return;for(const s of HVMON.list){if(s.depleted)continue;const m=s.mesh,d=Math.hypot(m.position.x-px,m.position.z-pz);if(d>140)continue;
+    if(!s.hide&&s.ends&&!s.aggro&&d>40){s.hide=true;m.visible=false;s.d.aggroD=0;m.position.set(s.home.x,height(s.home.x,s.home.z),s.home.z)}
+    if(s.hide){const de=s.ends?Math.min(...s.ends.map(e=>Math.hypot(e[0]-px,e[1]-pz))):d;if((d<8||de<7)&&!dead){s.hide=false;m.visible=true;s.aggro=true;s.d.aggroD=s.d.aggroD0||7;if(s.ends){const e=s.ends.reduce((a,b)=>Math.hypot(a[0]-px,a[1]-pz)<Math.hypot(b[0]-px,b[1]-pz)?a:b);m.position.set(e[0],height(e[0],e[1]),e[1])}SFX.play('troll');chat(`${s.name} bukkan elő a híd alól!`,'fight');floatText('!',m.position,'#ff4040',-30)}else{m.visible=false;continue}}
+    if(s.flee>0){s.flee-=dt;const ax=m.position.x-px,az=m.position.z-pz,l=Math.hypot(ax,az)||1,nx=m.position.x+ax/l*7*dt,nz=m.position.z+az/l*7*dt;if(height(nx,nz)>0.7){m.position.x=nx;m.position.z=nz}m.rotation.y=Math.atan2(ax,az);if(s.flee<=0)s.target={x:s.home.x,z:s.home.z}}
+    if(s.d.tongue&&s.aggro&&!dead){s.tg=(s.tg==null?4:s.tg)-dt;if(s.tg<=0&&d>2.6&&d<9){s.tg=7;const ax=px-m.position.x,az=pz-m.position.z,l=Math.hypot(ax,az);px=m.position.x+ax/l*1.8;pz=m.position.z+az/l*1.8;target=null;route=[];chat(`${s.name} nyelve kicsap és magához ránt!`,'fight');SFX.play('hit');const t=m.userData.tongue;if(t){t.scale.z=3;setTimeout(()=>t.scale.z=1,250)}}}
+    if(m.userData.fly){s.flyH=1.3+Math.sin(t*3+m.position.x)*0.3;for(const [w,sd] of m.userData.wings)w.rotation.z=sd*(0.12+Math.sin(t*40)*0.35);if(s.hv==='C'){const k=0.35+Math.sin(t*2+m.position.z)*0.25;m.traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive)o.material.emissiveIntensity=k})}}}}
+// --- „Lopott liszt”: Molnár Jakab mellékküldetése ---
+QREQ.liszt=()=>combatLevel()>=35;QREADY.liszt=()=>countItem('lisztzsak')>=5;(NPCQ.hvjakab||(NPCQ.hvjakab=[])).push('liszt');
+{const _jk=DIALOG.hvjakab;DIALOG.hvjakab=function(o){const S=say(o.name);if(sq(S,'liszt',{req:()=>combatLevel()>=35,reqText:'A tolvajok erősek és sokan vannak. Harmincötös harci szint nélkül ne menj utánuk.',offer:'Jakab vagyok, a molnár. A szénatolvajok, azok a szalmakalapos gazemberek, öt zsák lisztemet vitték el. Ha nem kerül meg, a falu kenyér nélkül marad. Visszahozod?',yes:'Visszahozom a lisztet.',after:'A búzamezőkön bujkálnak, szalmakalapban, vasvillával. A zsákjaikban keresd.',ready:()=>countItem('lisztzsak')>=5,done:'Mind az öt zsák! A malom újra őröl, a falu újra eszik. Fogadd hálám jeléül: pénz, kenyér, és mostantól fele áron sütök neked.',take:()=>takeN('lisztzsak',5)}))return;
+  showDialog('Molnár Jakab',qs.liszt.st===2?'Fele áron, ahogy ígértem! Mit adhatok?':'Lisztet, kenyeret? A pékem a ház mellett süt.',[{t:'Mit árulsz?',f:()=>openShop(qs.liszt.st===2?[['kenyer',5,1],['buza',2,1],['buzamag',1,1]]:[['kenyer',9,1],['buza',4,1],['buzamag',2,1]],'JAKAB MALMA')},{t:'Szép a malmod.',f:()=>showDialog('Molnár Jakab','Háromszáz éves a nagymalom. A vitorláit minden tavasszal újravarrjuk.')}])}}
+{const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='liszt'){setCoins(coins+2500);addXp('th',1500,p);for(let i=0;i<5;i++)kGive('kenyer')}}}
+ACH.push({id:'liszt',name:'A malom hőse',desc:'Hozd vissza Molnár Jakab öt zsák lisztjét.',chk:()=>qs.liszt.st===2},{id:'hidtroll',name:'Hídvámszedő',desc:'Győzd le a lesben álló folyami trollt.',chk:()=>!!((stats.kk||{}).folyamitroll)});
 
 // zóna-csoportok: csak az aktuális sziget objektumai és fényei láthatók (a többi 600 egységre van, a ködön túl)
 const zoneGroups=[];(function(){for(let i=0;i<ZNAMES.length;i++){const g=new THREE.Group();g.name='zone'+i;zoneGroups.push(g);scene.add(g)}
