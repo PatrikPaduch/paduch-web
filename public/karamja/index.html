@@ -4875,6 +4875,8 @@ Object.assign(QUESTS,{
 });
 // --- Hajnalföld, 1. fázis (v72): az első fő küldetés, új tárgyak és szörnyek ---
 for(const k of['tolgydeszka','kotel','naplolap','krakentinta','hajnallampa'])STACK.add(k);
+QUESTS.hamis={name:'Hamis érmék',giver:'Pénzverő Mester Gáspár (Aranykapu, pénzverde)',desc:'Ólmos, hamis aranykapui érmék keringenek a városban. Pénzverő Mester Gáspár szerint valaki a város szívében önti őket.',reward:'Aranykapu polgárjoga (10% kedvezmény a vásárcsarnokban, ingyenes hídvám), +2 hely a Nagyvásárban, 20 000 Tolvajlás XP, 5000 érme',qp:2,obj:q=>{const m=q.m||0,v=q.v||0,a=(b,nm,c)=>`${nm} (${c}) ${m&b?(v&b?'✔ ellenőrizve':'? ellenőrizd'):'✘'}`;return ['Beszélj a vak koldussal a rotunda előtti téren. Ő mindent hall (egy érmébe kerül).','Szerezd meg az óratorony kulcsát Órásmester Kelementől. Önként nem adja oda... (45-ös Tolvajlás)','Delelőkor, amikor az óra delet üt, vizsgáld át az óraszerkezetet az óratorony ajtajánál.','Vidd az öntőformát Pénzverő Mester Gáspárnak.',`Kérdezd ki a három céhpénztárnokot (a céhházaknál), és ellenőrizd az alibijüket: ${a(1,'Vilmos','Kovácsok')}, ${a(2,'Rozália','Vadászok')}, ${a(4,'Ábel','Hajósok')}.`+(m===7&&v===7?' Mondd meg Gáspárnak, kinek hazudott az alibije!':''),'Győzd le Ábel két bérencét a pénzverde előtt.','Térj vissza Pénzverő Mester Gáspárhoz.'][q.n]||''}};
+QUESTS.szilank={name:'Szilánkok a folyóban',giver:'Hajóskapitány Zsigmond (Aranykapu, Hajósok céhe)',desc:'Csuklyás alakok egy izzó ládával menekülnek lefelé a Napfolyón. Bodor szerint napkorong-szilánkokat vásárolnak fel Aranykapuban.',reward:'Napkorong-szilánk, 12 000 Horgászat XP (3000 a harcsáért), 3000 érme',qp:2,obj:q=>['Szállj fel Révész Matyi uszályára a csatorna déli végén, és üldözd a csuklyások csónakját a Napfolyón.','Fogd ki az óriásharcsát a Napfolyó örvényéből (55-ös Horgászat).','Vidd az óriásharcsát Hajóskapitány Zsigmondnak.'][q.n]||''};
 QUESTS.nagyvasar={name:'A Nagyvásár',giver:'Vásári ügyintéző (Aranykapu, a rotunda)',desc:'Aranykapu Nagyvására zárva, mert a Kovácsok, a Vadászok és a Hajósok céhe nem tud megegyezni a vásári szabályokban. Valakinek ki kell békítenie őket.',reward:'A Nagyvásár megnyílik (játékosok közti kereskedés, 4 ajánlathely), 1000 érme, 400 Kovácsolás, 600 Vadászat és 600 Hajózás XP',qp:1,obj:q=>`Szerezd meg a három céhmester pecsétjét (a céhházak a város déli részén), és vidd az ügyintézőnek: Kovácsok ${q.m&1?'✔':'✘'}, Vadászok ${q.m&2?'✔':'✘'}, Hajósok ${q.m&4?'✔':'✘'}.`+(q.m===7?' Mind megvan, vissza a rotundába!':'')};
 QUESTS.liszt={name:'Lopott liszt',giver:'Molnár Jakab (Malomdomb, Hajnalvölgy)',desc:'A szalmakalapos szénatolvajok éjjelente kirabolják Jakab malmait. Öt lisztes zsák tűnt el, és a falu kenyere velük együtt.',reward:'2500 érme, 1500 Tolvajlás XP, 5 kenyér, a malom kenyere fele áron',qp:1,obj:q=>`Hozz vissza öt lisztes zsákot a szénatolvajoktól (a búzamezőkön, szalmakalapban): ${countItem('lisztzsak')}/5.`};
 QUESTS.hajnal={name:'Hajnal a láthatáron',giver:'Révkapitány Ármin (Halászrév)',desc:'Hét napja futott be egy hajó kelet felől: legénység nélkül, a kormány lekötve, a napló megperzselve. Az utolsó olvasható sor: „ott, ahol a nap kel, már nem kel fel”.',
@@ -6796,7 +6798,7 @@ const AK={C:HP.ak,R:88,gates:[],bridges:[],land:[]};
   const avenue=(x,z)=>AK.gates.some(g=>{const L=Math.hypot(g[0]-8,g[1]);const t=clamp(((x-8)*(g[0]-8)+z*g[1])/(L*L),0,1);return Math.hypot(x-8-(g[0]-8)*t,z-g[1]*t)<6.5});
   // az óvárosi kocsma (Az Arany Kupa) és a kikötői raktár a csatorna mellett: az első szabad hely a nyugati parton
   {let done=0;for(let a=2.0;a<4.4&&done<1;a+=0.05)for(const r of[60,46,74]){const x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>45)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',sign:0xa83a1a});AK.land.push([x,z,8]);AK.tavern=[x,z];done=1;break}}
-  {let done=0;for(let a=0.6;a<2.2&&done<1;a+=0.05){const r=60,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>40)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',bars:true,sign:0x6a5a3a});AK.land.push([x,z,8]);AK.depot=[x,z];done=1}}
+  {let done=0;for(let a=0.3;a<2.8&&done<1;a+=0.05)for(const r of[60,46,74]){if(done)break;const x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(!ok(x,z)||riv(x,z)>60)continue;house(HJX+CX+x,CZ+z,9,7,Math.atan2(8-x,-z),{style:'varrock',bars:true,sign:0x6a5a3a});AK.land.push([x,z,8]);AK.depot=[x,z];done=1}}
   for(const [r,step] of[[46,8.3],[60,8.3],[74,8.4]]){const n=Math.floor(6.283*r/step);for(let i=0;i<n;i++){const a=i/n*6.283+r*0.01,x=8+Math.cos(a)*r,z=Math.sin(a)*r;if(avenue(x,z)||Math.hypot(x-14,z)<34)continue;
     const west=riv(x,z)<60&&x<-8,st=r===46?'varrock':west?'varrock':'aldarin';H(x,z,Math.atan2(8-x,-z),st,r===46?{bars:true}:undefined)}}
   // a megmaradt foghíjas telkekre: kút, piaci standok, szekér hordókkal, virágos kiskert padokkal
@@ -7246,7 +7248,7 @@ function hjKill(s){const q=qs.hajnal;if(s.hj==='kal'&&q.st===1&&q.n===5){q.k=(q.
 function hjFinish(id,p){if(id!=='hajnal')return;if(xp.ha<xpFor(10))xp.ha=xpFor(10);myboat.hajnal=1;myboat.level=Math.max(myboat.level||0,1);myboat.style=myboat.style||'A';updateSkillsUI();
   kGive('hajnallampa');kGive('hajnallampa');addXp('ha',1000,p);chat('Megkaptad: Hajózás 10. szint, a Hajnalcsillag a tiéd, és két hajnali tudáslámpa (5000 XP egyenként, Horgászat, Kovácsolás vagy Hajózás). Mostantól hajó jár Halászrév és Hajnalrév között.','xp');hjSync()}
 // --- percenkénti/képkockánkénti teendők ---
-function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);hvMonTick(dt);
+function hjTick(dt){const q=qs.hajnal,zn=zoneOf(px);HTOWN.step(dt);HVLIFE.step(dt);HRLIFE.step(dt);AKL.step(dt);AKQ.step(dt);hvMonTick(dt);
   // a torony lépcsőjén a lap: csak éjjel, ha ég a lámpa
   HJR.lhpage.mesh.visible=q.st===1&&q.n===0&&!((q.m||0)&2)&&night>0.45&&!!stats.kfeny;
   if(zn===14){const L=HJR.light;const lit=night>0.2;L.piv.visible=lit;if(lit)L.piv.rotation.y+=dt*0.7;
@@ -7660,7 +7662,8 @@ DIALOG.akclerk=o=>{const S=say('Vásári ügyintéző'),q=qs.nagyvasar;
     done:'Mindhárom pecsét! A Kovácsok, a Vadászok és a Hajósok... egy levélen! Ilyet még nem láttam. A Nagyvásár megnyílik, és az első helyet neked foglaljuk.',thanks:'Nyissuk ki a vásárt!'}))return;
   S('A Nagyvásár zárva.')};
 QREQ.nagyvasar=()=>true;
-{const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='nagyvasar'){setCoins(coins+1000);chat('A Nagyvásár megnyílt előtted! A rotunda ügyintézőinél kereskedhetsz a többi kalandorral.','xp')}}}
+{const _hjF=hjFinish;hjFinish=function(id,p){_hjF(id,p);if(id==='hamis'){setCoins(coins+5000);addXp('th',20000,p);chat('Aranykapu polgára lettél! Kedvezmény a csarnokban, ingyenes hídvám, és két új hely a Nagyvásárban.','xp')}if(id==='szilank'){setCoins(coins+3000);addXp('fi',9000,p)}if(id==='nagyvasar'){setCoins(coins+1000);chat('A Nagyvásár megnyílt előtted! A rotunda ügyintézőinél kereskedhetsz a többi kalandorral.','xp')}}}
+ACH.push({id:'hamis',name:'Pénzhamisítók vesztére',desc:'Leplezd le Aranykapu pénzhamisítóját.',chk:()=>qs.hamis.st===2},{id:'szilank',name:'A harcsa gyomrában',desc:'Szerezd vissza a napkorong-szilánkot a Napfolyóból.',chk:()=>qs.szilank.st===2});
 ACH.push({id:'nagyvasar',name:'Vásárbíró',desc:'Békítsd ki Aranykapu három céhét, és nyisd meg a Nagyvásárt.',chk:()=>qs.nagyvasar.st===2},{id:'gekotes',name:'Első üzlet',desc:'Köss üzletet a Nagyvásárban.',chk:()=>!!stats.gekotes});
 
 // ---------------- a Nagyvásár ablaka ----------------
@@ -7769,6 +7772,146 @@ const GE=(()=>{let el=null,tab='o',offers=[],max=6,setup=null,piac=null,busy=fal
   setInterval(()=>{if(!stats.geNyitott||(el&&el.style.display==='block'))return;refresh()},60000);
   return {open,close,refresh,get offers(){return offers},api,isOpen:()=>!!el&&el.style.display==='block'}})();
 function geOpen(){if(!(qs.nagyvasar&&qs.nagyvasar.st===2)){DIALOG.akclerk({});return}hideDialog();GE.open()}
+// ================= v74c: „Hamis érmék” és „Szilánkok a folyóban” =================
+Object.assign(ITEMS,{hamiserme:{name:'Hamis érme',icon:'🪙'},orakulcs:{name:'Óratorony-kulcs',icon:'🗝'},ontoforma:{name:'Öntőforma horgonyjellel',icon:'⚓'},oriasharcsa:{name:'Óriásharcsa',icon:'🐟'},napszilank:{name:'Napkorong-szilánk',icon:'✨'}});
+QREQ.hamis=()=>qs.nagyvasar.st===2&&lvlFor(xp.th)>=45;QREADY.hamis=()=>qs.hamis.n===6;(NPCQ.akgaspar||(NPCQ.akgaspar=[])).push('hamis');
+QREQ.szilank=()=>qs.nagyvasar.st===2&&lvlFor(xp.fi)>=55;QREADY.szilank=()=>qs.szilank.n===2&&countItem('oriasharcsa')>0;(NPCQ.akzsigmond||(NPCQ.akzsigmond=[])).push('szilank');
+const AKQ=(()=>{const [CX,CZ]=AK.C,W=(x,z)=>[HJX+CX+x,CZ+z],L=(wx,wz)=>[wx-HJX-CX,wz-CZ];
+  // az első szabad, járható pont (x,z)-től (tx,tz) felé: az ajtók, kapuk elé tesszük a szereplőket
+  const front=(x,z,tx,tz,side=0)=>{const d=Math.hypot(tx-x,tz-z)||1,ux=(tx-x)/d,uz=(tz-z)/d;for(let k=0;k<d;k+=0.5){const lx=x+ux*k,lz=z+uz*k,[wx,wz]=W(lx,lz);if(!colHit(wx,wz,1.0)&&height(wx,wz)>0.5)return [lx+ux*2.2-uz*side,lz+uz*2.2+ux*side]}return [tx,tz]};
+  const person=(lx,lz,name,dlg,look,ry)=>{const o=npc(...W(lx,lz),name,[],look,dlg);if(ry!==undefined){o.mesh.rotation.y=ry;o.noTurn=true}hjSlim(o.mesh);AKL.statics.push(o);return o};
+  const P={};
+  // --- szereplők ---
+  {const c=AK.clock,a=0.2;const f=front(c[0],c[1],c[0]+Math.sin(a)*30,c[1]+Math.cos(a)*30);P.clockDoor=front(c[0],c[1],c[0]+Math.sin(a)*30,c[1]+Math.cos(a)*30,0);
+    P.kelemen=person(f[0]+2.5,f[1]+1,'Órásmester Kelemen','akkelemen',{skin:0xe0c8b0,hair:0xd8d8d0,shirt:0x5a4a3a,sleeves:0x5a4a3a,pants:0x3a3a3a,boots:0x2a1a0a,beard:true});
+    const g=new THREE.Group();const s=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.6,0.3),HMAT(0x4a3a2a));s.position.y=1.3;g.add(s);const k=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.08,6,14),HMAT(0xd8b040));k.position.set(0,1.7,0.2);g.add(k);
+    const [wx,wz]=W(P.clockDoor[0],P.clockDoor[1]);placeAt(g,wx,wz);g.rotation.y=a;shadowed(g);scene.add(g);
+    const o={mesh:g,type:'kact',name:'Óraszerkezet',action:'Átvizsgálom',hit:s,wp:{x:wx,z:wz},act:()=>clockwork()};interactables.push(o)}
+  const mp=m=>L(m.mesh.position.x,m.mesh.position.z);
+  {const o=mp(AK.npc.otto);P.vilmos=person(o[0]+2.6,o[1]+0.4,'Pénztárnok Vilmos','akvilmos',{skin:0xd8a880,hair:0x5a3a1a,shirt:0x8a2a1a,sleeves:0xe8dcc0,pants:0x2a2a34,boots:0x111111})}
+  {const o=mp(AK.npc.kordelia);P.rozalia=person(o[0]+2.6,o[1]+0.4,'Pénztárnok Rozália','akrozalia',{skin:0xe8c39e,hair:0xa04a1a,shirt:0x2a6a3a,sleeves:0xe8dcc0,pants:0x3a3a2a,boots:0x2a1a0a,hairStyle:'long'})}
+  {const o=mp(AK.npc.zsigmond);P.abel=person(o[0]+0.4,o[1]+2.6,'Pénztárnok Ábel','akabel',{skin:0xc89070,hair:0x2a1a0a,shirt:0x2a4a8a,sleeves:0xe8dcc0,pants:0xe8e0c8,boots:0x111111})}
+  {const t=AK.tavern;const f=front(t[0],t[1],8,0,2);P.terez=person(f[0],f[1],'Kocsmáros Teréz','akterez',{skin:0xe8c39e,hair:0xc8a050,shirt:0xe8e0c0,sleeves:0xa83a1a,pants:0x5a3a2a,boots:0x2a1a0a,hairStyle:'long'})}
+  {const f=front(14,-50,14,0,3);P.gergely=person(f[0],f[1],'Palotaőr Gergely','akgergely',{skin:0xd8a880,hair:0x2a1a0a,shirt:0x2a4a8a,sleeves:0xd8b040,pants:0x2a2a34,boots:0x111111,item:'helm'})}
+  {const t=AK.depot||[40,50];const f=front(t[0],t[1],8,0,2);P.jeno=person(f[0],f[1],'Raktáros Jenő','akjeno',{skin:0xc8a888,hair:0x6a5a4a,shirt:0x6a5a3a,sleeves:0x6a5a3a,pants:0x3a3a3a,boots:0x2a1a0a,beard:true})}
+  AK.npc.koldus.dialog='akkoldus';
+  THIEF['Órásmester Kelemen']={lvl:45,xp:110,loot:[['coins',55]]};
+  // --- „Hamis érmék” ---
+  const hq=()=>qs.hamis;const fmtT=()=>{const h=dayT*24;return `${Math.floor(h)}:${String(Math.floor(h%1*60)).padStart(2,'0')}`};
+  const noon=()=>dayT>0.44&&dayT<0.6;
+  function clockwork(){const q=hq();
+    if(!(q.st===1&&q.n===2)){chat(q.st===2?'Az óraszerkezet egyenletesen ketyeg. A titkos rekesz üres.':'Az óratorony ajtaja zárva. Az óraszerkezet bent kattog.');return}
+    if(!countItem('orakulcs')){chat('Az óratorony ajtaja zárva. Kulcs kellene.');return}
+    if(!noon()){chat(`Az óraszerkezet jár, a fogaskerekek közé nem lehet benyúlni. Delelőkor, amikor az óra delet üt, egy percre megáll. (Most ${fmtT()} van.)`);return}
+    if(!giveItem('ontoforma'))return;q.n=3;SFX.play('quest');chat('Az óra delet üt, a szerkezet megáll. A fogaskerekek mögött egy titkos rekesz: benne egy kormos öntőforma, a hátulján horgonyjel! Ebben öntötték a hamis érméket.','xp');renderQuests();saveLocal()}
+  {const _pp=pickpocket;pickpocket=function(o){const q=hq();if(o.name==='Órásmester Kelemen'&&q.st===1&&q.n===1&&!countItem('orakulcs')){const T=THIEF[o.name],old=T.loot;T.loot=[['orakulcs',1]];_pp(o);T.loot=old;if(countItem('orakulcs')){q.n=2;chat('Megvan az óratorony kulcsa! Delelőkor nézd meg az óraszerkezetet.','xp');renderQuests();saveLocal()}return}return _pp(o)}}
+  DIALOG.akkoldus=o=>{const S=say(o.name),q=hq();
+    if(q.st===1&&q.n===0){S('Egy érmét a vak koldusnak, jó uram... Én nem látok semmit. De hallok mindent.',[{t:'Itt egy érme. Mit hallottál a hamis pénzről?',f:()=>{if(coins<1){S('Üres a zsebed is? Akkor menj.');return}setCoins(coins-1);q.n=1;renderQuests();S('Hamis pénz... Hm. Minden délben, amikor az óra delet üt, kalapálást hallok az óratoronyból. Tompa, ritmusos kalapálást, mint amikor fémet öntenek. Pedig Kelemen mester ilyenkor ebédel, és a kulcsot sosem adja ki a kezéből.')}},{t:'Semmit nem adok.',f:()=>S('Az ingyen hír nem ér semmit, jó uram.')}]);return}
+    S(pickR(['Egy érmét a vak koldusnak, jó uram...','Én nem látok semmit. De hallok mindent.','A hidakon este a lámpások sziszegnek. Szeretem hallgatni.']))};
+  DIALOG.akkelemen=o=>{const S=say(o.name),q=hq();
+    if(q.st===1&&q.n===1){S('A kulcsot? Az óratorony kulcsa nálam marad! Az óra a város szíve, nem engedek oda senkit. Még a polgármestert sem.',[{t:'(Majd megoldom másképp.)'}]);chat('Talán ki lehetne zsebelni Kelemen mestert. (45-ös Tolvajlás, jobb klikk rajta.)');return}
+    S(q.st===2?'Az óra pontosabb, mint valaha. Valaki egy titkos rekeszt vájt bele, képzeld! Azóta minden délben magam ellenőrzöm.':'Kelemen vagyok, az órásmester. Háromszáz éve jár ez az óra, és én tartom életben. Delelőkor egy percre megáll, olyankor olajozom.')};
+  const treas=(bit,nm,alibi)=>o=>{const S=say(o.name),q=hq();if(q.st===1&&q.n===4){q.m=(q.m||0)|bit;renderQuests();S(alibi);return}S(q.st===2&&bit===4?'...':pickR(['A céh pénze rendben van, minden fillér.','Számolok, ne zavarj.',`A ${nm} céhének könyveit vezetem.`]))};
+  DIALOG.akvilmos=treas(1,'Kovácsok','Hamis pénz? Felháborító! Tegnap délben az Arany Kupában ebédeltem, ahogy minden nap. Kérdezd meg Teréz kocsmárost, ha nem hiszed!');
+  DIALOG.akrozalia=treas(2,'Vadászok','Tegnap délben a palotában voltam, a céh negyedéves adóját fizettem be. A palotaőr beírt a naplóba.');
+  DIALOG.akabel=o=>{const S=say(o.name),q=hq();if(q.st===1&&q.n===4){q.m=(q.m||0)|4;renderQuests();S('Én? Tegnap délben a kikötői raktárban számoltam a ládákat, egész nap. Kérdezd meg Jenőt, a raktárost. Ő is ott volt.');return}
+    if(q.st===2){S('...');return}S(pickR(['A Hajósok céhének könyvei rendben vannak.','Sietek, sok a dolgom.','Számolok, ne zavarj.']))};
+  const witness=(bit,yes,no,gen)=>o=>{const S=say(o.name),q=hq();if(q.st===1&&q.n===4&&(q.m&bit)){q.v=(q.v||0)|bit;if(bit===4)q.lie=1;renderQuests();S(yes);return}if(q.st===1&&q.n===4){S(no);return}S(pickR(gen))};
+  DIALOG.akterez=witness(1,'Vilmos? Igen, minden áldott délben itt eszi a gulyását, a sarokasztalnál. Tegnap is itt volt, két kanál paprikát kért bele.','Kiről kérdezel? Sokan járnak ide.',['Az Arany Kupa a legjobb kocsma Aranykapuban! A gulyásunk híres.','Sör? Bor? A céhmesterek is itt isznak.']);
+  DIALOG.akgergely=witness(2,'Rozália pénztárnok? Delelőkor itt volt, a negyedéves adót hozta. Itt a napló, nézd: tizenkét óra, Vadászok céhe, befizetve.','Kiről kérdezel? A palotába nem jön be akárki.',['A palotát őrzöm. Tovább, polgár.','A Napkorong festménye odabent lóg. Régen fényesebb volt, mondják.']);
+  DIALOG.akjeno=witness(4,'Ábel? Délben? Nem, egész délelőtt a lábát se tette be ide. Délután jött, kormos kézzel, és nagyon sietett. Azt mondta, a kovácsnál járt. A kovácsnál! Ábel!','Kiről kérdezel? Itt csak ládák vannak.',['A Hajósok céhének ládái. Ne nyúlj hozzájuk!','Kötél, szög, só, hal. Minden ide jön, minden innen megy.']);
+  // Gáspár: a küldetés gerince
+  DIALOG.akgaspar=o=>{const S=say('Pénzverő Mester Gáspár'),q=hq();
+    if(q.st===1&&q.n===3&&countItem('ontoforma')){S('Egy öntőforma! Kormos... és nézd csak: horgonyjel a hátulján. A Hajósok céhéé? Lehet. De ne siessünk: ez a forma mindhárom céhpénztárban megfordul, a pénztárnokok hordják hozzám a céhek ezüstjét. Kérdezd ki a három pénztárnokot, és ellenőrizd, igazat mondanak-e!',[{t:'Kikérdezem őket.',f:()=>{q.n=4;q.m=0;q.v=0;renderQuests()}}]);return}
+    if(q.st===1&&q.n===4){if(q.m===7&&q.v===7){S('Nos? Kinek hazudott az alibije? Ha rossz embert vádolunk meg, a céhek újra egymásnak esnek.',[
+        {t:'Vilmos, a Kovácsok pénztárnoka.',f:()=>S('Vilmost Teréz is látta az Arany Kupában. Az alibije stimmel. Gondold át újra.')},
+        {t:'Rozália, a Vadászok pénztárnoka.',f:()=>S('Rozália neve ott van a palota naplójában, delelőkor. Ő nem lehetett. Gondold át újra.')},
+        {t:'Ábel, a Hajósok pénztárnoka.',f:()=>{q.n=5;q.k=0;takeItem('ontoforma');renderQuests();S('Ábel! A raktárban sem volt, kormos volt a keze, és a forma az ő céhének jelét viseli. Őrség! Fogjátok el Ábelt!');chat('Ábel elfut, és két bérenc ugrik elő a pénzverde mögül!','fight');spawnGoons()}}]);return}
+      S(QUESTS.hamis.obj(q));return}
+    if(q.st===1&&q.n===5){S('A bérencek! Előbb velük végezz!');return}
+    if(sq(S,'hamis',{req:()=>qs.nagyvasar.st===2&&lvlFor(xp.th)>=45,reqText:qs.nagyvasar.st!==2?'Gáspár, a város pénzverője. Minden aranykapui érme átment a kezemen. Amíg a Nagyvásár zárva, nincs időm másra.':'Furcsa érmék keringenek a városban, de ehhez éles szem és ügyes kéz kell. Gyere vissza, ha a Tolvajlásod eléri a 45-öt.',
+      offer:'Nézd ezt az érmét. Aranykapui, a napkorong rajta... de könnyebb a kelleténél. Ólom van benne! Valaki hamis pénzt önt a városban, és a Nagyvásár megnyitása óta egyre több kering. Ha kiderül, senki nem bízik többé az aranykapui pénzben. Kiderítenéd, ki az?',
+      yes:'Kiderítem.',start:()=>giveItem('hamiserme'),after:'Itt egy hamis érme, vidd magaddal. Kezdd a vak koldussal a téren: ő nem lát semmit, de mindent hall.',ready:()=>q.n===6,
+      done:'Ábel bérencei a földön, Ábelt elkapták a keleti kapunál. A forma beolvasztva. Aranykapu adósa vagy, kalandor. Mostantól a város polgára vagy: a csarnokban kedvezmény jár, a hídvám ingyenes, a Nagyvásárban pedig két új hely vár.',thanks:'Megtiszteltetés.',take:()=>takeItem('hamiserme')}))return;
+    S('Gáspár, a város pénzverője. Az aranykapui érme újra tiszta, hála neked.')};
+  function spawnGoons(){const g=AK.npc.gaspar.mesh.position;for(const s of[-1,1]){const m=spawnAt('rablolovag',g.x+s*3,g.z+3);m.temp=true;m.aggro=true;m.akb=1;m.name='Hamisító bérenc';m.home={x:g.x,z:g.z+3};tempMons.push(m)}}
+  {const _md=monsterDie;monsterDie=function(s){_md(s);if(s.akb){const q=hq();if(q.st===1&&q.n===5){q.k=(q.k||0)+1;if(q.k>=2){q.n=6;chat('A bérencek legyőzve! Térj vissza Gáspárhoz.','xp');renderQuests();saveLocal()}}}}}
+  // --- „Szilánkok a folyóban”: uszályos üldözés a Napfolyón, aztán az óriásharcsa ---
+  const sq2=()=>qs.szilank;
+  const proj=(x,z)=>{for(let k=0;k<6;k++){const e=0.5,gx=(hjRiv(x+e,z)-hjRiv(x-e,z))/(2*e),gz=(hjRiv(x,z+e)-hjRiv(x,z-e))/(2*e);const r=hjRiv(x,z);if(r<0.3)break;const l=Math.hypot(gx,gz)||1;x-=gx/l*Math.min(r,1.5);z-=gz/l*Math.min(r,1.5)}return [x,z]};
+  let PATH=null;function path(){if(PATH)return PATH;let best=null;for(let a=0;a<6.283;a+=0.01){const x=CX+Math.cos(a)*55,z=CZ+Math.sin(a)*55;const r=hjRiv(x,z);if(z>CZ&&(!best||r<best[2]))best=[x,z,r]}
+    let p=proj(best[0],best[1]),d=[0,1];const pts=[p];for(let i=0;i<104;i++){let n=[p[0]+d[0]*3,p[1]+d[1]*3];n=proj(n[0],n[1]);const dx=n[0]-p[0],dz=n[1]-p[1],l=Math.hypot(dx,dz)||1;d=[dx/l*0.7+d[0]*0.3,dz/l*0.7+d[1]*0.3];const dl=Math.hypot(...d);d=[d[0]/dl,d[1]/dl];p=n;pts.push(p)}
+    const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));return PATH={pts,cum,L:cum[cum.length-1]}}
+  const at=s=>{const P=path();s=clamp(s,0,P.L-0.01);let i=1;while(P.cum[i]<s)i++;const t=(s-P.cum[i-1])/(P.cum[i]-P.cum[i-1]),a=P.pts[i-1],b=P.pts[i];return {x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,ry:Math.atan2(b[0]-a[0],b[1]-a[1])}};
+  const bank=(x,z)=>{for(let r=2;r<30;r+=1)for(let a=0;a<6.283;a+=0.26){const wx=HJX+x+Math.cos(a)*r,wz=z+Math.sin(a)*r;if(height(wx,wz)>1.6&&!colHit(wx,wz,0.8))return [wx,wz]}return [HJX+x,z]};
+  const boatMesh=(len,wid,col,cult)=>{const g=new THREE.Group(),M_=c=>HMAT(c);const h=new THREE.Mesh(new THREE.BoxGeometry(wid,0.8,len),M_(col));h.position.y=0.15;g.add(h);
+    for(const s of[-1,1]){const r=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.5,len),M_(0x4a3018));r.position.set(s*wid/2,0.7,0);g.add(r)}const bw=new THREE.Mesh(new THREE.ConeGeometry(wid/2,1.6,4),M_(col));bw.rotation.x=Math.PI/2;bw.rotation.y=Math.PI/4;bw.scale.set(1,1,0.5);bw.position.set(0,0.15,len/2+0.6);g.add(bw);
+    const dk=new THREE.Mesh(new THREE.BoxGeometry(wid-0.3,0.08,len-0.3),M_(0xa07a4a));dk.position.y=0.58;g.add(dk);
+    if(!cult){for(const [x,z] of[[-0.8,-2.5],[0.7,-2.2],[0.6,2.6]]){const c=new THREE.Mesh(new THREE.BoxGeometry(1,0.9,1),M_(0x8a6a3a));c.position.set(x,1.05,z);g.add(c)}const m=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,3.4,5),M_(0x5a3a1a));m.position.set(0,2.2,1);g.add(m);
+      const lp=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.4,0.3),new THREE.MeshBasicMaterial({color:0xffd070}));lp.position.set(0,3.9,1);g.add(lp);const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,4,5),M_(0x6a4a2a));pole.position.set(0.4,1.8,-4);pole.rotation.x=0.5;g.add(pole);g.userData.pole=pole}
+    else for(const z of[-1,1]){const f=new THREE.Group();const b=new THREE.Mesh(new THREE.BoxGeometry(0.75,1.6,0.55),M_(0x2a1a2a));b.position.y=1.4;f.add(b);const hd=new THREE.Mesh(new THREE.SphereGeometry(0.32,8,6),M_(0x2a1a2a));hd.position.y=2.45;f.add(hd);
+      const m1=new THREE.Mesh(new THREE.CircleGeometry(0.22,12,-Math.PI/2,Math.PI),new THREE.MeshBasicMaterial({color:0xe8c040}));m1.position.set(0,2.45,0.3);f.add(m1);const m2=new THREE.Mesh(new THREE.CircleGeometry(0.22,12,Math.PI/2,Math.PI),new THREE.MeshBasicMaterial({color:0xc8c8d8}));m2.position.set(0,2.45,0.3);f.add(m2);f.position.z=z*1.2;g.add(f)}
+    if(cult){const ch=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.6,0.7),HMAT(0x5a3a1a));ch.position.set(0,0.95,0);g.add(ch);const gl=new THREE.Mesh(new THREE.BoxGeometry(0.95,0.08,0.75),new THREE.MeshBasicMaterial({color:0xffe070}));gl.position.set(0,1.27,0);g.add(gl);const cv=document.createElement('canvas');cv.width=cv.height=64;const cx2=cv.getContext('2d'),gr=cx2.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,230,140,1)');gr.addColorStop(0.4,'rgba(255,200,80,.45)');gr.addColorStop(1,'rgba(255,180,40,0)');cx2.fillStyle=gr;cx2.fillRect(0,0,64,64);const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,opacity:0.8,depthWrite:false,blending:THREE.AdditiveBlending}));halo.scale.set(3.5,3.5,1);halo.position.set(0,1.5,0);g.add(halo)}
+    shadowed(g);return g};
+  const R={on:false};let barge=null,cult=null,matyi=null,orv=null,start=null;
+  function ensureBarge(){if(barge)return;const p=at(1);barge=boatMesh(10,4.6,0x6a4a2a,false);barge.position.set(HJX+p.x,0.21,p.z);barge.rotation.y=p.ry;barge.userData.noOcc=true;scene.add(barge);
+    const r=hPerson({skin:0xc89070,hair:0x3a2a1a,shirt:0x8a6a3a,sleeves:0x8a6a3a,pants:0x3a3a3a,boots:0x2a1a0a,hat:'straw'});r.position.set(0.4,0.6,-4.2);hjSlim(r);r.userData.keep=1;barge.add(r);barge.userData.rower=r;if(barge.userData.pole)barge.userData.pole.userData.keep=1;mergeStatic(barge);
+    start=bank(p.x,p.z);matyi=npc(start[0],start[1],'Révész Matyi',['Matyi vagyok, a révész. Az uszályom a leggyorsabb a Napfolyón!'],{skin:0xc89070,hair:0x3a2a1a,shirt:0x8a6a3a,sleeves:0x8a6a3a,pants:0x3a3a3a,boots:0x2a1a0a,hat:'straw'},'akmatyi');hjSlim(matyi.mesh)}
+  DIALOG.akmatyi=o=>{const S=say(o.name),q=sq2();if(q.st===1&&q.n===0){S('Zsigmond küldött? A csuklyások csónakja most fordult ki a csatornából, lefelé a Napfolyón! Ugorj fel, utolérjük őket!',[{t:'Indulás!',f:()=>{hideDialog();rideStart()}},{t:'Még nem.'}]);return}S(q.st===2?'Az a harcsa! Még most is arról mesél az egész kikötő.':'Matyi vagyok, a révész. Ha Zsigmond megbíz, akár a tengerig is elviszlek.')};
+  function rideStart(){const P=path();R.on=true;R.s=1;R.slow=0;R.qi=0;R.end=false;R.fl={x:0,z:0,hw:2.2,hd:4.8,c:1,s:0,y0:0.79,y1:0.79};FLOORS.push(R.fl);
+    if(!cult){cult=boatMesh(6,2.4,0x2a2028,true);cult.traverse(c=>{if(c.isSprite)c.userData.keep=1});mergeStatic(cult);cult.userData.noOcc=true;const c0=at(30);cult.position.set(HJX+c0.x,0.21,c0.z);scene.add(cult)}cult.visible=true;cult.rotation.set(0,0,0);R.cs=30;
+    target=null;route=[];busy=null;chat('Révész Matyi: „Kapaszkodj!” Az uszály kilő a csatornából. Elöl a csuklyások csónakja szeli a vizet!','xp');SFX.play('quest')}
+  let qte=null;function qteShow(){const el=document.createElement('div');el.id='akqte';const good=Math.random()<0.5?'L':'R';
+    el.innerHTML=`<div class="qt">⚠ ${pickR(['Úszó rönk az úton!','Zátony elöl!','A csuklyások hordót dobtak a vízbe!'])}</div><div class="qb"><button data-s="L">◀ Balra!</button><button data-s="R">Jobbra! ▶</button></div><div class="qh">Kerüld ki ${good==='L'?'balra':'jobbra'}!</div>`;
+    el.style.cssText='position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:9;background:rgba(30,20,10,.88);border:3px solid #c8902a;padding:12px 20px;text-align:center;color:#ffcf40;font:bold 18px Trebuchet MS';
+    el.querySelectorAll('button').forEach(b=>{b.style.cssText='font:bold 18px Trebuchet MS;margin:8px;padding:8px 18px;background:linear-gradient(#6a5634,#4a3c24);color:#ffdf70;border:2px solid #1a140c;cursor:pointer';b.onmousedown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();qteEnd(b.dataset.s===good)}});
+    (document.getElementById('ui')||document.body).appendChild(el);qte={el,t:2.6}}
+  function qteEnd(ok){if(!qte)return;qte.el.remove();qte=null;if(ok){chat('Ügyes kormányzás! Az uszály elsuhan az akadály mellett.','xp');addXp('ha',250,player.position)}else{chat('Bumm! Az uszály nekicsapódik. A csuklyások elhúznak egy kicsit.','fight');SFX.play('hurt');R.slow=2.2;R.cs+=10}}
+  function rideTick(dt){if(!R.on)return;const P=path();if(qte){qte.t-=dt;if(qte.t<=0)qteEnd(false)}
+    const sp=R.slow>0?6:14;R.slow=Math.max(0,R.slow-dt);R.s+=sp*dt;const p=at(R.s);barge.position.set(HJX+p.x,0.21+Math.sin(R.s*0.4)*0.05,p.z);barge.rotation.y=p.ry;const ry=p.ry;
+    R.fl.x=barge.position.x;R.fl.z=barge.position.z;R.fl.c=Math.cos(ry);R.fl.s=Math.sin(ry);px=barge.position.x-Math.sin(ry)*1;pz=barge.position.z-Math.cos(ry)*1;target=null;route=[];facing=ry;
+    if(barge.userData.pole)barge.userData.pole.rotation.x=0.5+Math.sin(R.s*0.5)*0.3;
+    if(!R.end){R.cs=Math.max(18,R.cs-dt*0.6);const c=at(Math.min(P.L-2,R.s+R.cs));cult.position.set(HJX+c.x,0.21+Math.sin(R.s)*0.08,c.z);cult.rotation.y=c.ry}
+    const fr=R.s/P.L;if(R.qi<3&&fr>[0.25,0.5,0.72][R.qi]&&!qte){R.qi++;qteShow()}
+    if(!R.end&&R.s+R.cs>=P.L-3){R.end=true;R.et=0;chat('A csuklyások csónakja beleszalad az örvénybe a kanyarban... és felborul!','fight')}
+    if(R.end){R.et+=dt;cult.rotation.z=Math.min(2.6,R.et*1.4);cult.position.y=0.21-R.et*0.5;if(R.et>1.2&&!R.splash){R.splash=1;chat('Egy izzó szilánk csobban a vízbe a csónakból. Egy hatalmas, bajszos harcsa bukkan fel, és egyetlen nyeléssel elnyeli!','xp');ensureOrv()}}
+    if(R.s>=P.L-6){rideEnd()}}
+  function rideEnd(){R.on=false;R.splash=0;if(qte)qteEnd(true);const i=FLOORS.indexOf(R.fl);if(i>=0)FLOORS.splice(i,1);cult.visible=false;const P=path(),e=P.pts[P.pts.length-1],[bx,bz]=bank(e[0],e[1]);px=bx;pz=bz;placeAt(player,px,pz);
+    const p=at(1);barge.position.set(HJX+p.x,0.21,p.z);barge.rotation.y=p.ry;const q=sq2();if(q.st===1&&q.n===0){q.n=1;renderQuests();saveLocal()}ensureOrv();chat('Partra ugrasz. A csuklyások kievickéltek a túlsó partra és eltűntek, de a szilánk a harcsában van. Az örvényben lakik: fogd ki!','xp')}
+  function ensureOrv(){if(orv)return;const P=path(),e=P.pts[P.pts.length-1];const g=new THREE.Group();const rings=[];for(let i=0;i<3;i++){const r=new THREE.Mesh(new THREE.RingGeometry(1.2+i*1.3,1.6+i*1.3,24,1,i,4.6),new THREE.MeshBasicMaterial({color:i%2?0xd8f0f0:0x9ad8d8,transparent:true,opacity:0.55-i*0.12,side:THREE.DoubleSide,depthWrite:false}));r.rotation.x=-Math.PI/2;r.position.y=0.26+i*0.01;g.add(r);rings.push(r)}
+    const hit=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,1,12),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=0.4;g.add(hit);g.position.set(HJX+e[0],0,e[1]);scene.add(g);const [bx,bz]=bank(e[0],e[1]);
+    orv={g,rings,o:{mesh:g,type:'kact',name:'Örvény',action:'Horgászom',hit,wp:{x:bx,z:bz},act:()=>reel()}};interactables.push(orv.o)}
+  // a horgász-minijáték: a jelölő ide-oda lendül, a zöld sáv vándorol; „Húzd!”, amikor a jelölő a zöldben van. 3 jó húzás = kifogtad, 3 rossz = elszakad a zsinór
+  let RL=null;function reel(){const q=sq2();if(!(q.st===1&&q.n===1)){chat(q.st===2?'Csak örvénylik a víz. A harcsa már nincs itt.':'Az örvény sebesen forog. Nagy hal lakhat alatta.');return}
+    if(lvlFor(xp.fi)<55){chat('Ehhez 55-ös Horgászat kell. Ez a harcsa elvinné a botodat is.');return}if(RL)return;
+    const el=document.createElement('div');el.style.cssText='position:absolute;left:50%;top:30%;transform:translateX(-50%);z-index:9;background:linear-gradient(#24343a,#16242a);border:3px solid #6ab8c8;box-shadow:0 0 0 2px #0a1418,0 10px 40px #000;padding:14px 20px;width:min(380px,90%);color:#d8f8ff;font:bold 15px Trebuchet MS;text-align:center';
+    el.innerHTML='<div style="font-size:18px;color:#ffdf70">🐟 Óriásharcsa a horgon!</div><div class="rb" style="position:relative;height:26px;margin:12px 0;background:#0a1418;border:2px solid #000"><div class="gz" style="position:absolute;top:0;bottom:0;background:linear-gradient(#40d060,#208030)"></div><div class="mk" style="position:absolute;top:-4px;bottom:-4px;width:6px;background:#ffdf70;box-shadow:0 0 8px #ffdf70"></div></div><div class="st">Húzás: 0/3 · Hiba: 0/3</div><button style="margin-top:10px;font:bold 18px Trebuchet MS;padding:8px 30px;background:linear-gradient(#e8b030,#a87010);color:#2a1a00;border:2px solid #1a140c;cursor:pointer">Húzd! (szóköz)</button>';
+    (document.getElementById('ui')||document.body).appendChild(el);RL={el,hit:0,miss:0,t:0,gz:0.4,gw:0.24,gv:0.18,mk:0,last:performance.now()};const btn=el.querySelector('button');btn.onmousedown=e=>e.stopPropagation();btn.onclick=e=>{e.stopPropagation();pull()};
+    RL.key=e=>{if(e.code==='Space'){e.preventDefault();e.stopPropagation();pull()}};window.addEventListener('keydown',RL.key,true);requestAnimationFrame(reelFrame)}
+  function reelFrame(now){if(!RL)return;const dt=Math.min(0.05,(now-RL.last)/1000);RL.last=now;RL.t+=dt;const sp=1.3+RL.hit*0.35;RL.mk=0.5+0.5*Math.sin(RL.t*sp*2.2);RL.gz+=RL.gv*dt;if(RL.gz<0.05||RL.gz>0.95-RL.gw){RL.gv*=-1;RL.gz=clamp(RL.gz,0.05,0.95-RL.gw)}
+    RL.el.querySelector('.gz').style.left=(RL.gz*100)+'%';RL.el.querySelector('.gz').style.width=(RL.gw*100)+'%';RL.el.querySelector('.mk').style.left=`calc(${RL.mk*100}% - 3px)`;requestAnimationFrame(reelFrame)}
+  function pull(ok){if(!RL)return;const inZ=ok!==undefined?ok:(RL.mk>=RL.gz&&RL.mk<=RL.gz+RL.gw);if(inZ){RL.hit++;RL.gw=Math.max(0.12,RL.gw-0.04);SFX.play('pickup')}else{RL.miss++;SFX.play('hurt')}
+    RL.el.querySelector('.st').textContent=`Húzás: ${RL.hit}/3 · Hiba: ${RL.miss}/3`;if(RL.hit>=3)reelEnd(true);else if(RL.miss>=3)reelEnd(false)}
+  function reelEnd(win){window.removeEventListener('keydown',RL.key,true);RL.el.remove();RL=null;const q=sq2();
+    if(!win){chat('Pattan a zsinór! A harcsa visszamerül az örvénybe. Próbáld újra!','fight');return}
+    if(!giveItem('oriasharcsa')){chat('Tele a táskád, a harcsa visszacsusszan a vízbe!');return}q.n=2;addXp('fi',3000,player.position);SFX.play('levelup');chat('Kifogtad az óriásharcsát! Akkora, mint egy borjú. Vidd Zsigmondnak!','xp');renderQuests();saveLocal()}
+  // Zsigmond: a Nagyvásár után ő adja a szilánkos küldetést
+  {const _z=DIALOG.akzsigmond;DIALOG.akzsigmond=function(o){const S=say(o.name),q=sq2();if(qs.nagyvasar.st!==2)return _z(o);
+    if(sq(S,'szilank',{req:()=>lvlFor(xp.fi)>=55,reqText:'A folyón baj van, de ahhoz egy igazi horgász kellene. Gyere vissza, ha a Horgászatod eléri az 55-öt.',
+      offer:'Hallgass ide. Csuklyás alakok béreltek csónakot tőlem, és egy ládát hoztak, amiből fény szivárgott. Bodor szerint napkorong-szilánkokat vásárolnak fel a városban. Most fordultak ki a csatornából lefelé, a Napfolyón! Utánuk mennél?',
+      yes:'Utánuk megyek!',after:'Révész Matyi uszálya a csatorna déli végén, a falon belül vár. Siess!',ready:()=>q.n===2&&countItem('oriasharcsa')>0,
+      done:'Ez aztán a harcsa! Add csak ide a késemet... Nézd! A gyomrában ott izzik: egy napkorong-szilánk. Meleg, mint a napfény. Ezt őrizd meg, kalandor. Ha a csuklyások ennyire akarják, nagyobb dolog van emögött, mint gondolnánk.',thanks:'Megőrzöm.',take:()=>{takeItem('oriasharcsa');giveItem('napszilank')}}))return;
+    S(q.st===2?'A szilánk nálad van? Jól vigyázz rá. A csuklyások nem adják fel ilyen könnyen.':'A Nagyvásár azóta tele hajóval. A Hajósok céhe áll a szavához.')}}
+  {const _c=DIALOG.akcsuklyas;DIALOG.akcsuklyas=function(o){if(qs.szilank&&qs.szilank.st===2){showDialog('Csuklyás alak','...Nálad van. Érzem a melegét. Nem a tiéd, vándor. A nap a miénk lesz, ha elfárad. Egyszer visszaveszünk mindent.');return}return _c.call(this,o)}}
+  // polgárjog: 10% kedvezmény a csarnoki árusoknál
+  const HALLT=new Set(['ZOLTÁN FEGYVEREI','ERZSÉBET PÁNCÉLJAI','BENEDEK ÉKSZERBOLTJA','MIRA RÚNÁI','GYULA KONYHÁJA','HANNA FŰSZERESE']);
+  {const _os=openShop;openShop=function(list,title){if(qs.hamis&&qs.hamis.st===2&&HALLT.has(title)&&list){list=list.map(([i,a,n])=>[i,Math.max(1,Math.floor(a*0.9)),n]);title+=' (polgár: −10%)'}return _os(list,title)}}
+  function step(dt){if(zoneOf(px)!==14)return;const near=Math.hypot(px-HJX-CX,pz-CZ)<260;if(near||R.on)ensureBarge();rideTick(dt);
+    if(!orv&&sq2().st===1&&sq2().n>=1)ensureOrv();if(orv){orv.rings.forEach((r,i)=>r.rotation.z+=dt*(1.6-i*0.4))}
+    if(barge&&barge.userData.rower)barge.userData.rower.userData.armL&&(barge.userData.rower.userData.armL.rotation.x=R.on?Math.sin(performance.now()/300)*0.8:0);
+    const q=hq();if(q.st===1&&q.n===5&&!tempMons.some(m=>m.akb&&!m.depleted)&&Math.hypot(px-AK.npc.gaspar.mesh.position.x,pz-AK.npc.gaspar.mesh.position.z)<40&&(q.k||0)<2){q.k=0;spawnGoons();chat('Ábel bérencei visszatértek a pénzverde elé!','fight')}}
+  return {step,P,R,path,rideStart,rideEnd,reel,pull,clockwork,spawnGoons,get orv(){return orv},get barge(){return barge}}})();
+{const _wt=walkTo;walkTo=function(x,z,a){if(AKQ.R.on)return false;return _wt(x,z,a)}}
 // kamera-takarás: ami a kamera és a játékos közé esik (fa, ház, torony, fal, sövény), áttetszővé halványul
 const OCC={list:[],zone:-1,t:9,act:new Set(),hit:new Set(),box:new THREE.Box3(),ray:new THREE.Ray(),v:new THREE.Vector3(),tgt:new THREE.Vector3(),dir:new THREE.Vector3(),
   skip:new Set(['monster','npc','player','monkey','crab','sheep','puppy','genie','fire','fish','clue','dig','digsite','shell','herb','plot'])};
