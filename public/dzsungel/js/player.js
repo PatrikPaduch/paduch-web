@@ -117,16 +117,20 @@ export class Player {
     const depth0 = lvl0 - ground0;
     this.swim = depth0 > 1.25;
     this.wade = Math.max(0, Math.min(1, (lvl0 - this.pos.y) / 1.2));
-    this.running = this.moving && input.run && this.stamina > 0.04 && !this.swim;
+    this.running = this.moving && input.run && this.stamina > 0.04 && !this.swim && !this.aim;
+    if (this.running || this.swim) this.crouch = false;
     let target = this.rig
-      ? (this.swim ? 2.2 : this.running ? 6.8 : input.walk ? 1.3 : 3.8)
-      : (this.swim ? 2.2 : this.running ? 6.4 : 3.0);
+      ? (this.swim ? 2.2 : this.running ? 6.8 : this.crouch ? 1.25 : input.walk ? 1.3 : 3.8)
+      : (this.swim ? 2.2 : this.running ? 6.4 : this.crouch ? 1.4 : 3.0);
+    if (this.aim) target = Math.min(target, 1.6);
     if (!this.swim) target *= 1 - this.wade * 0.45;
     this.speed = damp(this.speed, this.moving ? target : 0, this.moving ? 8 : 10, dt);
     if (this.running) this.stamina = Math.max(0, this.stamina - dt * 0.12);
     else this.stamina = Math.min(1, this.stamina + dt * (this.moving ? 0.06 : 0.12));
 
-    if (this.moving) this.facing = angDamp(this.facing, Math.atan2(dir.x, dir.y), 10, dt);
+    // célzáskor a karakter a kamera irányába néz (oldalazva, hátrálva is)
+    if (this.aim) this.facing = angDamp(this.facing, this.camYaw + Math.PI, 14, dt);
+    else if (this.moving) this.facing = angDamp(this.facing, Math.atan2(dir.x, dir.y), 10, dt);
     const moveDir = this.moving ? dir : new THREE.Vector2(Math.sin(this.facing), Math.cos(this.facing));
     let nx = this.pos.x + moveDir.x * this.speed * dt, nz = this.pos.z + moveDir.y * this.speed * dt;
 
@@ -170,7 +174,7 @@ export class Player {
     if (this.rig) {
       this.root.position.copy(this.pos);
       this.root.rotation.y = this.facing;
-      const step = this.rig.update(dt, { speed: this.speed, swim: this.swim, onGround: this.onGround, vy: this.vy });
+      const step = this.rig.update(dt, { speed: this.speed, swim: this.swim, onGround: this.onGround, vy: this.vy, crouch: this.crouch && !this.swim });
       if (step && this.onStep) this.onStep(this.wade > 0.05 ? 'water' : 'ground', Math.min(1, Math.max(0, (this.speed - 3.5) / 3)));
       return;
     }
@@ -229,16 +233,21 @@ export class Player {
     this.camYaw = damp(this.camYaw, this.yawT, 16, dt);
     this.camPitch = damp(this.camPitch, this.pitchT, 16, dt);
     this.camDist = damp(this.camDist, this.camDistT, 8, dt);
+    // célzás: közelebb, a jobb váll fölé húzódó kamera; guggolva lejjebb
+    this.aimK = damp(this.aimK ?? 0, this.aim ? 1 : 0, 9, dt);
+    this.crK = damp(this.crK ?? 0, this.crouch && !this.swim ? 1 : 0, 6, dt);
     const right = new V3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
-    const tgt = new V3(this.pos.x, this.pos.y + (this.swim ? (this.rig ? 0.5 : 1.1) : 1.6), this.pos.z).addScaledVector(right, 0.45 * Math.min(1, this.camDist / 4));
+    const tgt = new V3(this.pos.x, this.pos.y + (this.swim ? (this.rig ? 0.5 : 1.1) : 1.6 - this.crK * 0.45 + this.aimK * 0.05), this.pos.z)
+      .addScaledVector(right, 0.45 * Math.min(1, this.camDist / 4) + this.aimK * 0.4);
     this.camTarget.x = damp(this.camTarget.x, tgt.x, 14, dt);
     this.camTarget.z = damp(this.camTarget.z, tgt.z, 14, dt);
     this.camTarget.y = damp(this.camTarget.y, tgt.y, 9, dt);
     const cp = Math.cos(this.camPitch);
     const dir = new V3(Math.sin(this.camYaw) * cp, Math.sin(this.camPitch), Math.cos(this.camYaw) * cp);
     // kamera ne menjen bele a fatörzsekbe: sugármenetelés a cél felől
-    let dist = this.camDist;
-    for (let s = 0.6; s < this.camDist; s += 0.35) {
+    const camD = this.camDist + (Math.min(this.camDist, 2.4) - this.camDist) * this.aimK;
+    let dist = camD;
+    for (let s = 0.6; s < camD; s += 0.35) {
       const px = this.camTarget.x + dir.x * s, pz = this.camTarget.z + dir.z * s;
       let hit = false;
       for (const c of this.colliders) {
@@ -251,7 +260,7 @@ export class Player {
       if (hit) { dist = Math.max(0.8, s - 0.35); break; }
     }
     this.camHit = damp(this.camHit ?? dist, dist, dist < (this.camHit ?? dist) ? 20 : 4, dt);
-    const c = dir.multiplyScalar(Math.min(this.camDist, this.camHit)).add(this.camTarget);
+    const c = dir.multiplyScalar(Math.min(camD, this.camHit)).add(this.camTarget);
     c.y = Math.max(c.y, T.heightAt(c.x, c.z) + 0.4, T.waterLevelAt(c.x, c.z) + 0.3);
     camera.position.copy(c);
     camera.lookAt(this.camTarget);

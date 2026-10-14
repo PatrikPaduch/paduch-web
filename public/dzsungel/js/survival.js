@@ -10,10 +10,13 @@ const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE
 export const ITEMS = {
   stick: { name: 'Ág', icon: '🪵' }, stone: { name: 'Kő', icon: '🪨' }, vine: { name: 'Lián', icon: '🌿' },
   leaf: { name: 'Nagy levél', icon: '🍃' }, banana: { name: 'Banán', icon: '🍌' }, coconut: { name: 'Kókuszdió', icon: '🥥' },
+  // vadászzsákmány: csak akkor látszik a tárgysávon, ha van belőle
+  meat: { name: 'Nyers hús', icon: '🥩', opt: 1 }, fish: { name: 'Hal', icon: '🐟', opt: 1 },
+  meatC: { name: 'Sült hús', icon: '🍖', opt: 1 }, fishC: { name: 'Sült hal', icon: '🍢', opt: 1 },
 };
 export const TOOLS = {
   axe: { name: 'Kőbalta', icon: '🪓', key: 1, need: { stick: 2, stone: 1, vine: 1 }, desc: 'Feltöri a kókuszdiót.' },
-  spear: { name: 'Lándzsa', icon: '🔱', key: 2, need: { stick: 3, stone: 1, vine: 1 }, desc: 'Kézben elhárítja a jaguár támadását.' },
+  spear: { name: 'Lándzsa', icon: '🔱', key: 2, need: { stick: 3, stone: 1, vine: 1 }, desc: 'Vadászat: kattintás döf, nyomva tartva célzol és dobsz. Elhárítja a jaguárt.' },
   torch: { name: 'Fáklya', icon: '🔥', key: 3, need: { stick: 1, leaf: 2, vine: 1 }, desc: 'Világít és távol tartja a jaguárt. 6 percig ég.' },
   fire: { name: 'Tábortűz', icon: '🏕️', need: { stick: 4, stone: 5, leaf: 1 }, desc: 'Leteszed magad elé. Melegít, véd. 8 percig ég.' },
 };
@@ -55,7 +58,8 @@ void main(){
 export class Survival {
   constructor(scene, T, flora, player, rnd = Math.random) {
     this.scene = scene; this.T = T; this.flora = flora; this.player = player;
-    this.inv = { stick: 0, stone: 0, vine: 0, leaf: 0, banana: 0, coconut: 0 };
+    this.inv = Object.fromEntries(Object.keys(ITEMS).map((k) => [k, 0]));
+    this.spearOut = false; // a lándzsa el van dobva, ott fekszik valahol
     this.tools = { axe: false, spear: false, torch: false };
     this.equipped = null; this.torchT = 0;
     this.fire = null; // lerakott tűz: {x, z, t}
@@ -192,6 +196,13 @@ void main() {
     return `Elkészült: ${TOOLS[id].name}`;
   }
   eat(stats) {
+    const I = this.inv, add = (f, w = 0, hp = 0) => { stats.food = Math.min(1, stats.food + f); stats.water = Math.min(1, stats.water + w); stats.hp = Math.max(0.05, Math.min(1, stats.hp + hp)); };
+    if (I.meatC > 0) { I.meatC--; add(0.42, 0, 0.06); return 'Megettél egy szelet sült húst'; }
+    if (I.fishC > 0) { I.fishC--; add(0.3, 0.05, 0.04); return 'Megettél egy sült halat'; }
+    if (I.banana <= 0 && I.coconut <= 0 && (I.meat > 0 || I.fish > 0)) {
+      if (I.meat > 0) { I.meat--; add(0.12, 0, -0.06); } else { I.fish--; add(0.08, 0, -0.04); }
+      return 'Nyersen ettél, nem esett jól. Süsd meg a tűznél!';
+    }
     if (this.inv.banana > 0) { this.inv.banana--; stats.food = Math.min(1, stats.food + 0.3); return 'Megettél egy banánt'; }
     if (this.inv.coconut > 0) {
       if (!this.tools.axe) return 'A kókuszdió feltöréséhez kőbalta kell';
@@ -236,11 +247,13 @@ void main() {
       this.handParent.add(o);
       void k;
     }
+    this.handRest = this.hand.spear.quaternion.clone();
   }
   equip(id) {
     if (id && !this.tools[id]) return `Nincs ${TOOLS[id].name.toLowerCase()}d. Tabbal barkácsolhatsz.`;
+    if (id === 'spear' && this.spearOut && this.equipped !== 'spear') return 'A lándzsád ott maradt, ahová dobtad (iránytű: ↑)';
     this.equipped = this.equipped === id ? null : id;
-    for (const [k, o] of Object.entries(this.hand)) o.visible = k === this.equipped;
+    for (const [k, o] of Object.entries(this.hand)) o.visible = k === this.equipped && !(k === 'spear' && this.spearOut);
     return this.equipped ? `Kézben: ${TOOLS[this.equipped].name}` : 'Üres kéz';
   }
 
@@ -273,7 +286,13 @@ void main() {
     if (this.fire && Math.hypot(p.x - this.fire.x, p.z - this.fire.z) < 9) return true;
     return this.equipped === 'torch' && Math.hypot(p.x - this.player.pos.x, p.z - this.player.pos.z) < 9;
   }
-  hasSpear() { return this.equipped === 'spear'; }
+  hasSpear() { return this.equipped === 'spear' && !this.spearOut; }
+  canCook(p) { return this.warmth(p) && (this.inv.meat > 0 || this.inv.fish > 0); }
+  cook() {
+    const m = this.inv.meat, f = this.inv.fish;
+    this.inv.meatC += m; this.inv.fishC += f; this.inv.meat = 0; this.inv.fish = 0;
+    return `Megsütöttél ${[m && `${m} húst`, f && `${f} halat`].filter(Boolean).join(' és ')}`;
+  }
   warmth(p) { return Math.hypot(p.x - CAMP.x, p.z - CAMP.z) < 4 || (this.fire && Math.hypot(p.x - this.fire.x, p.z - this.fire.z) < 3.5); }
 
   update(dt, night, toast) {

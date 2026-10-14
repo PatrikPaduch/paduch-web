@@ -133,3 +133,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .bar { width: 96px; }
 }
 @media (max-width: 1200px) { #help { bottom: 78px; } }
+/* célkereszt: a külső gyűrű az erő növekedtével összeszűkül */
+#xhair { --k: 0; position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+#xhair.on { opacity: 1; }
+#xhair i { position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 3px #000; }
+#xhair b { position: absolute; --r: calc(26px - var(--k) * 16px); left: calc(var(--r) * -1); top: calc(var(--r) * -1); width: calc(var(--r) * 2); height: calc(var(--r) * 2); border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, calc(0.35 + var(--k) * 0.5)); box-shadow: 0 0 4px rgba(0, 0, 0, 0.5); }
+#hotbar .slot.out { opacity: 0.45; border-style: dashed; }

@@ -170,22 +170,45 @@ function buildRig(ch, clips) {
   use('swimF', 'Swim_Fwd_Loop'); use('swimI', 'Swim_Idle_Loop');
   use('jumpS', 'Jump_Start', true); use('jumpL', 'Jump_Loop'); use('land', 'Jump_Land', true);
   use('interact', 'Interact', true);
+  use('crouchI', 'Crouch_Idle_Loop'); use('crouchF', 'Crouch_Fwd_Loop');
   for (const k of ['walk', 'jog', 'sprint']) if (act[k]) act[k].a.timeScale = 0; // kézi fázis-vezérlés
   act.idle.w = 1;
 
-  return new Rig(holder, mixer, act);
+  // Felsőtest-réteg (célzás, dobás): a klip spine_02 fölötti sávjait közvetlenül mintavételezzük és a fő keverés után
+  // ráírjuk a csontokra; így a lábak közben tovább sétálnak
+  const upNames = new Set();
+  scene.getObjectByName('spine_02')?.traverse((o) => { if (o.isBone) upNames.add(o.name); });
+  const uact = {};
+  const useU = (key, name, once = false) => {
+    const c0 = byName[name]; if (!c0) return;
+    const ch = c0.tracks.filter((t) => t.name.endsWith('.quaternion') && upNames.has(t.name.split('.')[0]))
+      .map((t) => ({ bone: scene.getObjectByName(t.name.split('.')[0]), it: t.createInterpolant() }));
+    uact[key] = { ch, dur: c0.duration, once };
+  };
+  for (const [k, n, once] of [['aim', 'Pistol_Aim_Up'], ['throw', 'Sword_Attack', true], ['stab', 'Punch_Cross', true], ['torch', 'Idle_Torch_Loop']]) useU(k, n, once);
+
+  return new Rig(holder, mixer, act, { uact, make: useU });
 }
 
 class Rig {
-  constructor(object, mixer, act) {
+  constructor(object, mixer, act, up) {
     this.object = object; this.mixer = mixer; this.act = act;
     this.phase = 0; this.lastHalf = 0; this.shot = null; this.shotT = 0; this.wasGround = true;
+    this.up = up; this.upKey = null; this.upW = 0; this.upT = 0; this.upShotT = 0; this.upHold = null; this.upSpeed = 1;
+    this._q = new THREE.Quaternion();
   }
 
   oneShot(key, dur) {
     const s = this.act[key]; if (!s) return;
     s.a.reset(); s.a.play();
     this.shot = key; this.shotT = dur ?? s.dur;
+  }
+
+  // felsőtest-póz: tartós (pl. 'aim') vagy egyszeri (pl. 'throw', dur másodpercig)
+  upper(key, dur) {
+    if (key && !this.up.uact[key]) return;
+    if (dur) { this.upKey = key; this.upT = 0; this.upShotT = dur; this.upSpeed = this.up.uact[key].dur / dur; return; }
+    this.upHold = key;
   }
 
   // p: { speed, swim, onGround, vy, dt } -> visszaadja, volt-e lépés (lépéshang)
@@ -214,6 +237,12 @@ class Rig {
         this.phase = (this.phase + s * dt / dist) % 1;
       }
       for (const k of ['walk', 'jog', 'sprint']) if (A[k]) A[k].a.time = this.phase * A[k].dur;
+      // lopakodás: guggoló séta (saját fázissal, a lábak itt nem kell, hogy szinkronban legyenek)
+      if (p.crouch) {
+        const m = THREE.MathUtils.smoothstep(s, 0.05, 0.6);
+        T.crouchI = 1 - m; T.crouchF = m; T.idle = T.walk = T.jog = T.sprint = 0;
+        if (A.crouchF) A.crouchF.a.timeScale = Math.max(0.4, s / 1.1);
+      }
       const half = this.phase < 0.5 ? 0 : 1;
       if (half !== this.lastHalf && tw > 0.3) step = true;
       this.lastHalf = half;
@@ -234,6 +263,20 @@ class Rig {
       A[k].a.setEffectiveWeight(A[k].w);
     }
     this.mixer.update(dt);
+    // felsőtest-réteg
+    if (this.upShotT > 0) { this.upShotT -= dt; if (this.upShotT <= 0) this.upKey = null; }
+    if (this.upShotT <= 0 && this.upHold && this.upKey !== this.upHold) { this.upKey = this.upHold; this.upT = 0; this.upSpeed = 1; }
+    const wantW = this.upShotT > 0 || this.upHold ? 1 : 0;
+    this.upW = damp(this.upW, wantW, wantW ? 14 : 7, dt);
+    if (this.upKey) this.upLast = this.upKey;
+    else if (this.upW > 0.001) this.upSpeed = 0; // elengedés: az utolsó pózból halványul vissza
+    const key = this.upKey || this.upLast;
+    if (key && this.upW > 0.001) {
+      const U = this.up.uact[key];
+      this.upT += dt * this.upSpeed;
+      const t = U.once ? Math.min(this.upT, U.dur) : this.upT % Math.max(U.dur, 1e-3);
+      for (const c of U.ch) c.bone.quaternion.slerp(this._q.fromArray(c.it.evaluate(t)), this.upW);
+    }
     return step;
   }
 }

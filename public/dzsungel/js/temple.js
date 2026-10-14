@@ -65,7 +65,7 @@ export class Temple {
     for (const [x, z, fall] of [[-6.5, ST_FRONT + 1.5, 0], [6.5, ST_FRONT + 1.5, 0], [-12, ST_FRONT - 2, 1]]) {
       if (fall) box(0.9, 0.45, 3.2, x, 0.25, z, 0, 0.6, 0.08);
       else { box(0.9, 3.2, 0.45, x, 1.6, z); box(1.1, 0.25, 0.6, x, 3.3, z); }
-      this.colliders.push({ x: TEMPLE.x + x, z: TEMPLE.z + z, r: 0.75 });
+      this.colliders.push({ x: TEMPLE.x + x, z: TEMPLE.z + z, r: 0.75, h: fall ? 0.6 : 3.5 });
     }
     // omladék a piramis körül
     for (let i = 0; i < 40; i++) {
@@ -74,7 +74,7 @@ export class Temple {
       if (z > HS0 && Math.abs(x) < ST_W + 1.5) continue;
       const s = 0.4 + rnd() * 0.9;
       box(s * (1 + rnd()), s * 0.7, s, x, s * 0.25, z, rnd(), rnd() * 3, rnd());
-      if (s > 0.8) this.colliders.push({ x: TEMPLE.x + x, z: TEMPLE.z + z, r: s * 0.8 });
+      if (s > 0.8) this.colliders.push({ x: TEMPLE.x + x, z: TEMPLE.z + z, r: s * 0.8, h: s * 0.9 });
     }
     const inner = [new THREE.Vector4(TEMPLE.x, TEMPLE.z, SH.hx - SH.wall + 0.02, SH.hz - SH.wall + 0.02), new THREE.Vector4(TOP - 0.3, TOP + SH.h - 0.02, 0, 0)];
     const mat = flora.rockTex ? templeMatPBR(flora.rockTex, inner) : flora.rockMat;

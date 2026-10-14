@@ -111,6 +111,23 @@ export class JungleAudio {
       src.start(s, Math.random() * 2, 2); o.start(s); o.stop(s + 2);
     }
   }
+  // vadászat: suhogás, becsapódás, pekari-röfögés és visítás, sercegés a tűzön
+  whoosh(power = 1) { if (this.ctx) { this.burst(500 + power * 500, 0.7, 0.1 + power * 0.08, 0.35); this.burst(1600, 1.5, 0.04 * power, 0.25); } }
+  thunk(vol = 0.3, wood = false) { if (this.ctx) { this.burst(wood ? 420 : 160, wood ? 3 : 1, vol, wood ? 0.09 : 0.14); this.crack(vol * 0.5); } }
+  grunt(pan = 0, vol = 0.15, high = false) {
+    if (!this.ctx) return;
+    const C = this.ctx, s = C.currentTime + Math.random() * 0.05;
+    for (let k = 0; k < (high ? 1 : 2); k++) {
+      const t = s + k * 0.17, o = C.createOscillator(), f = C.createBiquadFilter(), g = C.createGain(), p = C.createStereoPanner();
+      o.type = 'sawtooth'; const f0 = high ? 520 : 105 + Math.random() * 30;
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * (high ? 1.7 : 0.75), t + (high ? 0.28 : 0.12));
+      f.type = 'lowpass'; f.frequency.value = high ? 2600 : 650; p.pan.value = pan;
+      o.connect(f).connect(g).connect(p).connect(this.master);
+      this.env(g, t, 0.01, vol, high ? 0.5 : 0.15); o.start(t); o.stop(t + (high ? 0.55 : 0.2));
+    }
+  }
+  squeal(pan = 0, vol = 0.3) { this.grunt(pan, vol, true); }
+  sizzle() { if (this.ctx) { this.burst(4200, 0.4, 0.07, 1.6); this.burst(2600, 0.6, 0.05, 1.1); } }
   plop() { if (this.ctx) this.burst(500 + Math.random() * 300, 1.2, 0.12, 0.18); }
   // jaguár: mély, reszelős morgás
   growl(vol = 0.5) {

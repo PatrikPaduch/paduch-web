@@ -10,6 +10,7 @@ import { Weather, WEATHER_LABELS } from './weather.js';
 import { Animals } from './animals.js';
 import { Temple } from './temple.js';
 import { Survival, ITEMS, TOOLS } from './survival.js';
+import { Hunt } from './hunt.js';
 import { buildFlora } from './flora.js';
 import { Sky } from './sky.js';
 import { Post } from './post.js';
@@ -104,6 +105,7 @@ async function init() {
   T.heightAt = (x, z) => Math.max(terrainHeight(x, z), temple.heightAt(x, z));
   player.camBlock = (x, z) => temple.heightAt(x, z);
   const surv = new Survival(scene, T, flora, player);
+  const hunt = new Hunt(scene, T, flora, audio, fx, surv, player, animals);
 
   let Q = QUALITY.high, streamFrom = new THREE.Vector3(1e9, 0, 0);
   function applyQuality(name) {
@@ -158,12 +160,26 @@ async function init() {
     for (const [id, t] of Object.entries(TOOLS)) if (t.key && e.code === `Digit${t.key}`) { toast(surv.equip(id)); refreshHotbar(); }
     if (e.code === 'KeyR') { const m = weather.cycleMode(); settings.weather = m; toast(`Időjárás: ${WEATHER_LABELS[m]}`); syncMenu(); }
     if (e.code === 'KeyC') { input.walk = !input.walk; toast(input.walk ? 'Séta' : 'Kocogás'); }
+    if (e.code === 'KeyX') { player.crouch = !player.crouch; toast(player.crouch ? 'Lopakodás: a vad később vesz észre' : 'Felálltál'); }
+    if (e.code === 'KeyQ' && !e.repeat && !hunt.startAim() && surv.equipped !== 'spear') toast('Vedd kézbe a lándzsát (2)');
     if (e.code === 'KeyH') { state.hud = !state.hud; $('hud').classList.toggle('off', !state.hud); }
     if (e.code === 'KeyT') { settings.tspeed = settings.tspeed === 2 ? 1 : 2; toast(settings.tspeed === 2 ? 'Az idő felgyorsult' : 'Az idő normál ütemben telik'); syncMenu(); }
     if (e.code === 'KeyM') toast(audio.toggleMute() ? 'Hang némítva' : 'Hang bekapcsolva');
   });
-  addEventListener('keyup', (e) => { if (keymap[e.code]) input[keymap[e.code]] = false; });
-  addEventListener('blur', () => { for (const k in input) input[k] = false; audio.pause(true); });
+  addEventListener('keyup', (e) => {
+    if (keymap[e.code]) input[keymap[e.code]] = false;
+    if (e.code === 'KeyQ') huntRelease();
+  });
+  // lándzsa: bal gomb nyomva = célzás, felengedve dobás (rövid kattintás = döfés); jobb gomb megszakítja
+  function huntRelease() { if (!hunt.aim) return; const m = hunt.release(camera); if (m) toast(m); refreshHotbar(); }
+  canvas.addEventListener('mousedown', (e) => {
+    if (state.mode !== 'play' || state.menu) return;
+    if (e.button === 0) hunt.startAim();
+    if (e.button === 2) hunt.cancelAim();
+  });
+  addEventListener('mouseup', (e) => { if (e.button === 0) huntRelease(); });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  addEventListener('blur', () => { for (const k in input) input[k] = false; hunt.cancelAim(); audio.pause(true); });
   addEventListener('focus', () => { if (!document.hidden) audio.pause(false); });
   document.addEventListener('visibilitychange', () => audio.pause(document.hidden || !document.hasFocus()));
   let dragging = false;
@@ -190,7 +206,7 @@ async function init() {
   // ---------------- HUD
   let toastTimer = 0;
   function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600); }
-  const strip = $('cstrip'), PX = 2.2;
+  const strip = $('cstrip'), PX = 2.2, xhair = $('xhair');
   {
     const names = { 0: 'É', 45: 'ÉK', 90: 'K', 135: 'DK', 180: 'D', 225: 'DNy', 270: 'Ny', 315: 'ÉNy' };
     let html = '';
@@ -205,6 +221,7 @@ async function init() {
     { el: null, x: 10, z: T.lipZ, icon: '≋', title: 'Vízesés' },
     { el: null, x: CAMP.x, z: CAMP.z, icon: '▲', title: 'Tábor' },
     { el: null, x: TEMPLE.x, z: TEMPLE.z, icon: '◆', title: 'Templomrom' },
+    { el: null, x: 0, z: 0, icon: '↑', title: 'Lándzsa', spear: true },
   ];
   for (const m of marks) { const e = document.createElement('span'); e.className = 'm'; e.textContent = m.icon; e.title = m.title; $('cmarks').appendChild(e); m.el = e; }
   const fmtTime = (h) => { const hh = Math.floor(h), mm = Math.floor((h - hh) * 60); return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
@@ -229,6 +246,10 @@ async function init() {
       discover('Az Arany Jaguár a tiéd!', 'Megtaláltad az elveszett templom kincsét');
       player.rig?.oneShot('interact', 1.1); saveGame(); return;
     }
+    if (hunt.nearSpear(player.pos)) { toast(hunt.takeSpear()); player.rig?.oneShot('interact', 0.9); refreshHotbar(); return; }
+    const cc = hunt.nearCarcass(player.pos);
+    if (cc) { toast(hunt.butcher(cc)); player.rig?.oneShot('interact', 1.2); audio.thunk(0.15); refreshHotbar(); saveGame(); return; }
+    if (surv.canCook(player.pos)) { toast(surv.cook()); audio.sizzle(); player.rig?.oneShot('interact', 1.2); refreshHotbar(); return; }
     const it = surv.nearestItem(player.pos);
     if (it) { toast(surv.pickup(it)); player.rig?.oneShot('interact', 1.0); refreshHotbar(); return; }
     const b = nearBanana();
@@ -245,6 +266,11 @@ async function init() {
   }
   function promptText() {
     if (temple.idolNear(player.pos)) return '<b>E</b>Arany Jaguár felvétele';
+    if (hunt.aim) return hunt.charge() > 0.02 ? `Erő ${Math.round(hunt.charge() * 100)}% · engedd el a dobáshoz` : 'Célzás… (rövid kattintás: döfés)';
+    if (hunt.nearSpear(player.pos)) return `<b>E</b>🔱 Lándzsa visszavétele${hunt.shot.fish ? ' a hallal' : ''}`;
+    const cc = hunt.nearCarcass(player.pos);
+    if (cc) return `<b>E</b>${cc.sp === 'peccary' ? '🐗 Pekari' : '🦫 Kapibara'} feldolgozása`;
+    if (surv.canCook(player.pos)) return '<b>E</b>🔥 Sütés a tűzön';
     const it = surv.nearestItem(player.pos);
     if (it) return `<b>E</b>${ITEMS[it.type].icon} ${ITEMS[it.type].name} felvétele`;
     if (nearBanana()) return '<b>E</b>🍌 Banánfürt leszedése';
@@ -256,11 +282,11 @@ async function init() {
   // ---------------- Tárgysáv és barkácsolás
   function refreshHotbar() {
     let h = '';
-    for (const [k, d] of Object.entries(ITEMS)) h += `<div class="slot${surv.inv[k] ? '' : ' empty'}" title="${d.name}"><span>${d.icon}</span><i>${surv.inv[k]}</i></div>`;
+    for (const [k, d] of Object.entries(ITEMS)) if (!d.opt || surv.inv[k]) h += `<div class="slot${surv.inv[k] ? '' : ' empty'}" title="${d.name}"><span>${d.icon}</span><i>${surv.inv[k]}</i></div>`;
     h += '<div class="sep"></div>';
     for (const [k, d] of Object.entries(TOOLS)) {
       if (!d.key) continue;
-      h += `<div class="slot tool${surv.tools[k] ? '' : ' empty'}${surv.equipped === k ? ' on' : ''}" title="${d.name}"><span>${d.icon}</span><b>${d.key}</b></div>`;
+      h += `<div class="slot tool${surv.tools[k] ? '' : ' empty'}${surv.equipped === k ? ' on' : ''}${k === 'spear' && surv.spearOut ? ' out' : ''}" title="${d.name}"><span>${d.icon}</span><b>${d.key}</b></div>`;
     }
     $('hotbar').innerHTML = h;
     if (state.craft) renderCraft();
@@ -275,7 +301,7 @@ async function init() {
     $('recipes').innerHTML = h;
   }
   $('recipes').onclick = (e) => { const id = e.target.dataset.c; if (id) { const m = surv.craft(id); if (m) toast(m); refreshHotbar(); renderCraft(); saveGame(); } };
-  function openCraft() { state.craft = true; state.menu = true; renderCraft(); $('craft').classList.remove('hidden'); for (const k in input) input[k] = false; state.ignoreUnlock = true; document.exitPointerLock?.(); }
+  function openCraft() { hunt.cancelAim(); state.craft = true; state.menu = true; renderCraft(); $('craft').classList.remove('hidden'); for (const k in input) input[k] = false; state.ignoreUnlock = true; document.exitPointerLock?.(); }
   function closeCraft() { state.craft = false; state.menu = false; $('craft').classList.add('hidden'); lockPointer(); }
   $('craftClose').onclick = closeCraft;
 
@@ -292,7 +318,7 @@ async function init() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         v: 1, pos: [player.pos.x, player.pos.y, player.pos.z], facing: player.facing, hp: state.hp, food: state.food, water: state.water,
-        tod, surv: surv.serialize(), found: state.found, templeSeen: state.templeSeen,
+        tod, surv: surv.serialize(), found: state.found, templeSeen: state.templeSeen, firstKill: state.firstKill,
       }));
     } catch (e) { /* privát mód */ }
   }
@@ -302,7 +328,7 @@ async function init() {
     if (!s || s.v !== 1) return false;
     player.pos.set(s.pos[0], s.pos[1], s.pos[2]); player.facing = s.facing || 0;
     player.camTarget.set(s.pos[0], s.pos[1] + 1.6, s.pos[2]);
-    Object.assign(state, { hp: s.hp ?? 1, food: s.food ?? 0.8, water: s.water ?? 0.7, found: !!s.found, templeSeen: !!s.templeSeen });
+    Object.assign(state, { hp: s.hp ?? 1, food: s.food ?? 0.8, water: s.water ?? 0.7, found: !!s.found, templeSeen: !!s.templeSeen, firstKill: !!s.firstKill });
     if (s.tod !== undefined) tod = s.tod;
     surv.restore(s.surv);
     if (state.found) temple.takeIdol();
@@ -319,7 +345,7 @@ async function init() {
     $('cInv').checked = settings.invY; $('sens').value = settings.sens; $('sensv').textContent = (+settings.sens).toFixed(2);
     saveSettings();
   }
-  function openMenu() { state.menu = true; $('menu').classList.remove('hidden'); syncMenu(); for (const k in input) input[k] = false; }
+  function openMenu() { state.menu = true; hunt.cancelAim(); $('menu').classList.remove('hidden'); syncMenu(); for (const k in input) input[k] = false; }
   function closeMenu() { state.menu = false; $('menu').classList.add('hidden'); lockPointer(); }
   $('resume').onclick = closeMenu;
   $('qseg').onclick = (e) => { const q = e.target.dataset.q; if (q) applyQuality(q); };
@@ -421,6 +447,15 @@ async function init() {
     sky.updateEnv();
     fx.update(dt, { camera, player: state.mode === 'title' ? null : player, sky, screenH: post.h });
     animals.update(dt, { player, camera, sky, fx, hooks: animalHooks });
+    if (state.mode !== 'title') {
+      const hm = hunt.update(dt, camera);
+      if (hm) {
+        toast(hm); refreshHotbar();
+        if (hm.startsWith('Elejtettél') && !state.firstKill) { state.firstKill = true; discover('Vadász lettél', 'Elejtetted az első zsákmányodat'); }
+      }
+      xhair.classList.toggle('on', !!hunt.aim);
+      if (hunt.aim) xhair.style.setProperty('--k', hunt.charge().toFixed(3));
+    }
 
     temple.update(state.t);
     surv.update(dt, sky.night, (m) => { toast(m); refreshHotbar(); });
@@ -454,6 +489,11 @@ async function init() {
       const W = $('compass').clientWidth;
       strip.style.transform = `translateX(${W / 2 - (bearing + 360) * PX}px)`;
       for (const m of marks) {
+        if (m.spear) {
+          const sm = hunt.shot && hunt.shot.state !== 'fly' ? hunt.spearMid() : null;
+          if (!sm) { m.el.style.display = 'none'; continue; }
+          m.x = sm.x; m.z = sm.z;
+        }
         const mb = Math.atan2(m.x - player.pos.x, -(m.z - player.pos.z)) * 180 / Math.PI;
         let rel = ((mb - bearing) % 360 + 540) % 360 - 180;
         m.el.style.display = Math.abs(rel) < 85 ? '' : 'none';
@@ -514,7 +554,7 @@ async function init() {
     tod = v.t; settings.tspeed = 0;
   };
   if (qs.has('view')) setView(qs.get('view'));
-  window.__dz = { temple, surv, animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
+  window.__dz = { temple, surv, hunt, animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
 }
 
 init().catch((e) => {

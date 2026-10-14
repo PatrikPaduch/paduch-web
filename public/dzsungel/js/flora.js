@@ -795,7 +795,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     const h = T.heightAt(x, z);
     const g = 0.75 + rnd() * 0.35;
     rkL[Math.floor(rnd() * 5)].push({ x, y: h - s * sink, z, ry: rnd() * 6.28, rx: (rnd() - 0.5) * 0.3, rz: (rnd() - 0.5) * 0.3, s, sy: flatY, c: new THREE.Color(g, g * (0.97 + rnd() * 0.05), g * 0.95) });
-    if (s > 0.7) colliders.push({ x, z, r: s * 0.85 });
+    if (s > 0.7) colliders.push({ x, z, r: s * 0.85, h: s * 1.3 });
   };
   for (let k = 0; k < 30; k++) {
     const a = rnd() * Math.PI * 2, d = POND.r + rnd() * 3.5 - 1.2;
@@ -867,7 +867,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     const h0 = T.heightAt(x - dx, z - dz), h1 = T.heightAt(x + dx, z + dz);
     const c = new THREE.CatmullRomCurve3([new V3(x - dx, h0 + 0.3, z - dz), new V3(x, (h0 + h1) / 2 + 0.36, z), new V3(x + dx, h1 + 0.3, z + dz)]);
     tube(logGB, c, 12, 14, t => 0.42 * (1 - 0.2 * t), () => [0.75, 0.72, 0.68], 3);
-    for (let k = 0; k <= 4; k++) colliders.push({ x: x - dx + dx * 2 * k / 4, z: z - dz + dz * 2 * k / 4, r: 0.45 });
+    for (let k = 0; k <= 4; k++) colliders.push({ x: x - dx + dx * 2 * k / 4, z: z - dz + dz * 2 * k / 4, r: 0.45, h: 1.0 });
     for (let k = 0; k < 4; k++) {
       const t = 0.15 + rnd() * 0.7, p = c.getPointAt(t);
       logMush.push({ x: p.x + (rnd() - 0.5) * 0.4, y: p.y + 0.3, z: p.z + (rnd() - 0.5) * 0.4, ry: rnd() * 6, s: 0.8 + rnd() * 0.5 });

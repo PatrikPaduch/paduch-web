@@ -294,6 +294,7 @@ export class Animals {
   updateFish(dt, fx) {
     this.jumpT -= dt;
     for (const f of this.fish) {
+      if (f.caught) { if (f.hideT > 0) { f.hideT -= dt; f.m.visible = false; if (f.hideT <= 0) f.caught = false; } continue; } // lándzsán / kifogva
       if (f.jump >= 0) {
         f.jump += dt / 0.7;
         const u = Math.min(1, f.jump);
