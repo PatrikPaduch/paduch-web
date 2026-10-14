@@ -4,7 +4,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32, simplex2, smoothstep } from './noise.js';
 import { cellUV } from './textures.js';
 import { foliageMat, barkMat, plantMat, grassMat, rockMat, rockMatPBR } from './materials.js';
-import { POND, CAMP, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
+import { POND, CAMP, TEMPLE, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
 
 const V3 = THREE.Vector3;
 const UP = new V3(0, 1, 0);
@@ -517,6 +517,9 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     if (T.pathAt(x, z) > (o.path ?? 0.3)) return null;
     if (Math.hypot(x - CAMP.x, z - CAMP.z) < (o.camp ?? 9)) return null;
     if (Math.hypot(x - 2, z - 18) < (o.spawn ?? 4)) return null;
+    // a templomrom alapterülete: fák messzebb, aljnövényzet a falakig, a lépcső előtti tér szabad
+    const tx = Math.abs(x - TEMPLE.x), tz = z - TEMPLE.z;
+    if (o.big ? Math.hypot(tx, tz) < 20 : Math.max(tx, Math.abs(tz)) < 13.6 || (tx < 6 && tz > 0 && tz < 23)) return null;
     return h;
   };
   const rx = () => -186 + rnd() * 372;
@@ -556,7 +559,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   const gLists = [[], [], []];
   const heroes = [[-27, -24], [33, -20], [-31, 14], [29, 26], [-18, -50], [36, -48], [-40, -8]];
   const placeGiant = (x, z, forced) => {
-    const h = ground(x, z, { slope: 0.42, path: 0.15, camp: 14 });
+    const h = ground(x, z, { big: 1, slope: 0.42, path: 0.15, camp: 14 });
     if (h === null) return false;
     const v = Math.floor(rnd() * 3), s = 0.85 + rnd() * 0.35, r = giants[v].R0 * s * 1.6;
     if (!trees.free(x, z, r + (forced ? 2 : 4))) return false;
@@ -584,10 +587,11 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     const f = T.forestAt(x, z);
     const p = 0.12 + 0.9 * nearWater(x, z) + (f > 0.05 && f < 0.6 ? 0.35 : 0);
     if (rnd() > p) continue;
-    const h = ground(x, z, { above: 0.5, slope: 0.45, path: 0.2 });
+    const h = ground(x, z, { big: 1, above: 0.5, slope: 0.45, path: 0.2 });
     if (h === null || !trees.free(x, z, 2.2)) continue;
     trees.add(x, z, 1.2); colliders.push({ x, z, r: 0.38 });
     const v = Math.floor(rnd() * 4);
+    (out.palms ||= []).push({ x, z, y: h });
     pLists[v].push({ x, y: h - 0.2, z, ry: rnd() * Math.PI * 2, s: 0.85 + rnd() * 0.3, c: new THREE.Color().setRGB(0.9 + rnd() * 0.15, 0.95 + rnd() * 0.1, 0.85 + rnd() * 0.2) });
     n++;
   }
@@ -599,7 +603,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   for (let a = 0, n = 0; a < 28000 && n < 1050; a++) {
     const x = rx(), z = rx();
     if (rnd() > T.forestAt(x, z) * 1.1) continue;
-    const h = ground(x, z, { slope: 0.48, path: 0.2, camp: 12 });
+    const h = ground(x, z, { big: 1, slope: 0.48, path: 0.2, camp: 12 });
     if (h === null || !trees.free(x, z, 2.1)) continue;
     trees.add(x, z, 1.4); colliders.push({ x, z, r: 0.42 });
     const v = Math.floor(rnd() * 4);
@@ -623,7 +627,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     const f = T.forestAt(x, z);
     const p = (f > 0.08 && f < 0.75 ? 0.6 : 0.05) + nearWater(x, z) * 0.4;
     if (Math.hypot(x, z) > 120 || rnd() > p) continue;
-    const h = ground(x, z, { slope: 0.4, path: 0.15 });
+    const h = ground(x, z, { big: 1, slope: 0.4, path: 0.15 });
     if (h === null || !trees.free(x, z, 1.4)) continue;
     trees.add(x, z, 0.9); colliders.push({ x, z, r: 0.28 });
     const v = Math.floor(rnd() * 2), s = 0.85 + rnd() * 0.3, ry = rnd() * Math.PI * 2;
@@ -784,6 +788,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   await tick();
   const rMat = BX.rock ? rockMatPBR(BX.rock) : rockMat();
   out.rockMat = rMat;
+  out.rockTex = BX.rock;
   const rocks = [0, 1, 2, 3, 4].map(i => makeRock(1700 + i * 3));
   const rkL = [[], [], [], [], []];
   const addRock = (x, z, s, sink = 0.3, flatY = 1) => {
@@ -916,7 +921,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
       const x = rx(), z = rx();
       const f = T.forestAt(x, z);
       if (rnd() > f * 0.9 + 0.05) continue;
-      const h = ground(x, z, { slope: 0.45, path: 0.2, camp: 10 });
+      const h = ground(x, z, { big: 1, slope: 0.45, path: 0.2, camp: 10 });
       if (h === null || !trees.free(x, z, 1.6)) continue;
       trees.add(x, z, 0.8); colliders.push({ x, z, r: 0.22 });
       pach.push({ x, y: h - 0.05, z, ry: rnd() * 6.28, s: 2.4 + rnd() * 1.6, c: new THREE.Color().setRGB(0.85 + rnd() * 0.25, 0.92 + rnd() * 0.15, 0.8 + rnd() * 0.25) });

@@ -246,6 +246,8 @@ export class Player {
         const dx = px - c.x, dz = pz - c.z, rr = c.r + 0.25;
         if (dx * dx + dz * dz < rr * rr) { hit = true; break; }
       }
+      // magas falak (templom): ha a fal a sugár fölé ér, a kamera előtte áll meg
+      if (!hit && this.camBlock && this.camBlock(px, pz) > this.camTarget.y + dir.y * s - 0.3) hit = true;
       if (hit) { dist = Math.max(0.8, s - 0.35); break; }
     }
     this.camHit = damp(this.camHit ?? dist, dist, dist < (this.camHit ?? dist) ? 20 : 4, dt);

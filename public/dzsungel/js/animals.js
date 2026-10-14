@@ -386,7 +386,9 @@ export class Animals {
 
   updateJaguar(dt, player, night, hooks) {
     const J = this.jag, P = player.pos;
-    const fireD = Math.hypot(P.x - CAMP.x, P.z - CAMP.z);
+    // biztonságos: tábortűz, lerakott tűz vagy fáklya a kézben
+    const safe = hooks.isSafe ? hooks.isSafe(P) : Math.hypot(P.x - CAMP.x, P.z - CAMP.z) < 9;
+    const torch = hooks.hasTorch ? hooks.hasTorch() : false;
     const dP = Math.hypot(J.pos.x - P.x, J.pos.z - P.z);
     let target = null, spd = 0;
     if (J.state === 'away') {
@@ -407,19 +409,19 @@ export class Animals {
       J.t -= dt;
       // körözve közelít; a tábortűz fényébe nem lép be
       J.ang += dt * 0.12;
-      let R = Math.max(9, 24 - (60 - J.t) * 0.25);
+      let R = Math.max(torch ? 14 : 9, 24 - (60 - J.t) * 0.25);
       target = new V3(P.x + Math.cos(J.ang) * R, 0, P.z + Math.sin(J.ang) * R);
       const fd = Math.hypot(target.x - CAMP.x, target.z - CAMP.z);
       if (fd < 14) target.add(new V3(target.x - CAMP.x, 0, target.z - CAMP.z).normalize().multiplyScalar(14 - fd));
       spd = 1.6;
       J.growlT -= dt;
       if (dP < 22 && J.growlT <= 0) { this.audio?.growl(Math.min(1, 10 / dP)); J.growlT = 6 + rnd() * 6; }
-      if (dP < 8.5 && fireD > 10 && !player.swim) { J.state = 'charge'; J.t = 4; this.audio?.growl(1.2); }
+      if (dP < 8.5 && !safe && !player.swim) { J.state = 'charge'; J.t = 4; this.audio?.growl(1.2); }
       if (J.t <= 0 || night < 0.4 || dP > 70) J.state = 'leave';
     } else if (J.state === 'charge') {
       J.t -= dt; target = P.clone(); spd = 9;
       if (dP < 1.7) { hooks.onAttack(); J.state = 'leave'; J.t = 0; }
-      if (J.t <= 0 || fireD < 9 || player.swim) J.state = 'leave';
+      if (J.t <= 0 || safe || player.swim) J.state = 'leave';
     } else if (J.state === 'leave') {
       const away = new V3(J.pos.x - P.x, 0, J.pos.z - P.z).normalize();
       target = J.pos.clone().addScaledVector(away, 20); spd = 6;

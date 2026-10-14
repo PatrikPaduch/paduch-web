@@ -32,9 +32,12 @@
   <div id="prompt"></div>
   <div id="toast"></div>
   <div id="hurt"></div>
+  <div id="discover"><div class="t0">Felfedezés</div><div class="t1"></div><div class="t2"></div></div>
+  <div id="hotbar"></div>
   <div id="help">
     <div><kbd>W A S D</kbd> mozgás &nbsp; <kbd>Shift</kbd> futás &nbsp; <kbd>Szóköz</kbd> ugrás</div>
-    <div><kbd>E</kbd> használat &nbsp; <kbd>C</kbd> séta / kocogás &nbsp; <kbd>Görgő</kbd> kamera távolság &nbsp; <kbd>H</kbd> fotó mód</div>
+    <div><kbd>Tab</kbd> barkácsolás &nbsp; <kbd>F</kbd> evés &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> balta, lándzsa, fáklya</div>
+    <div><kbd>E</kbd> felvétel / használat &nbsp; <kbd>C</kbd> séta / kocogás &nbsp; <kbd>Görgő</kbd> kamera távolság &nbsp; <kbd>H</kbd> fotó mód</div>
     <div><kbd>← →</kbd> kamera forgatása &nbsp; <kbd>T</kbd> idő gyorsítása &nbsp; <kbd>R</kbd> időjárás &nbsp; <kbd>Esc</kbd> menü</div>
   </div>
   <div id="fps"></div>
@@ -47,7 +50,17 @@
     <p class="sub">Felfedezés és túlélés a vízesés völgyében</p>
     <div id="load"><div class="lbar"><i id="lfill"></i></div><div id="ltext">Betöltés…</div></div>
     <button id="go" class="hidden">Belépés a dzsungelbe</button>
+    <button id="newgame" class="hidden">Új játék</button>
     <div class="keys">Egér: nézelődés · WASD: mozgás · Shift: futás · E: használat</div>
+  </div>
+</div>
+
+<div id="craft" class="hidden">
+  <div class="panel wide">
+    <h2>Barkácsolás</h2>
+    <div class="hint top">Gyűjts ágat, követ, liánt és nagy levelet (E), aztán készíts eszközöket.</div>
+    <div id="recipes"></div>
+    <button id="craftClose" class="primary">Bezárás (Tab)</button>
   </div>
 </div>
 

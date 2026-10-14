@@ -49,6 +49,20 @@ canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: bloc
   opacity: 0; transition: opacity 0.5s, transform 0.5s; white-space: nowrap;
 }
 #toast.on { opacity: 1; transform: translateX(-50%); }
+#hotbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 5px; align-items: center; padding: 6px 8px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(8px); }
+#hotbar .slot { position: relative; width: 42px; height: 42px; border-radius: 9px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); }
+#hotbar .slot span { font-size: 21px; line-height: 1; }
+#hotbar .slot i { position: absolute; right: 4px; bottom: 2px; font: 600 11px Inter, sans-serif; font-style: normal; color: var(--ink); text-shadow: 0 1px 2px #000; }
+#hotbar .slot b { position: absolute; left: 4px; top: 2px; font: 600 10px Inter, sans-serif; color: var(--muted); }
+#hotbar .slot.empty { opacity: 0.35; }
+#hotbar .slot.on { border-color: var(--accent); background: rgba(216, 194, 122, 0.22); box-shadow: 0 0 10px rgba(216, 194, 122, 0.4); }
+#hotbar .sep { width: 1px; height: 30px; background: var(--line); margin: 0 4px; }
+#discover { position: absolute; left: 0; right: 0; top: 24%; text-align: center; opacity: 0; pointer-events: none; text-shadow: 0 3px 18px rgba(0, 0, 0, 0.8); }
+#discover .t0 { font: 500 12px Inter, sans-serif; letter-spacing: 0.42em; text-transform: uppercase; color: var(--accent); }
+#discover .t1 { font: 600 clamp(32px, 5.5vw, 64px)/1.1 'Cormorant Garamond', serif; margin: 8px 0 6px; }
+#discover .t2 { font: italic 500 clamp(16px, 2vw, 22px) 'Cormorant Garamond', serif; color: rgba(244, 239, 226, 0.88); }
+#discover.on { animation: discover 6s ease-in-out; }
+@keyframes discover { 0% { opacity: 0; transform: translateY(10px); } 12% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
 #hurt { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(160, 0, 0, 0) 45%, rgba(170, 10, 10, 0.75) 100%); }
 #hurt.on { animation: hurt 1.4s ease-out; }
 @keyframes hurt { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -78,6 +92,24 @@ h1 { font: 600 clamp(64px, 11vw, 150px)/0.9 'Cormorant Garamond', serif; letter-
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); transition: transform 0.2s, background 0.2s;
 }
 #go:hover { transform: translateY(-2px); background: #fff; }
+#newgame { margin: 30px 0 0 12px; font: 600 12px Inter, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; padding: 14px 20px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+#newgame:hover { background: rgba(255, 255, 255, 0.08); }
+#craft { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 6, 0.35); backdrop-filter: blur(3px); }
+.panel.wide { width: min(560px, calc(100vw - 32px)); }
+.hint.top { text-align: left; margin: 0 0 12px; }
+#recipes { display: flex; flex-direction: column; gap: 8px; }
+.recipe { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); }
+.recipe.no { opacity: 0.72; }
+.recipe .ri { font-size: 30px; width: 40px; text-align: center; }
+.recipe .rb { flex: 1; min-width: 0; }
+.recipe .rn { font: 600 15px Inter, sans-serif; }
+.recipe .rn em { font: 500 11px Inter, sans-serif; color: var(--accent); margin-left: 6px; font-style: normal; }
+.recipe .rd { font: 12px Inter, sans-serif; color: var(--muted); margin: 2px 0 6px; }
+.recipe .rr { display: flex; flex-wrap: wrap; gap: 8px; font: 500 12px Inter, sans-serif; }
+.recipe .rr .have { color: #a8d86a; }
+.recipe .rr .miss { color: #e88a7c; }
+.recipe button { padding: 9px 14px; border-radius: 9px; border: 0; background: var(--ink); color: #111; font: 600 12px Inter, sans-serif; cursor: pointer; }
+.recipe button:disabled { background: rgba(255, 255, 255, 0.12); color: var(--muted); cursor: default; }
 .keys { margin-top: 18px; font: 12px Inter, sans-serif; color: var(--muted); }
 
 #menu { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 6, 0.35); backdrop-filter: blur(3px); }
@@ -100,3 +132,4 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #help { display: none; }
   .bar { width: 96px; }
 }
+@media (max-width: 1200px) { #help { bottom: 78px; } }

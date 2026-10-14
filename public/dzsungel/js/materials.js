@@ -242,6 +242,43 @@ vec3 jN; float jRough;`)
   });
 }
 
+// Templomkő: nagyobb léptékű, fakóbb kő, moha a felfelé néző lapokon és a fugákban,
+// a szentély belseje sötét (nincs valódi beltéri árnyék, ezért itt csaljuk)
+export function templeMatPBR(T, shrine) {
+  const m = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 });
+  m.userData.u = { tRd: { value: T.diff }, tRn: { value: T.nor }, tRa: { value: T.arm }, uShr: { value: shrine } };
+  return patch(m, 'templePBR', sh => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWP;\nvarying vec3 vWN;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n' + WP_V + WN_V);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tRd; uniform sampler2D tRn; uniform sampler2D tRa;
+uniform vec4 uShr[2];
+${TRI}
+vec3 jN; float jRough; float jIn;`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{ vec3 N = normalize(vWN);
+  vec3 rD, rN, rA;
+  triSample(tRd, tRn, tRa, vWP / 4.6, N, rD, rN, rA);
+  float l = dot(rD, vec3(0.33));
+  vec3 stone = mix(vec3(l), rD, 0.35) * vec3(1.12, 1.0, 0.8) * 0.98;
+  vec2 mp = vWP.xz + vec2(vWP.y * 0.7, -vWP.y * 0.4);
+  float n = jn2(mp * 0.45) * 0.55 + jn2(mp * 1.9) * 0.3 + jn2(mp * 6.3) * 0.15;
+  float moss = smoothstep(0.35, 0.85, N.y) * smoothstep(0.5, 0.7, n + (l - 0.3) * 0.4);
+  moss = max(moss, smoothstep(0.66, 0.82, n) * (1.0 - abs(N.y)) * 0.7);
+  stone = mix(stone, vec3(0.09, 0.13, 0.04) * (0.6 + rD.g * 1.6), moss * 0.8);
+  vec2 q = abs(vWP.xz - uShr[0].xy) - uShr[0].zw;
+  jIn = step(max(q.x, q.y), 0.0) * step(uShr[1].x, vWP.y) * step(vWP.y, uShr[1].y);
+  diffuseColor.rgb *= stone * mix(1.0, rA.r, 0.9) * (1.0 - uWet * 0.35) * (1.0 - jIn * 0.72);
+  jN = rN; jRough = mix(mix(rA.g, 1.0, moss * 0.5), 0.25, uWet * 0.8); }`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = jRough;')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize((viewMatrix * vec4(jN, 0.0)).xyz);')
+      .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.indirectDiffuse *= 1.0 - jIn * 0.5;');
+  });
+}
+
 export function farMat() {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   return patch(m, 'far', sh => {

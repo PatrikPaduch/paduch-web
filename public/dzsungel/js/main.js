@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { G, installChunks } from './shaders.js';
 import { makeAtlas, makeBark, makeWing } from './textures.js';
-import { buildTerrain, UPPER, CAMP, RIVER, polyInfo } from './terrain.js';
+import { buildTerrain, UPPER, CAMP, TEMPLE, RIVER, polyInfo } from './terrain.js';
 import { terrainMat, terrainMatPBR, farMat, waterMat } from './materials.js';
 import { loadAssets } from './assets.js';
 import { loadPlants } from './plants.js';
 import { loadCharacter } from './character.js';
 import { Weather, WEATHER_LABELS } from './weather.js';
 import { Animals } from './animals.js';
+import { Temple } from './temple.js';
+import { Survival, ITEMS, TOOLS } from './survival.js';
 import { buildFlora } from './flora.js';
 import { Sky } from './sky.js';
 import { Post } from './post.js';
@@ -96,6 +98,12 @@ async function init() {
   const audio = new JungleAudio();
   const animals = new Animals(scene, T, flora, audio);
   player.onStep = (s, run) => audio.step(s, run);
+  // templomrom: a járható felülete (teraszok, lépcső, szentélyfalak) a domborzat fölé kerül
+  const temple = new Temple(scene, flora, PL, atlas);
+  const terrainHeight = T.heightAt;
+  T.heightAt = (x, z) => Math.max(terrainHeight(x, z), temple.heightAt(x, z));
+  player.camBlock = (x, z) => temple.heightAt(x, z);
+  const surv = new Survival(scene, T, flora, player);
 
   let Q = QUALITY.high, streamFrom = new THREE.Vector3(1e9, 0, 0);
   function applyQuality(name) {
@@ -140,10 +148,14 @@ async function init() {
   const input = { fwd: false, back: false, left: false, right: false, run: false, jump: false, turnL: false, turnR: false };
   const keymap = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', KeyD: 'right', ArrowLeft: 'turnL', ArrowRight: 'turnR', ShiftLeft: 'run', ShiftRight: 'run' };
   addEventListener('keydown', (e) => {
+    if (e.code === 'Tab') { e.preventDefault(); if (state.mode === 'play') (state.craft ? closeCraft() : (!state.menu && openCraft())); return; }
+    if (state.craft && e.code === 'Escape') { closeCraft(); return; }
     if (keymap[e.code]) input[keymap[e.code]] = true;
     if (state.mode !== 'play' || state.menu) return;
     if (e.code === 'Space') { input.jump = true; e.preventDefault(); }
     if (e.code === 'KeyE') interact();
+    if (e.code === 'KeyF') { toast(surv.eat(state)); refreshHotbar(); }
+    for (const [id, t] of Object.entries(TOOLS)) if (t.key && e.code === `Digit${t.key}`) { toast(surv.equip(id)); refreshHotbar(); }
     if (e.code === 'KeyR') { const m = weather.cycleMode(); settings.weather = m; toast(`Időjárás: ${WEATHER_LABELS[m]}`); syncMenu(); }
     if (e.code === 'KeyC') { input.walk = !input.walk; toast(input.walk ? 'Séta' : 'Kocogás'); }
     if (e.code === 'KeyH') { state.hud = !state.hud; $('hud').classList.toggle('off', !state.hud); }
@@ -192,6 +204,7 @@ async function init() {
   const marks = [
     { el: null, x: 10, z: T.lipZ, icon: '≋', title: 'Vízesés' },
     { el: null, x: CAMP.x, z: CAMP.z, icon: '▲', title: 'Tábor' },
+    { el: null, x: TEMPLE.x, z: TEMPLE.z, icon: '◆', title: 'Templomrom' },
   ];
   for (const m of marks) { const e = document.createElement('span'); e.className = 'm'; e.textContent = m.icon; e.title = m.title; $('cmarks').appendChild(e); m.el = e; }
   const fmtTime = (h) => { const hh = Math.floor(h), mm = Math.floor((h - hh) * 60); return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
@@ -209,19 +222,93 @@ async function init() {
     for (const b of flora.bananas) if (!b.eaten && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 1.9) return b;
     return null;
   }
+  // E: a legközelebbi teendő (kincs > tárgy > banán > ivás)
   function interact() {
+    if (temple.idolNear(player.pos)) {
+      temple.takeIdol(); state.found = true;
+      discover('Az Arany Jaguár a tiéd!', 'Megtaláltad az elveszett templom kincsét');
+      player.rig?.oneShot('interact', 1.1); saveGame(); return;
+    }
+    const it = surv.nearestItem(player.pos);
+    if (it) { toast(surv.pickup(it)); player.rig?.oneShot('interact', 1.0); refreshHotbar(); return; }
     const b = nearBanana();
     if (b) {
-      b.eaten = true;
+      b.eaten = true; b.back = 300;
       flora.bunchMesh.setMatrixAt(b.i, new THREE.Matrix4().makeScale(0, 0, 0));
       flora.bunchMesh.instanceMatrix.needsUpdate = true;
-      state.food = Math.min(1, state.food + 0.35);
-      toast('Leszedtél egy fürt banánt');
-      player.rig?.oneShot('interact', 1.1);
+      surv.inv.banana += 3;
+      toast('+3 Banán (F: evés)');
+      player.rig?.oneShot('interact', 1.1); refreshHotbar();
       return;
     }
     if (nearWater()) { state.water = 1; toast('Ittál a friss forrásvízből'); audio.step('water', 0); if (!player.swim) player.rig?.oneShot('interact', 1.1); }
   }
+  function promptText() {
+    if (temple.idolNear(player.pos)) return '<b>E</b>Arany Jaguár felvétele';
+    const it = surv.nearestItem(player.pos);
+    if (it) return `<b>E</b>${ITEMS[it.type].icon} ${ITEMS[it.type].name} felvétele`;
+    if (nearBanana()) return '<b>E</b>🍌 Banánfürt leszedése';
+    if (nearWater()) return '<b>E</b>Ivás';
+    if (surv.warmth(player.pos)) return 'Melegszel a tűznél';
+    return '';
+  }
+
+  // ---------------- Tárgysáv és barkácsolás
+  function refreshHotbar() {
+    let h = '';
+    for (const [k, d] of Object.entries(ITEMS)) h += `<div class="slot${surv.inv[k] ? '' : ' empty'}" title="${d.name}"><span>${d.icon}</span><i>${surv.inv[k]}</i></div>`;
+    h += '<div class="sep"></div>';
+    for (const [k, d] of Object.entries(TOOLS)) {
+      if (!d.key) continue;
+      h += `<div class="slot tool${surv.tools[k] ? '' : ' empty'}${surv.equipped === k ? ' on' : ''}" title="${d.name}"><span>${d.icon}</span><b>${d.key}</b></div>`;
+    }
+    $('hotbar').innerHTML = h;
+    if (state.craft) renderCraft();
+  }
+  function renderCraft() {
+    let h = '';
+    for (const [id, t] of Object.entries(TOOLS)) {
+      const ok = surv.canCraft(id) && (id === 'fire' || !surv.tools[id]);
+      const req = Object.entries(t.need).map(([k, n]) => `<span class="${surv.inv[k] >= n ? 'have' : 'miss'}">${ITEMS[k].icon} ${surv.inv[k]}/${n}</span>`).join('');
+      h += `<div class="recipe${ok ? '' : ' no'}"><div class="ri">${t.icon}</div><div class="rb"><div class="rn">${t.name}${id !== 'fire' && surv.tools[id] ? ' <em>megvan</em>' : ''}</div><div class="rd">${t.desc}</div><div class="rr">${req}</div></div><button data-c="${id}" ${ok ? '' : 'disabled'}>Elkészít</button></div>`;
+    }
+    $('recipes').innerHTML = h;
+  }
+  $('recipes').onclick = (e) => { const id = e.target.dataset.c; if (id) { const m = surv.craft(id); if (m) toast(m); refreshHotbar(); renderCraft(); saveGame(); } };
+  function openCraft() { state.craft = true; state.menu = true; renderCraft(); $('craft').classList.remove('hidden'); for (const k in input) input[k] = false; state.ignoreUnlock = true; document.exitPointerLock?.(); }
+  function closeCraft() { state.craft = false; state.menu = false; $('craft').classList.add('hidden'); lockPointer(); }
+  $('craftClose').onclick = closeCraft;
+
+  // nagy felfedezés-felirat
+  function discover(title, sub) {
+    const d = $('discover'); d.querySelector('.t1').textContent = title; d.querySelector('.t2').textContent = sub;
+    d.classList.remove('on'); void d.offsetWidth; d.classList.add('on');
+  }
+
+  // ---------------- Mentés (böngészőben, 10 mp-enként)
+  const SAVE_KEY = 'dzsungel-save';
+  function saveGame() {
+    if (state.mode !== 'play' || state.noAuto) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        v: 1, pos: [player.pos.x, player.pos.y, player.pos.z], facing: player.facing, hp: state.hp, food: state.food, water: state.water,
+        tod, surv: surv.serialize(), found: state.found, templeSeen: state.templeSeen,
+      }));
+    } catch (e) { /* privát mód */ }
+  }
+  function loadGame() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { s = null; }
+    if (!s || s.v !== 1) return false;
+    player.pos.set(s.pos[0], s.pos[1], s.pos[2]); player.facing = s.facing || 0;
+    player.camTarget.set(s.pos[0], s.pos[1] + 1.6, s.pos[2]);
+    Object.assign(state, { hp: s.hp ?? 1, food: s.food ?? 0.8, water: s.water ?? 0.7, found: !!s.found, templeSeen: !!s.templeSeen });
+    if (s.tod !== undefined) tod = s.tod;
+    surv.restore(s.surv);
+    if (state.found) temple.takeIdol();
+    return true;
+  }
+  addEventListener('beforeunload', saveGame);
 
   // ---------------- Menü
   function syncMenu() {
@@ -249,6 +336,12 @@ async function init() {
   $('sens').oninput = (e) => { settings.sens = +e.target.value; $('sensv').textContent = settings.sens.toFixed(2); saveSettings(); };
 
   // ---------------- Indítás
+  // banánfürtök eredeti helye (újranövéshez)
+  for (const b of flora.bananas) { b.m0 = new THREE.Matrix4(); flora.bunchMesh.getMatrixAt(b.i, b.m0); }
+  const hasSave = !qs.has('view') && !qs.has('play') && loadGame();
+  refreshHotbar();
+  if (hasSave) { $('go').textContent = 'Folytatás'; $('newgame').classList.remove('hidden'); }
+  $('newgame').onclick = () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* */ } location.reload(); };
   $('load').classList.add('hidden');
   $('go').classList.remove('hidden');
   $('start').classList.remove('loading');
@@ -268,8 +361,16 @@ async function init() {
 
   // jaguártámadás: sebzés, piros villanás, kamera-rázkódás
   const animalHooks = {
+    isSafe: (p) => surv.isSafe(p),
+    hasTorch: () => surv.equipped === 'torch',
     onAttack() {
       if (state.mode !== 'play') return;
+      if (surv.hasSpear()) {
+        state.hp = Math.max(0.05, state.hp - 0.08);
+        toast('Lándzsával elhárítottad a jaguárt!');
+        player.rig?.oneShot('interact', 0.6);
+        return;
+      }
       state.hp = Math.max(0.05, state.hp - 0.35);
       toast('A jaguár rád vetette magát!');
       const h = $('hurt'); h.classList.remove('on'); void h.offsetWidth; h.classList.add('on');
@@ -321,24 +422,31 @@ async function init() {
     fx.update(dt, { camera, player: state.mode === 'title' ? null : player, sky, screenH: post.h });
     animals.update(dt, { player, camera, sky, fx, hooks: animalHooks });
 
+    temple.update(state.t);
+    surv.update(dt, sky.night, (m) => { toast(m); refreshHotbar(); });
+    for (const b of flora.bananas) if (b.eaten) { b.back -= dt; if (b.back <= 0) { b.eaten = false; flora.bunchMesh.setMatrixAt(b.i, b.m0); flora.bunchMesh.instanceMatrix.needsUpdate = true; } }
+
     // túlélés
     if (state.mode === 'play' && !state.menu) {
-      const fireD = Math.hypot(player.pos.x - CAMP.x, player.pos.z - CAMP.z);
       state.food = Math.max(0, state.food - dt / 480);
       state.water = Math.max(0, state.water - dt / 300);
       if (state.food <= 0 || state.water <= 0) state.hp = Math.max(0.05, state.hp - dt / 150);
-      else state.hp = Math.min(1, state.hp + dt * (fireD < 4 ? 1 / 30 : 1 / 240));
+      else state.hp = Math.min(1, state.hp + dt * (surv.warmth(player.pos) ? 1 / 30 : 1 / 240));
+      if (!state.templeSeen && temple.near(player.pos, 32)) {
+        state.templeSeen = true;
+        discover('Az Elveszett Jaguár-templom', 'Ősi romok a vízesés fölötti fennsíkon');
+        saveGame();
+      }
+      state.saveT = (state.saveT || 0) - dt;
+      if (state.saveT <= 0) { state.saveT = 10; saveGame(); }
       hudT -= dt;
       if (hudT < 0) {
         hudT = 0.1;
         bars.hp.style.width = `${state.hp * 100}%`; bars.food.style.width = `${state.food * 100}%`;
         bars.water.style.width = `${state.water * 100}%`; bars.stam.style.width = `${player.stamina * 100}%`;
-        const b = nearBanana(), w = !b && nearWater(), fire = fireD < 3.5;
-        const p = $('prompt');
-        if (b) p.innerHTML = '<b>E</b>Banán leszedése';
-        else if (w) p.innerHTML = '<b>E</b>Ivás';
-        else if (fire) p.innerHTML = 'Melegszel a tűznél';
-        p.classList.toggle('on', !!(b || w || fire));
+        const txt = promptText(), p = $('prompt');
+        if (txt) p.innerHTML = txt;
+        p.classList.toggle('on', !!txt);
       }
     }
     if (state.mode !== 'title') {
@@ -393,6 +501,8 @@ async function init() {
     D: { p: [2, 18], yaw: -1.35, pitch: -0.05, dist: 5.2, t: 7.0 },
     E: { p: [-30, -2], yaw: 1.9, pitch: 0.1, dist: 5, t: 10.5 },
     F: { p: [-62, 40], yaw: 2.6, pitch: 0.1, dist: 5, t: 10.5 },
+    G: { p: [-43, -68], yaw: 0.15, pitch: 0.12, dist: 6, t: 9.5 },
+    H: { p: [-45, -83], yaw: 0, pitch: 0.3, dist: 5, t: 16.5 },
   };
   const setView = (k) => {
     const v = VIEWS[k];
@@ -404,7 +514,7 @@ async function init() {
     tod = v.t; settings.tspeed = 0;
   };
   if (qs.has('view')) setView(qs.get('view'));
-  window.__dz = { animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
+  window.__dz = { temple, surv, animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
 }
 
 init().catch((e) => {

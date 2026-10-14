@@ -6,6 +6,8 @@ export const SIZE = 400, HALF = 200, N = 401;
 export const UPPER = 16.2;
 export const POND = { x: 10, z: -44, r: 11 };
 export const CAMP = { x: -4, z: 3 };
+// Ősi templomrom a fennsíkon (a lépcső dél felé, +z irányba néz)
+export const TEMPLE = { x: -45, z: -95, y: 18.3 };
 
 function catmull(pts, sub) {
   const out = [];
@@ -27,6 +29,8 @@ export const PATHS = [
   [[3, 18], [2, 8], [4, -4], [7, -16], [6, -28]],
   [[-4, 6], [-16, 2], [-30, -6], [-46, -4], [-62, -12], [-76, -28], [-86, -48], [-92, -70], [-96, -92], [-90, -112]],
   [[6, 10], [20, 8], [34, 4]],
+  // a feljáró tetejétől a templom lépcsőjéig
+  [[-96, -92], [-84, -86], [-70, -80], [-56, -76], [-45, -72]],
 ].map(p => catmull(p, 6));
 
 export function polyInfo(x, z, poly) {
@@ -107,6 +111,9 @@ export function heightFn(x, z) {
     if (uf > 0) U = lerp(U, 14.8, uf);
     h = lerp(L, U, t);
   }
+  // a templom alapja: sík terasz
+  const dT = Math.hypot(x - TEMPLE.x, z - TEMPLE.z);
+  if (dT < 36) h = lerp(h, TEMPLE.y, smoothstep(36, 25, dT));
   const rim = smoothstep(150, 196, r) * (22 + 14 * fbm(x * 0.012 + 40, z * 0.012, 3))
     + smoothstep(200, 430, r) * (55 + 45 * fbm(x * 0.004, z * 0.004, 3));
   h += rim * (1 - Math.max(rf, uf * t));
