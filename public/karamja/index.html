@@ -548,27 +548,28 @@ function kBuildHF(){KHF=new Float32Array(KNX*KNZ);for(let j=0;j<KNZ;j++){const z
 function contHeight(x,z){if(!KHF)kBuildHF();const fx=(x+KHW)/KG,fz=(z+KHD)/KG;if(fx<0||fz<0||fx>=KNX-1||fz>=KNZ-1)return -6;const i=fx|0,j=fz|0,u=fx-i,v=fz-j,k=j*KNX+i;return (KHF[k]*(1-u)+KHF[k+1]*u)*(1-v)+(KHF[k+KNX]*(1-u)+KHF[k+KNX+1]*u)*v}
 // a különleges tájak színei lineáris térben (a kimenet sRGB-kódolású, így a megadott árnyalat látszik)
 const KC={sand:new THREE.Color(0xe6d4a0),deep:new THREE.Color(0x2a6a94),grass:new THREE.Color(0x5e9e32),grass2:new THREE.Color(0x4c8a28),forest:new THREE.Color(0x2f6a22).convertSRGBToLinear(),forest2:new THREE.Color(0x24561c).convertSRGBToLinear(),
-  swamp:new THREE.Color(0x2e4220).convertSRGBToLinear(),swamp2:new THREE.Color(0x22301a).convertSRGBToLinear(),mud:new THREE.Color(0x3a2e1e).convertSRGBToLinear(),ash:new THREE.Color(0x3a3734).convertSRGBToLinear(),ash2:new THREE.Color(0x201e1c).convertSRGBToLinear(),lava:new THREE.Color(0xff5a00),lava2:new THREE.Color(0xffc040),
+  swamp:new THREE.Color(0x3e5a28).convertSRGBToLinear(),swamp2:new THREE.Color(0x2c4020).convertSRGBToLinear(),mud:new THREE.Color(0x3a2e1e).convertSRGBToLinear(),ash:new THREE.Color(0x4c4742).convertSRGBToLinear(),ash2:new THREE.Color(0x2e2a26).convertSRGBToLinear(),lava:new THREE.Color(0xff5a00),lava2:new THREE.Color(0xffc040),
   arc:new THREE.Color(0x6a4a9a).convertSRGBToLinear(),arc2:new THREE.Color(0x2a8a6a).convertSRGBToLinear(),wheat:new THREE.Color(0xc4a232).convertSRGBToLinear(),soil:new THREE.Color(0x76562c).convertSRGBToLinear(),meadow:new THREE.Color(0x7ab040),rock:new THREE.Color(0x6e6a64).convertSRGBToLinear(),snow:new THREE.Color(0xf0f4f8),
-  cobble:new THREE.Color(0x76736c).convertSRGBToLinear(),dirt:new THREE.Color(0x9a7a46).convertSRGBToLinear(),trod:new THREE.Color(0x8a7a50).convertSRGBToLinear(),wall:new THREE.Color(0xa8a49c).convertSRGBToLinear()};
+  cobble:new THREE.Color(0x76736c).convertSRGBToLinear(),dirt:new THREE.Color(0x9a7a46).convertSRGBToLinear(),trod:new THREE.Color(0x8a7a50).convertSRGBToLinear(),wall:new THREE.Color(0xa8a49c).convertSRGBToLinear(),lush:new THREE.Color(0x3a7e1e),dryg:new THREE.Color(0x92b03c)};
 function kPaint(x,z,h,tmp,jit=true){
   const R=KR,n=fbm(x*0.06+3,z*0.06+7,2),j=jit?hash(Math.floor(x*3.5)+13,Math.floor(z*3.5)+57):0.5;
   if(h<0.3){tmp.copy(KC.sand).lerp(KC.deep,clamp(0.35-h*0.12,0.35,0.8));return}
   const cb=kCapCheb(x,z);
   if(h>13&&cb<R.cap.w+3){tmp.copy(KC.wall).lerp(KC.rock,j*0.3);return}
   tmp.copy(KC.grass).lerp(KC.grass2,n);
+  {const pp=fbm(x*0.018+41,z*0.018+17,3);if(pp>0.55)tmp.lerp(KC.lush,clamp((pp-0.55)*4,0,1)*0.5);else if(pp<0.42)tmp.lerp(KC.dryg,clamp((0.42-pp)*4,0,1)*0.45)}
   const wSw=kW(Math.hypot(x-R.swamp.x,z-R.swamp.z),R.swamp.r,110),wAsh=kW(Math.hypot(x-R.ash.x,z-R.ash.z),R.ash.r,120),wArc=kW(Math.hypot(x-R.arkan.x,z-R.arkan.z),150,110),
     wFo=kW(Math.hypot(x-R.forest.x,z-R.forest.z),R.forest.r,110),wFa=kW(Math.hypot(x-R.farm.x,z-R.farm.z),R.farm.r,110);
   if(wFo>0){tmp.lerp(KC.forest,wFo*0.8);tmp.lerp(KC.forest2,wFo*n*0.5)}
   if(wFa>0){tmp.lerp(KC.meadow,wFa*0.55);if(wFa>0.45){const fx=Math.floor((x+fbm(x*0.02,z*0.02,2)*20)/26),fz=Math.floor(z/18),hh=hash(fx+200,fz+300);if(hh<0.62){const st=Math.floor((hh<0.31?x:z)/2.2)&1;tmp.lerp(st?KC.wheat:KC.soil,Math.min(1,(wFa-0.45)*3)*0.85)}}}
   if(wSw>0){tmp.lerp(KC.swamp,wSw*0.9);tmp.lerp(KC.swamp2,wSw*n*0.6);if(h<1.3)tmp.lerp(KC.mud,wSw*clamp((1.3-h)/0.8,0,1)*0.6)}
   if(wAsh>0){tmp.lerp(KC.ash,wAsh*0.95);tmp.lerp(KC.ash2,wAsh*n*0.6);if(wAsh>0.55&&h>2&&fbm(x*0.012+3,z*0.012+9,2)>0.5){const r=Math.abs(2*fbm(x*0.045+5,z*0.045+11,3)-1);if(r<0.02)tmp.copy(KC.lava).lerp(KC.lava2,(0.02-r)/0.02)}}
-  if(wArc>0){tmp.lerp(KC.arc,wArc*0.6);tmp.lerp(KC.arc2,wArc*n*0.6)}
+  if(wArc>0){tmp.lerp(KC.arc,wArc*0.22);tmp.lerp(KC.arc2,wArc*n*0.45)}
   if(h>12)tmp.lerp(KC.rock,clamp((h-12)/6,0,1)*0.85);{const sl=31+fbm(x*0.05,z*0.05,2)*7;if(h>sl)tmp.lerp(KC.snow,clamp((h-sl)/4,0,1))}
   if(h<2.2&&wSw<0.3){const coastal=kCoastE(x,z)>0.94||Math.hypot(x-R.lake.x,z-R.lake.z)<R.lake.r+22||Math.hypot(x-R.isle.x,z-R.isle.z)<R.isle.r+8;if(coastal)tmp.lerp(KC.sand,clamp((2.2-h)/0.9,0,1))}
   const dc=Math.hypot(x-R.camp.x,z-R.camp.z);if(dc<R.camp.r)tmp.lerp(KC.trod,smooth(Math.min(1,(R.camp.r-dc)/14))*0.6);
   const dk=Math.hypot(x-R.orkcamp.x,z-R.orkcamp.z);if(dk<R.orkcamp.r)tmp.lerp(KC.mud,smooth(Math.min(1,(R.orkcamp.r-dk)/10))*0.6);
-  {const dp=Math.hypot(x-R.port.x,z-R.port.z);if(dp<46)tmp.lerp(KC.cobble,smooth(Math.min(1,(46-dp)/10))*0.8)}
+  {const dp=Math.hypot(x-R.port.x,z-R.port.z);if(dp<46)tmp.lerp(KC.trod,smooth(Math.min(1,(46-dp)/14))*(0.15+0.35*fbm(x*0.05+9,z*0.05+3,2)))}
   for(const c of[R.koho]){const d=Math.hypot(x-c.x,z-c.z);if(d<c.r*0.7)tmp.lerp(KC.trod,smooth(Math.min(1,(c.r*0.7-d)/12))*0.5)}
   if(cb<R.cap.w-1){const g=(Math.abs(((x-R.cap.x)%8+8)%8-4)<0.9||Math.abs(((z-R.cap.z)%8+8)%8-4)<0.9)?0.8:1;tmp.copy(KC.cobble).multiplyScalar(g)}
   const rd=kRoadDist(x,z);if(rd<3.2&&h>0.8){const city=cb<R.cap.w+30||Math.hypot(x-R.port.x,z-R.port.z)<R.port.r;tmp.lerp(wAsh>0.5?KC.ash2:city?KC.cobble:KC.dirt,clamp((3.2-rd)/1.2,0,1)*0.9)}
@@ -9694,6 +9695,44 @@ const SZEP=(()=>{const lin=ML.lin;const rr=kRng(8901);
     for(let i=0;i<400&&placed<kit.length;i++){const a=R2()*6.283,r=near+R2()*(S.r*0.85-near);const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(hjHeight(x,z)<0.9||colHit(HJX+x,z,2)||onPath(x-cx,z-cz)||(S.ring&&Math.hypot(x-cx,z-cz)<S.ring[1]+1)||(S.square&&(Math.abs(x-cx)>S.square-1.5||Math.abs(z-cz)>S.square-1.5)))continue;
       const g=G();P[kit[placed]](g);g.position.set(HJX+x,height(HJX+x,z),z);g.rotation.y=a+Math.PI/2+(R2()-0.5)*0.6;shadowed(g);scene.add(g);colAdd(HJX+x,z,1,1,0,'szeptargy');placed++}}
   return {decal,T,P,scatter,SET}})();
+// ================= v90: a régebbi zónák településeinek szépítése (ugyanaz az eszközkészlet, világkoordinátákban) =================
+const SZEP2=(()=>{const lin=ML.lin;const {P,T}=SZEP;
+  const zb=x=>{const z=zoneOf(x);return z===12?KX:z*ZX};
+  function decalW(inside,cx,cz,R,t,sc,col=0xffffff,step=0.5){const ox=zb(cx);const idx=new Map(),pos=[],uv=[],cl=[],ind=[];const ins=(x,z)=>height(cx+x,cz+z)>0.35&&inside(x,z);const A=(x,z)=>{let k=0;for(const [a,b] of[[-0.35,-0.35],[0.35,-0.35],[-0.35,0.35],[0.35,0.35],[0,0]])if(ins(x+a,z+b))k++;return k/5};
+    const V=(x,z)=>{const key=x+','+z;let i=idx.get(key);if(i==null){i=pos.length/3;idx.set(key,i);const wx=cx+x,wz=cz+z;const fy=floorAt(wx,wz);pos.push(wx-ox,Math.max(height(wx,wz),fy!=null?fy:-9)+0.08,wz);uv.push(wx/sc,wz/sc);cl.push(1,1,1,A(x,z))}return i};
+    for(let x=-R;x<R;x+=step)for(let z=-R;z<R;z+=step){if(!(ins(x+step/2,z+step/2)||ins(x,z)||ins(x+step,z)||ins(x,z+step)||ins(x+step,z+step)))continue;const a=V(x,z),b=V(x+step,z),c=V(x+step,z+step),d=V(x,z+step);ind.push(a,d,b,b,d,c)}
+    if(!ind.length)return null;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('color',new THREE.Float32BufferAttribute(cl,4));g.setIndex(ind);g.computeVertexNormals();
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:lin(col),map:t,vertexColors:true,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));m.position.x=ox;m.receiveShadow=true;m.renderOrder=1;scene.add(m);return m}
+  const segD=(x,z,ax,az,bx,bz)=>{const vx=bx-ax,vz=bz-az,L2=vx*vx+vz*vz||1;const t=clamp(((x-ax)*vx+(z-az)*vz)/L2,0,1);return Math.hypot(x-ax-vx*t,z-az-vz*t)};
+  const VEG={trop:[[0x3a7a2a,'bush',90],[0x2e6a24,'fern',90],[0x8a8478,'rock',25],[null,'flower',120],[0x4a8a2a,'tuft',220]],mez:[[0x456a28,'bush',80],[0x7a766c,'rock',25],[0x5a8030,'tuft',260],[null,'flower',110]],erdo:[[0x2e4a24,'fern',110],[0x5a6a54,'rock',30],[null,'mushroom',40],[0x4a6a2a,'tuft',180],[null,'flower',50]],
+    ho:[[0xe8eef4,'rock',50],[0xd8e4ec,'mound',50]],part:[[0x8a7a4a,'dry',50],[0x9a8a74,'rock',40],[0x6a8a3a,'tuft',90]],sivatag:[[0x8a6a3a,'dry',60],[0xb8784a,'rock',40],[0x4a7a3a,'cactus',18]],lap:[[0x8a9a4a,'reed',140],[0x3e5a2a,'bush',50],[0x5a6a3a,'tuft',120]],hamu:[[0x2a2624,'rock',60],[0x3a2a20,'dry',40]]};
+  function scatterW(cx,cz,r0,r1,biome,avoid){const L=VEG[biome]||[];const ox=zb(cx),zn=zoneOf(cx);const d=new THREE.Object3D();const R=kRng(Math.round(cx*7+cz*13+91));
+    for(const [col,kind,n] of L){const list=[];for(let i=0;i<n*12&&list.length<n;i++){const a=R()*6.283,r=r0+R()*(r1-r0);const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(zoneOf(x)!==zn)continue;const h=height(x,z);if(h<0.6||!walkable(x,z)||colHit(x,z,0.8)||avoid(x,z))continue;list.push([x,z,0.7+R()*0.6,R()*6.28,h])}if(!list.length)continue;
+      let geo,mat,y=0,sy=1,shadow=false;const fl=c=>new THREE.MeshLambertMaterial({color:lin(c),flatShading:true});
+      if(kind==='bush'){geo=new THREE.IcosahedronGeometry(0.8,0);mat=fl(col);y=0.45;sy=0.7;shadow=true}else if(kind==='rock'){geo=new THREE.DodecahedronGeometry(0.7,0);mat=fl(col);y=0.15;sy=0.55;shadow=true}else if(kind==='tuft'){geo=new THREE.ConeGeometry(0.09,0.55,3);mat=fl(col);y=0.25}else if(kind==='fern'){geo=new THREE.ConeGeometry(0.5,0.7,5);mat=fl(col);y=0.3;sy=0.8}
+      else if(kind==='reed'){geo=new THREE.ConeGeometry(0.05,1.8,3);mat=fl(col);y=0.9}else if(kind==='dry'){geo=new THREE.IcosahedronGeometry(0.55,0);mat=fl(col);y=0.3;sy=0.6}else if(kind==='cactus'){geo=new THREE.CylinderGeometry(0.25,0.3,1.8,7);mat=fl(col);y=0.9}else if(kind==='mound'){geo=new THREE.SphereGeometry(0.9,8,5,0,6.283,0,Math.PI/2);mat=fl(col);sy=0.5}
+      else {geo=new THREE.SphereGeometry(kind==='flower'?0.11:0.16,5,4);mat=new THREE.MeshLambertMaterial({color:0xffffff});y=kind==='flower'?0.3:0.2;sy=kind==='flower'?1:0.55}
+      const im=new THREE.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,s,r,h],i)=>{d.position.set(x-ox,h+y*s,z);d.rotation.set(0,r,0);d.scale.set(s,s*sy,s);d.updateMatrix();im.setMatrixAt(i,d.matrix);if(kind==='flower'||kind==='mushroom')im.setColorAt(i,new THREE.Color(kind==='mushroom'?0xc83a2a:[0xd84a4a,0xe8d040,0xc890e0,0xf8f4e8,0xe88a3a][(R()*5)|0]).convertSRGBToLinear())});
+      if(im.instanceColor)im.instanceColor.needsUpdate=true;im.position.x=ox;im.frustumCulled=false;im.receiveShadow=true;im.castShadow=shadow;scene.add(im)}}
+  const KIT={trop:['crates','basket','barrel','sacks','firering','bench','basket','crates'],kikoto:['crates','barrel','sacks','basket','crates','barrel','bench','fence','sacks'],ho:['firewood','sled','snowman','barrel','crates','firewood'],kaloz:['barrel','crates','jars','firering','rack','barrel','crates','sacks'],
+    sivatag:['tent','carpet','jars','jars','carpet','crates','sacks'],tunde:['flowers','mush','bench','basket','flowers','mush','firering'],erdo:['logs','stump','mush','firering','logs','bench'],farm:['hay','stack','cart','sacks','fence','flowers','barrel','hay','stack'],lap:['basket','reeds','basket','barrel','reeds','crates'],mely:['ore','barrel','crates','ore','brazier','sacks'],tabor:['rack','dummy','brazier','barrel','crates','rack','firering'],ego:['bench','flowers','crates','barrel','basket','bench']};
+  const K=(x,z)=>[KX+x,z];
+  const SET=[{n:'Karamja falu',c:[-28,71],r:40,biome:'trop',plaza:7,ptex:'dirt',kit:'trop'},{n:'Port Sarim',c:[615,20],r:50,biome:'mez',plaza:7,ptex:'cob',kit:'kikoto'},{n:'Zúzmara-fok',c:[1202,39],r:36,biome:'ho',plaza:7,ptex:'snow',path:'snow',kit:'ho'},
+    {n:'Koponya-öböl',c:[2341,-22],r:40,biome:'part',plaza:7,ptex:'sand',path:'dirt',kit:'kaloz'},{n:'Homokfok',c:[3044,26],r:38,biome:'sivatag',plaza:7,ptex:'sand',path:'sand',kit:'sivatag'},{n:'Tündefalva',c:[3559,30],r:38,biome:'erdo',plaza:7,ptex:'moss',kit:'tunde'},
+    {n:'Gnómváros',c:[4775,8],r:38,biome:'erdo',plaza:6,ptex:'moss',kit:'erdo'},{n:'Druidafalu',c:[5366,-33],r:40,biome:'mez',plaza:7,ptex:'dirt',kit:'farm'},{n:'Lápfalva',c:[5982,77],r:32,biome:'lap',plaza:5,ptex:'dirt',kit:'lap'},{n:'Felhőfok',c:[6598,55],r:30,biome:'mez',plaza:6,ptex:'flag',kit:'ego'},
+    {n:'Halászrév',c:K(560,-245),r:58,biome:'mez',plaza:8,ptex:'cob',kit:'kikoto'},{n:'Kohóváros',c:K(-195,-190),r:44,biome:'hamu',plaza:7,ptex:'flag',path:'dirt',kit:'mely'},{n:'Arkánum',c:K(220,-245),r:40,biome:'mez',plaza:6,ptex:'flag',kit:'ego'},
+    {n:'Pajzsőrség',c:K(-190,165),r:44,biome:'mez',plaza:8,ptex:'dirt',kit:'tabor'},{n:'Búzavölgy',c:K(450,140),r:50,biome:'mez',plaza:7,ptex:'dirt',kit:'farm'},{n:'Gyíkláp',c:K(-560,-20),r:60,biome:'lap',kit:'lap',noPlaza:true},{n:'Ezüsterdő',c:K(130,250),r:70,biome:'erdo',kit:'erdo',noPlaza:true}];
+  for(const S of SET){const [cx,cz]=S.c;const zn=zoneOf(cx);const doors=COLR.filter(c=>c.tag==='ajto'&&zoneOf(c.x)===zn&&Math.hypot(c.x-cx,c.z-cz)<S.r).map(c=>[c.x-cx,c.z-cz]);
+    let pc=[0,0];if(!S.noPlaza&&(colHit(cx,cz,2)||height(cx,cz)<0.5)){let best=null;for(let r=3;r<20&&!best;r+=2)for(let a=0;a<6.28&&!best;a+=0.5){const x=Math.cos(a)*r,z=Math.sin(a)*r;if(!colHit(cx+x,cz+z,S.plaza)&&height(cx+x,cz+z)>0.5)best=[x,z]}if(best)pc=best;else S.noPlaza=true}
+    const inPlaza=(x,z)=>!S.noPlaza&&Math.hypot(x-pc[0],z-pc[1])<S.plaza;const segs=S.noPlaza?[]:doors.map(d=>[d[0],d[1],pc[0],pc[1]]);const onPath=(x,z)=>segs.some(([ax,az,bx,bz])=>segD(x,z,ax,az,bx,bz)<1.05);
+    const R=S.r+4;const pt=S.path||'dirt';
+    if(!S.noPlaza)decalW((x,z)=>inPlaza(x,z),cx,cz,R,T[S.ptex],S.ptex==='flag'?3:4);
+    if(segs.length)decalW((x,z)=>onPath(x,z)&&!inPlaza(x,z),cx,cz,R,T[pt],pt==='dirt'?5:4,pt==='dirt'?0xe0d0c0:0xffffff);
+    scatterW(cx,cz,S.noPlaza?6:S.plaza+2,S.r+30,S.biome,(x,z)=>inPlaza(x-cx,z-cz)||onPath(x-cx,z-cz));
+    const kit=KIT[S.kit];const R2=kRng(Math.round(cx*3+cz*5+17));let placed=0;const near=(S.plaza||5)+2.5;
+    for(let i=0;i<500&&placed<kit.length;i++){const a=R2()*6.283,r=near+R2()*(S.r*0.8-near);const x=cx+pc[0]+Math.cos(a)*r,z=cz+pc[1]+Math.sin(a)*r;if(zoneOf(x)!==zn||height(x,z)<0.6||!walkable(x,z)||colHit(x,z,2.2)||onPath(x-cx,z-cz)||inPlaza(x-cx,z-cz))continue;
+      const g=new THREE.Group();P[kit[placed]](g);g.position.set(x,height(x,z),z);g.rotation.y=a+Math.PI/2+(R2()-0.5)*0.6;shadowed(g);scene.add(g);placed++}}
+  return {SET,decalW,scatterW}})();
 // ================= v87: griffútvonalak, új imák, Sárkányacél- és Hajnal-szint, tájankénti zene, raid-méretezés, közös napfogyatkozás =================
 Object.assign(PRAYERS,{hajnaliaid:{name:'Hajnali áldás',lvl:70,drain:1/6,desc:'Négyszer gyorsabban gyógyulsz. (Hajnal a láthatáron után.)',q:()=>qs.hajnal.st===2,qt:'Ezt az imát a „Hajnal a láthatáron” után tanulod meg.'},
   napfeny:{name:'Napfény-oltalom',lvl:80,drain:1/3,desc:'A szörnyek sebzése feleződik, és a támadóidat 10% eséllyel napsugár sújtja. (Napkirályok sírja után.)',q:()=>qs.napkiralyok.st===2,qt:'Ezt az imát a Napkönyvből tanulod meg (Napkirályok sírja).'},
