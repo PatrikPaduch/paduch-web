@@ -5988,7 +5988,7 @@ function applySave(d){
   if(qs.majom.st===1&&qs.majom.key){chestObj.mesh.visible=true;chestObj.depleted=false}else if(qs.majom.st===2){chestObj.mesh.visible=true;chestObj.lid.rotation.x=-1.6;chestObj.depleted=true}else{chestObj.mesh.visible=false;chestObj.depleted=true}
   renderInv();updateSkillsUI();updateHp();refreshGear();renderQuests();placeAt(player,px,pz);return true;
 }
-function saveLocal(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot()))}catch(err){}}
+function saveLocal(){if(/[?&]felfedezo/.test(location.search))return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot()))}catch(err){}}
 function loadLocal(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))}catch(err){return null}}
 // mentéskód
 const ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -5999,7 +5999,7 @@ const cloud={ok:null,last:0,lastJson:'',busy:false};
 const stEl=document.getElementById('saveSt');
 function cloudStatus(){stEl.textContent=cloud.ok===null?'Mentés …':(cloud.ok?'Mentés ✓':'Mentés ✗');stEl.style.color=cloud.ok===false?'#ff8a8a':'#9ad08a';
   document.getElementById('cloudSt').textContent=cloud.ok===null?'Felhő: még nem kapcsolódott.':(cloud.ok?`Felhő: rendben, utolsó mentés ${new Date(cloud.last).toLocaleTimeString('hu')}.`:'Felhő: nem elérhető, csak helyben mentünk.')}
-async function cloudSave(force,keep){
+async function cloudSave(force,keep){if(/[?&]felfedezo/.test(location.search))return;
   const d=snapshot();const js=JSON.stringify({data:d});if(!force&&js===cloud.lastJson)return;if(cloud.busy&&!keep)return;cloud.busy=true;
   try{const r=await fetch(API+'/save',{method:'PUT',headers:{'Content-Type':'application/json','X-Save-Code':saveCode},body:js,keepalive:!!keep});
     if(r.ok){cloud.ok=true;cloud.last=Date.now();cloud.lastJson=js}else cloud.ok=false}catch(err){cloud.ok=false}
