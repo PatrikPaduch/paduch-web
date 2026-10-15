@@ -32,10 +32,10 @@ function leafify(mat, alpha, sway, flutter, key) {
   vLW = (modelMatrix * p4).xyz; }`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vLW;')
-      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
 { vec3 vd = normalize(vLW - cameraPosition);
   float bl = pow(max(dot(vd, uSunDir), 0.0), 3.0);
-  totalEmissiveRadiance += diffuseColor.rgb * uSunCol * bl * 1.2; }`);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.1, 1.2, 0.55) * jDirAcc * bl * 0.8; }`);
   });
   let depth = null;
   if (alpha) {

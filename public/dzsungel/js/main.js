@@ -35,12 +35,13 @@ const QUALITY = {
   low: { label: 'Alacsony', lod: 16, imp: 40, prCap: 1, msaa: 0, shadow: 1024, shadowR: 36, rays: false, ao: false, grass: 0.35, near: 0.65, trees: 0.6 },
   medium: { label: 'Közepes', lod: 26, imp: 55, prCap: 1, msaa: 2, shadow: 2048, shadowR: 50, rays: true, grass: 0.7, near: 0.85, trees: 0.85 },
   high: { label: 'Magas', lod: 40, imp: 75, prCap: 1.25, msaa: 4, shadow: 2048, shadowR: 60, rays: true, grass: 1, near: 1, trees: 1 },
+  epic: { label: 'Epikus', lod: 100, imp: 150, aoFull: true, prCap: 2, msaa: 4, shadow: 4096, shadowR: 90, rays: true, grass: 1, near: 1.6, trees: 1, pom: true, dense: true },
   ultra: { label: 'Ultra', lod: 70, imp: 110, aoFull: true, prCap: 2, msaa: 4, shadow: 4096, shadowR: 70, rays: true, grass: 1, near: 1.3, trees: 1 },
 };
-const QORDER = ['low', 'medium', 'high', 'ultra'];
+const QORDER = ['low', 'medium', 'high', 'ultra', 'epic'];
 const TSPEED = [0, 1 / 120, 1 / 6];
 
-const settings = { rays: true, bloom: true, grain: true, q: 'high', rs: 'auto', tspeed: 1, sens: 1, invY: false };
+const settings = { rays: true, bloom: true, grain: true, taa: true, q: 'high', rs: 'auto', tspeed: 1, sens: 1, invY: false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dzsungel-settings') || '{}')); } catch (e) { /* nincs tárolt beállítás */ }
 const saveSettings = () => { try { localStorage.setItem('dzsungel-settings', JSON.stringify(settings)); } catch (e) { /* privát mód */ } };
 
@@ -137,7 +138,8 @@ async function init() {
     renderer.setPixelRatio(Math.min(devicePixelRatio, Q.prCap));
     renderer.setSize(W, H);
     const v = renderer.getDrawingBufferSize(new THREE.Vector2());
-    post.setSize(Math.max(320, Math.round(v.x * rsCur)), Math.max(180, Math.round(v.y * rsCur)), Q.msaa, v.x, v.y);
+    post.taa = !!settings.taa; // TAA mellett nem kell MSAA (az időbeli átlagolás simít)
+    post.setSize(Math.max(320, Math.round(v.x * rsCur)), Math.max(180, Math.round(v.y * rsCur)), settings.taa ? 0 : Q.msaa, v.x, v.y);
     camera.aspect = W / H; camera.updateProjectionMatrix();
     G.uScreenH.value = post.h;
     $('rsv').textContent = `${post.w}×${post.h}${post.scaled ? ` → ${post.ow}×${post.oh}` : ''}`;
@@ -147,10 +149,11 @@ async function init() {
     applyRes();
     sky.setShadow(Q.shadow, Q.shadowR);
     flora.setTreeFrac(Q.trees);
+    if (tMat.userData.u.uPom) tMat.userData.u.uPom.value = Q.pom ? 1 : 0;
     flora.lodD = Q.lod; flora.impD = Q.imp; flora.updateLod(camera.position.x, camera.position.z);
     if (flora.pachLeaf?.mesh) { flora.pachLeaf.mesh.userData.noShadow = name === 'low'; flora.pachLeaf.mesh.castShadow = name !== 'low'; }
     shadowCache?.invalidate();
-    for (const s of flora.streams) { s.rMul = Q.near; s.frac = s.isGrass ? Q.grass : Math.min(1, Q.grass + 0.3); }
+    for (const s of flora.streams) { s.rMul = Q.near; s.frac = s.isExtra ? (Q.dense ? 1 : 0) : s.isGrass ? Q.grass : Math.min(1, Q.grass + 0.3); }
     flora.grassMat.userData.u.uGrassR.value = 65 * Q.near;
     post.useRays = Q.rays && settings.rays;
     post.useBloom = settings.bloom;
@@ -433,7 +436,7 @@ async function init() {
     $('tod').value = tod; $('todv').textContent = fmtTime(tod);
     document.querySelectorAll('#tseg button').forEach((b) => b.classList.toggle('on', +b.dataset.t === settings.tspeed));
     document.querySelectorAll('#wseg button').forEach((b) => b.classList.toggle('on', b.dataset.w === weather.mode));
-    $('cRays').checked = settings.rays; $('cBloom').checked = settings.bloom; $('cGrain').checked = settings.grain;
+    $('cRays').checked = settings.rays; $('cBloom').checked = settings.bloom; $('cGrain').checked = settings.grain; $('cTaa').checked = settings.taa;
     $('cInv').checked = settings.invY; $('sens').value = settings.sens; $('sensv').textContent = (+settings.sens).toFixed(2);
     saveSettings();
   }
@@ -458,6 +461,7 @@ async function init() {
   $('cRays').onchange = (e) => { settings.rays = e.target.checked; post.useRays = Q.rays && settings.rays; saveSettings(); };
   $('cBloom').onchange = (e) => { settings.bloom = e.target.checked; post.useBloom = settings.bloom; saveSettings(); };
   $('cGrain').onchange = (e) => { settings.grain = e.target.checked; saveSettings(); };
+  $('cTaa').onchange = (e) => { settings.taa = e.target.checked; saveSettings(); applyRes(); };
   $('wseg').onclick = (e) => { const w = e.target.dataset.w; if (w) { weather.setMode(w); settings.weather = w; syncMenu(); } };
   if (settings.weather) weather.setMode(settings.weather);
   if (qs.has('w')) weather.setMode(qs.get('w'));
@@ -708,6 +712,10 @@ async function init() {
     // árnyék-gyorsítótár: a statikus térkép ritkán frissül, a mozgó dolgok minden képkockán
     if (sky.shadowMoved) { sky.shadowMoved = false; shadowCache.invalidate(); }
     shadowCache.before(dt, scene, camera);
+    // felhőárnyék: nappal, a borultsággal együtt erősödik
+    G.uCloudSh.value = window.__cloudSh ?? (settings.q === 'low' ? 0 : 0.5 * sky.day);
+    G.uCloudCov.value = sky.mat.uniforms.uCloud.value;
+    post.jitter(camera);
     flora.imp?.setLight(sky);
     post.render(scene, camera, {
       sunUV, rays: sky.post.rays * vis, raysStr: sky.post.rays * vis * 1.2,
@@ -715,6 +723,7 @@ async function init() {
       grain: settings.grain ? 0.014 : 0, fade: state.fade,
     });
     shadowCache.after();
+    post.unjitter(camera);
 
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { fpsShown = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; $('fps').textContent = `${fpsShown} fps${post.gpuMs ? ` · GPU ${post.gpuMs.toFixed(1)} ms` : ''} · ${Q.label} · ${Math.round(rsCur * 100)}%`; }

@@ -133,6 +133,7 @@ export function terrainMatPBR(tSplat, A) {
     tFd: { value: F.diff }, tFn: { value: F.nor },
     tMd: { value: M.diff }, tMn: { value: M.nor },
     tRd: { value: R.diff }, tRn: { value: R.nor }, tRa: { value: R.arm },
+    uPom: { value: 0 },
   };
   return patch(m, 'terrainPBR', sh => {
     sh.vertexShader = sh.vertexShader
@@ -144,7 +145,15 @@ varying vec3 vWP; varying vec3 vWN;
 uniform sampler2D tSplat; uniform sampler2D tCanopy;
 uniform sampler2D tGd; uniform sampler2D tGn; uniform sampler2D tFd; uniform sampler2D tFn;
 uniform sampler2D tMd; uniform sampler2D tMn; uniform sampler2D tRd; uniform sampler2D tRn; uniform sampler2D tRa;
-uniform vec4 uMouth; uniform vec3 uMouthZ;
+uniform vec4 uMouth; uniform vec3 uMouthZ; uniform float uPom;
+// parallax-mélység: a textúra világosságából becsült magasságon lépkedünk a nézés irányában (közel a kamerához)
+vec2 jPom(sampler2D t, vec2 uv, vec2 d) {
+  vec2 gx = dFdx(uv), gy = dFdy(uv);
+  const float L = 0.1; vec2 st = d * L; vec2 c = uv; float cd = 0.0;
+  float hh = 1.0 - clamp(dot(textureGrad(t, c, gx, gy).rgb, vec3(0.45)) * 1.6, 0.0, 1.0);
+  for (int i = 0; i < 10; i++) { if (cd >= hh) break; c -= st; cd += L; hh = 1.0 - clamp(dot(textureGrad(t, c, gx, gy).rgb, vec3(0.45)) * 1.6, 0.0, 1.0); }
+  return c;
+}
 ${TRI}
 vec3 jN; float jRough; float jCaus;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
@@ -155,15 +164,20 @@ vec3 jN; float jRough; float jCaus;`)
   vec4 sp = texture2D(tSplat, tuv);
   vec3 N = normalize(vWN);
   float slope = 1.0 - N.y;
+  vec3 Vw = normalize(cameraPosition - vWP);
+  float pomK = uPom * (1.0 - smoothstep(10.0, 26.0, length(cameraPosition - vWP))) * smoothstep(0.3, 0.1, slope);
+  vec2 pdir = Vw.xz / max(Vw.y, 0.2);
   float nLow = jn2(vWP.xz * 0.045);
   vec2 uvG = vWP.xz / 3.4;
   vec3 gD = mix(texture2D(tGd, uvG).rgb, texture2D(tGd, uvG * 0.37 + vec2(0.37, 0.71)).rgb, smoothstep(0.35, 0.65, nLow));
   vec3 gN = texture2D(tGn, uvG).xyz * 2.0 - 1.0;
   gD *= vec3(0.52, 0.84, 0.4);
   vec2 uvF = vWP.xz / 2.8;
+  if (pomK > 0.01) uvF = jPom(tFd, uvF, pdir * (0.05 / 2.8) * pomK);
   vec3 fD = mix(texture2D(tFd, uvF).rgb, texture2D(tFd, uvF * 0.33 + 0.5).rgb, smoothstep(0.35, 0.65, jn2(vWP.xz * 0.06 + 3.0)));
   vec3 fN = texture2D(tFn, uvF).xyz * 2.0 - 1.0;
   vec2 uvM = vWP.xz / 2.5;
+  if (pomK > 0.01) uvM = jPom(tMd, uvM, pdir * (0.07 / 2.5) * pomK);
   vec3 mD = texture2D(tMd, uvM).rgb * vec3(1.25, 1.02, 0.78);
   vec3 mN = texture2D(tMn, uvM).xyz * 2.0 - 1.0;
   float hG = dot(gD, vec3(0.333)), hF = dot(fD, vec3(0.333)), hM = dot(mD, vec3(0.333));
@@ -429,9 +443,12 @@ export function foliageMat(atlas, sway, flutter) {
       .replace('#include <color_fragment>', `#include <color_fragment>
 diffuseColor.rgb *= (0.86 + 0.28 * jn2(vWP.xz * 0.05 + vWP.y * 0.03)) * (1.0 - uWet * 0.14);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += diffuseColor.rgb * uAmbF;`)
+      // áttetszőség: a levél csak ott világít át, ahol a napfény tényleg eléri (árnyékban és felhő alatt nem)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
 { vec3 vd = normalize(vWP - cameraPosition);
   float bl = pow(max(dot(vd, uSunDir), 0.0), 3.0);
-  totalEmissiveRadiance += diffuseColor.rgb * uSunCol * bl * 1.4 + diffuseColor.rgb * uAmbF; }`);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.1, 1.2, 0.55) * jDirAcc * bl * 0.9; }`);
   });
   const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: atlas, alphaTest: 0.5, side: THREE.DoubleSide });
   d.userData.u = u;
@@ -529,9 +546,11 @@ vGH = uv.y;
   vec3 tip = mix(s2l(vec3(0.40, 0.58, 0.17)), s2l(vec3(0.56, 0.64, 0.22)), jn2(vGW.xz * 0.3 + 7.0));
   diffuseColor.rgb *= mix(base, tip, smoothstep(0.0, 1.0, vGH)) * (0.8 + 0.2 * vGH) * (1.0 - uWet * 0.15); }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += diffuseColor.rgb * uAmbF * (0.6 + 0.6 * vGH);`)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
 { vec3 vd = normalize(vGW - cameraPosition);
   float bl = pow(max(dot(vd, uSunDir), 0.0), 4.0);
-  totalEmissiveRadiance += diffuseColor.rgb * uSunCol * bl * vGH * 1.25 + diffuseColor.rgb * uAmbF * (0.6 + 0.6 * vGH); }`);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.1, 1.2, 0.6) * jDirAcc * bl * vGH * 0.55; }`);
   });
 }
 

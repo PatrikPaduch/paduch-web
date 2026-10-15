@@ -445,7 +445,7 @@ function thinLeaves(geo, keep = 0.34, grow = 1.5) {
 
 // Egy anyag = egy BatchedMesh = egy rajzolási hívás (multi-draw), példányonkénti látótér- és távolság-vágással
 class Batch {
-  constructor(mat, opts = {}) { this.mat = mat; this.opts = opts; this.items = []; this.inst = []; this.frac = 1; this.rMul = 1; this.isGrass = !!opts.grass; }
+  constructor(mat, opts = {}) { this.mat = mat; this.opts = opts; this.items = []; this.inst = []; this.frac = 1; this.rMul = 1; this.isGrass = !!opts.grass; this.isExtra = !!opts.extra; }
   add(geo, list, R = Infinity, sMul = 1, lo = null) { if (!list.length) return null; const it = { geo, list, R, sMul, lo, refs: [] }; this.items.push(it); return it; }
   build(scene) {
     let nI = 0, nV = 0, nX = 0;
@@ -736,6 +736,15 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     n++;
   }
   if (!PL) fernGeos.forEach((g, i) => mkStream(g, fol.ground.mat, fernL[i], { R: 85 }));
+  // Epikus szint: sűrűbb páfrányos aljnövényzet
+  const fernLX = [];
+  for (let a = 0; a < 16000 && fernLX.length < 3200; a++) {
+    const x = rx(), z = rx();
+    if (rnd() > T.forestAt(x, z) * 0.85 + nearWater(x, z) * 0.15 + 0.05) continue;
+    const h = ground(x, z, { slope: 0.6, path: 0.35, camp: 7, above: 0.2 });
+    if (h === null || !trees.free(x, z, 0.2)) continue;
+    fernLX.push({ x, y: h - 0.05, z, ry: rnd() * 6.28, s: 0.7 + rnd() * 0.7, c: new THREE.Color().setRGB(0.85 + rnd() * 0.25, 0.9 + rnd() * 0.2, 0.8 + rnd() * 0.25) });
+  }
 
   const monGeos = [0, 1].map(i => makeMonstera(1300 + i));
   const monL = [[], []];
@@ -756,12 +765,12 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   SB.grass = new Batch(gMat, { grass: true, sort: false, cull: false });
   const grassGeo = makeGrassClump(mulberry32(5), 9);
   const gList = [];
-  const addGrass = (x, z) => {
+  const addGrass = (x, z, L = gList) => {
     const h = ground(x, z, { slope: 0.5, path: 0.55, camp: 2.2, spawn: 0, above: 0.15 });
     if (h === null) return;
     const s = 0.8 + rnd() * 0.45;
     const c = new THREE.Color().setRGB(0.9 + rnd() * 0.2, 0.9 + rnd() * 0.2, 0.85 + rnd() * 0.2);
-    gList.push({ x, y: h - 0.03, z, ry: rnd() * 6.28, s, sy: 0.75 + rnd() * 0.5, c });
+    L.push({ x, y: h - 0.03, z, ry: rnd() * 6.28, s, sy: 0.75 + rnd() * 0.5, c });
   };
   for (let a = 0; a < 30000; a++) {
     const x = -38 + rnd() * 86, z = -64 + rnd() * 110;
@@ -776,6 +785,20 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     addGrass(x, z);
   }
   mkStream(grassGeo, gMat, gList, { R: 60 });
+  // Epikus szint: még egyszer ennyi fű (külön készlet, a többi szinten rejtve)
+  const gListX = [];
+  for (let a = 0; a < 30000; a++) {
+    const x = -38 + rnd() * 86, z = -64 + rnd() * 110;
+    if (rnd() > Math.pow(1 - T.forestAt(x, z), 2)) continue;
+    addGrass(x, z, gListX);
+  }
+  for (let a = 0; a < 26000; a++) {
+    const x = rx(), z = rx();
+    if (rnd() > 0.05 + nearWater(x, z) * 0.35 + (1 - T.forestAt(x, z)) * 0.3) continue;
+    addGrass(x, z, gListX);
+  }
+  SB.grassX = new Batch(gMat, { grass: true, extra: true, sort: false, cull: false });
+  SB.grassX.add(grassGeo, gListX, 60);
 
   const reedGeo = makeGrassClump(mulberry32(9), 7, 2.4);
   const rList = [];
@@ -936,6 +959,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     progress('Növénymodellek elhelyezése');
     SB.gFern = new Batch(PL.fern.mat, { cull: false, sort: false });
     addModel(SB.gFern, PL.fern.geos, fernL.flat(), 85, 2.0, true);
+    SB.gFernX = new Batch(PL.fern.mat, { cull: false, sort: false, extra: true });
+    addModel(SB.gFernX, PL.fern.geos, fernLX, 85, 2.0, true);
     const mon = monL.flat();
     SB.gAnth = new Batch(PL.anthurium.mat, { cull: false, sort: false });
     addModel(SB.gAnth, PL.anthurium.geos, mon.filter((_, i) => i % 2 === 0), 95, 2.6, true);

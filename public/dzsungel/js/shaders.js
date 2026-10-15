@@ -18,6 +18,8 @@ export const G = {
   uMouth: { value: new THREE.Vector4(0, -100, 0, 0) },
   uMouthZ: { value: new THREE.Vector3(0, 0, 0) },
   uScreenH: { value: 900 }, // a belső kép magassága pixelben (pont-sprite-ok méretezéséhez)
+  uCloudSh: { value: 0 },   // felhőárnyék erőssége (0 = ki)
+  uCloudCov: { value: 0.5 }, // felhőborítottság (az égbolt felhőivel egyezik)
 };
 
 export const NOISE = /* glsl */`
@@ -62,7 +64,27 @@ uniform float uRain;
 uniform float uWet;
 uniform float uFlash;
 uniform vec3 uBoltDir;
-` + NOISE;
+uniform float uCloudSh;
+uniform float uCloudCov;
+` + NOISE + `
+// a nap tényleges (árnyékolt, felhővel takart) fénye ezen a ponton; az áttetsző levelek ebből világítanak át
+vec3 jDirAcc;
+// vonuló felhők árnyéka: a pontot a nap irányában a felhőrétegre vetítjük
+float jCloud(vec3 vp) {
+  if (uCloudSh <= 0.0) return 1.0;
+  vec3 wp = cameraPosition + transpose(mat3(viewMatrix)) * vp;
+  vec2 p = wp.xz + uSunDir.xz / max(uSunDir.y, 0.15) * (140.0 - wp.y);
+  p = p * 0.0065 + vec2(uTime * 0.02, uTime * 0.008);
+  float n = jn2(p) * 0.65 + jn2(p * 2.3 + 5.1) * 0.35;
+  return 1.0 - smoothstep(0.62 - uCloudCov * 0.45, 0.82 - uCloudCov * 0.35, n) * uCloudSh;
+}`;
+  // a napfény-ciklusba: felhőárnyék + a tényleges napfény összegyűjtése
+  {
+    const LB = C.lights_fragment_begin;
+    const d0 = LB.indexOf('#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )');
+    const ci = LB.indexOf('RE_Direct( directLight', d0);
+    if (d0 >= 0 && ci > d0) C.lights_fragment_begin = 'jDirAcc = vec3(0.0);\n' + LB.slice(0, ci) + 'directLight.color *= jCloud( geometryPosition );\n\t\tjDirAcc += directLight.color;\n\t\t' + LB.slice(ci);
+  }
 
   // Magassági, napfény felé melegedő köd (párás dzsungel-levegő)
   C.fog_pars_vertex = `#ifdef USE_FOG

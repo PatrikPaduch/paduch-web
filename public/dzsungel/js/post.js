@@ -169,6 +169,41 @@ void main(){
   gl_FragColor = vec4(clamp((lobe * (b + d + f + h) + e) / (4.0 * lobe + 1.0), 0.0, 1.0), 1.0);
 }`;
 
+// Időbeli élsimítás (TAA): a jelenet minden képkockán szubpixelnyit eltolva készül; az előzményt a mélység alapján
+// visszavetítjük (kameramozgás), a 3x3-as szomszédság szín-szórására vágjuk (YCoCg, nincs szellemkép), és összeátlagoljuk.
+const TAA = `
+uniform sampler2D tCur; uniform sampler2D tHist; uniform sampler2D tDepth;
+uniform mat4 uInvVP; uniform mat4 uPrevVP; uniform vec2 uTexel; uniform float uReset;
+varying vec2 vUv;
+vec3 tm(vec3 c) { return c / (1.0 + max(c.r, max(c.g, c.b))); }
+vec3 itm(vec3 c) { return c / max(1.0 - max(c.r, max(c.g, c.b)), 1e-4); }
+vec3 toY(vec3 c) { return vec3(0.25 * c.r + 0.5 * c.g + 0.25 * c.b, 0.5 * c.r - 0.5 * c.b, -0.25 * c.r + 0.5 * c.g - 0.25 * c.b); }
+vec3 fromY(vec3 y) { return vec3(y.x + y.y - y.z, y.x + y.z, y.x - y.y - y.z); }
+void main() {
+  vec4 cur = texture2D(tCur, vUv);
+  vec3 c = toY(tm(cur.rgb));
+  vec3 m1 = vec3(0.0), m2 = vec3(0.0);
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec3 s = toY(tm(texture2D(tCur, vUv + vec2(float(i), float(j)) * uTexel).rgb));
+    m1 += s; m2 += s * s;
+  }
+  m1 /= 9.0; vec3 sg = sqrt(max(m2 / 9.0 - m1 * m1, 0.0));
+  vec3 bmin = m1 - sg * 1.25, bmax = m1 + sg * 1.25;
+  float d = texture2D(tDepth, vUv).r;
+  vec4 wp = uInvVP * vec4(vUv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); wp /= wp.w;
+  vec4 pc = uPrevVP * vec4(wp.xyz, 1.0); vec2 puv = pc.xy / pc.w * 0.5 + 0.5;
+  float off = step(1.0, max(abs(puv.x - 0.5), abs(puv.y - 0.5)) * 2.0);
+  vec3 h = toY(tm(texture2D(tHist, puv).rgb));
+  // vágás a doboz felé (AABB clip a középpont irányában)
+  vec3 cen = 0.5 * (bmax + bmin), ext = 0.5 * (bmax - bmin) + 1e-4, v = h - cen;
+  vec3 a = abs(v / ext); float ma = max(a.x, max(a.y, a.z));
+  if (ma > 1.0) h = cen + v / ma;
+  float vel = length((puv - vUv) / uTexel);
+  float w = mix(0.1, 0.3, clamp(vel / 10.0, 0.0, 1.0));
+  w = max(w, max(off, uReset));
+  gl_FragColor = vec4(itm(fromY(mix(h, c, w))), cur.a);
+}`;
+
 const sm = (frag, uniforms, extra = {}) => new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: frag, uniforms, depthTest: false, depthWrite: false, ...extra });
 
 export class Post {
@@ -197,18 +232,24 @@ export class Post {
     this.aoBlur = sm(AOBLUR, { tAO: { value: null }, uDir: { value: new THREE.Vector2() } });
     this.upscale = sm(UPSCALE, { tSrc: { value: null }, uInRes: { value: new THREE.Vector2() } });
     this.rcas = sm(RCAS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uSharp: { value: 0.8 } });
+    this.taaMat = sm(TAA, { tCur: { value: null }, tHist: { value: null }, tDepth: { value: null }, uInvVP: { value: new THREE.Matrix4() }, uPrevVP: { value: new THREE.Matrix4() }, uTexel: { value: new THREE.Vector2() }, uReset: { value: 1 } });
+    this.taa = false; this.taaI = 0; this.hist = []; this.prevVP = new THREE.Matrix4(); this.projBase = new THREE.Matrix4(); this.jx = 0; this.jy = 0;
     this.useRays = true; this.useBloom = true; this.useAO = true;
   }
 
   // w, h: belső (számolt) felbontás; ow, oh: a vászon felbontása (ha nagyobb, felskálázunk)
   setSize(w, h, msaa, ow = w, oh = h) {
-    for (const t of [this.rtScene, this.rtA, this.rtB, this.rtOut, this.rtUp, ...(this.mips || [])]) if (t) t.dispose();
+    for (const t of [this.rtScene, this.rtA, this.rtB, this.rtOut, this.rtUp, ...(this.mips || []), ...this.hist]) if (t) t.dispose();
     this.scaled = ow > w + 1 || oh > h + 1;
     this.ow = ow; this.oh = oh;
-    if (this.scaled) {
+    // TAA: előzmény-pufferek (HDR), és élesítés akkor is, ha nincs felskálázás
+    this.hist = this.taa ? [0, 1].map(() => new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false })) : [];
+    this.histOk = false;
+    this.sharpen = this.scaled || this.taa;
+    if (this.sharpen) {
       const l = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
       this.rtOut = new THREE.WebGLRenderTarget(w, h, l);
-      this.rtUp = new THREE.WebGLRenderTarget(ow, oh, l);
+      this.rtUp = this.scaled ? new THREE.WebGLRenderTarget(ow, oh, l) : null;
     } else { this.rtOut = null; this.rtUp = null; }
     const o = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
     const dt = new THREE.DepthTexture(w, h); dt.type = THREE.FloatType;
@@ -230,6 +271,22 @@ export class Post {
 
   pass(mat, target) { this.quad.material = mat; this.r.setRenderTarget(target); this.r.render(this.scene, this.cam); }
 
+  // TAA: szubpixeles kamera-eltolás (Halton 2,3) a render előtt; utána visszaállítás és az előző nézet eltárolása
+  jitter(camera) {
+    if (!this.taa) return;
+    this.projBase.copy(camera.projectionMatrix);
+    const i = (this.frameN = ((this.frameN || 0) + 1) % 8) + 1;
+    const hal = (n, b) => { let f = 1, r = 0; while (n > 0) { f /= b; r += f * (n % b); n = Math.floor(n / b); } return r; };
+    this.jx = (hal(i, 2) - 0.5) * 2 / this.w; this.jy = (hal(i, 3) - 0.5) * 2 / this.h;
+    const e = camera.projectionMatrix.elements; e[8] += this.jx; e[9] += this.jy;
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  }
+  unjitter(camera) {
+    if (!this.taa) return;
+    camera.projectionMatrix.copy(this.projBase);
+    camera.projectionMatrixInverse.copy(this.projBase).invert();
+    this.prevVP.multiplyMatrices(this.projBase, camera.matrixWorldInverse);
+  }
   // a videókártya valódi munkaideje képkockánként (EXT_disjoint_timer_query_webgl2), ha a böngésző engedi
   gpuBegin() {
     const gl = this.r.getContext();
@@ -258,7 +315,16 @@ export class Post {
     const r = this.r;
     r.setRenderTarget(this.rtScene);
     r.render(scene, camera);
-    const tex = this.rtScene.texture;
+    let tex = this.rtScene.texture;
+    if (this.taa && this.hist.length) {
+      const T = this.taaMat.uniforms, a = this.hist[this.taaI], b = this.hist[1 - this.taaI];
+      T.tCur.value = tex; T.tHist.value = a.texture; T.tDepth.value = this.rtScene.depthTexture;
+      T.uInvVP.value.multiplyMatrices(camera.matrixWorld, camera.projectionMatrixInverse);
+      T.uPrevVP.value.copy(this.prevVP);
+      T.uTexel.value.set(1 / this.w, 1 / this.h); T.uReset.value = this.histOk ? 0 : 1;
+      this.pass(this.taaMat, b);
+      tex = b.texture; this.taaI = 1 - this.taaI; this.histOk = true;
+    }
     let ao = this.white;
     if (this.useAO) {
       const S = this.ssao.uniforms;
@@ -306,11 +372,15 @@ export class Post {
     F.tScene.value = tex; F.tBloom.value = bloom; F.tRays.value = rays; F.tAO.value = ao;
     F.uBloom.value = P.bloom; F.uRays.value = P.raysStr; F.uExposure.value = P.exposure;
     F.uTime.value = P.time; F.uGrain.value = P.grain; F.uFade.value = P.fade ?? 1;
-    if (!this.scaled) { this.pass(this.final, null); return; }
+    if (!this.sharpen) { this.pass(this.final, null); return; }
     this.pass(this.final, this.rtOut);
-    this.upscale.uniforms.tSrc.value = this.rtOut.texture; this.upscale.uniforms.uInRes.value.set(this.w, this.h);
-    this.pass(this.upscale, this.rtUp);
-    this.rcas.uniforms.tSrc.value = this.rtUp.texture; this.rcas.uniforms.uTexel.value.set(1 / this.ow, 1 / this.oh);
+    let sharpSrc = this.rtOut;
+    if (this.scaled) {
+      this.upscale.uniforms.tSrc.value = this.rtOut.texture; this.upscale.uniforms.uInRes.value.set(this.w, this.h);
+      this.pass(this.upscale, this.rtUp); sharpSrc = this.rtUp;
+    }
+    this.rcas.uniforms.tSrc.value = sharpSrc.texture; this.rcas.uniforms.uTexel.value.set(1 / this.ow, 1 / this.oh);
+    this.rcas.uniforms.uSharp.value = this.scaled ? 0.8 : 0.55;
     this.pass(this.rcas, null);
   }
 }
