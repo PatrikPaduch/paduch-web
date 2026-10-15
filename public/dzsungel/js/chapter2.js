@@ -182,9 +182,9 @@ export class Chapter2 {
     this.bind = new THREE.Mesh(mergeGeometries(binds), mat); this.bind.visible = false; g.add(this.bind);
     // evező
     const paddle = new THREE.Group();
-    const pm = new THREE.Mesh(mergeGeometries([part(new THREE.CylinderGeometry(0.022, 0.022, 1.5, 6), woodC, M4(0, 0.15, 0)), part(new THREE.BoxGeometry(0.16, 0.42, 0.025), woodC, M4(0, -0.75, 0))]), mat);
+    const pm = new THREE.Mesh(mergeGeometries([part(new THREE.CylinderGeometry(0.022, 0.022, 1.5, 6), woodC, M4(0, 0.15, 0)), part(new THREE.BoxGeometry(0.16, 0.42, 0.025), woodC, M4(0, -0.75, 0)), part(new THREE.CylinderGeometry(0.02, 0.02, 0.13, 6), woodC, M4(0, 0.9, 0, 0, 0, Math.PI / 2))]), mat);
     pm.castShadow = true; paddle.add(pm);
-    paddle.position.set(0.25, 0.55, -0.2); paddle.rotation.set(0.2, 0, 0.5);
+    paddle.position.set(0.08, -0.02, 0.35); paddle.rotation.set(Math.PI / 2, 0, 0.1); // a kenu aljában fekszik
     g.add(paddle);
     this.paddle = paddle;
     this.scene.add(g);
@@ -244,7 +244,11 @@ export class Chapter2 {
   updateCanoe(dt, input) {
     const C = this.canoe;
     C.pt += dt;
-    if (!this.inCanoe) { this.placeCanoe(); this.paddle.rotation.set(0.2, 0, 0.5); return; }
+    if (!this.inCanoe) {
+      this.placeCanoe();
+      if (this.paddleHeld) { this.paddleHeld = false; this.paddle.position.set(0.08, -0.02, 0.35); this.paddle.rotation.set(Math.PI / 2, 0, 0.1); if (this.player.rig) this.player.rig.ik = null; }
+      return;
+    }
     const sy = input.sy || 0, sx = input.sx || 0;
     const thrust = (input.fwd ? 1 : 0) - (input.back ? 0.6 : 0) - (Math.abs(sy) > 0.1 ? sy : 0);
     const turn = (input.left ? 1 : 0) - (input.right ? 1 : 0) - (Math.abs(sx) > 0.1 ? sx : 0);
@@ -269,15 +273,53 @@ export class Chapter2 {
     const P = this.player;
     P.pos.set(C.pos.x - fx * 0.75, C.g.position.y - 0.42, C.pos.z - fz * 0.75);
     P.facing = C.yaw; P.vy = 0;
-    // evezés: váltakozó oldalú csapások
-    const pw = Math.abs(thrust) > 0.05 ? 1 : 0;
-    const ph = C.pt * 4.2, side = Math.sin(ph * 0.5) > 0 ? 1 : -1;
-    this.paddle.position.set(0.32 * side, 0.55, -0.35 + Math.sin(ph) * 0.35 * pw);
-    this.paddle.rotation.set(0.35 + Math.sin(ph) * 0.6 * pw, 0, 0.55 * side);
+    // evezés: az evező a két kézben; csapás-ciklus (beszúrás elöl, húzás hátra, kiemelés és átváltás a másik oldalra)
+    const pw = Math.abs(thrust) > 0.05 || Math.abs(turn) > 0.05 ? 1 : 0;
+    const ph = this.paddleStroke(dt, thrust, turn);
     C.wakeT -= dt;
     if (Math.abs(C.v) > 0.6 && C.wakeT <= 0) { C.wakeT = 0.35; this.fx?.ripple(C.pos.x - fx * 1.9, 0, C.pos.z - fz * 1.9, 1.4, 1.1); }
-    if (pw && Math.sin(ph) > 0.97 && !this.splashT) { this.audio?.step('water', 0.2); this.splashT = 0.3; }
+    if (pw && ph.dip && !this.splashT) { this.audio?.step('water', 0.2); this.splashT = 0.6; this.fx?.ripple(ph.blade.x, 0, ph.blade.z, 0.8, 0.9); }
     this.splashT = Math.max(0, (this.splashT || 0) - dt);
+  }
+
+  // az evező helye a kenuban (helyi koordináta: +z előre, +x a játékos bal keze felől) és a két kéz célpontja
+  paddleStroke(dt, thrust, turn) {
+    const S = this.pad ||= { k: 0, u: 0.1, side: -1, prevIn: false, L: new V3(), U: new V3(), ax: new V3() };
+    const act = Math.abs(thrust) > 0.05 || Math.abs(turn) > 0.05;
+    S.k = damp(S.k, act ? 1 : 0, 5, dt);
+    // szóló kenus módjára mindig a jobb oldalon evez (J-csapás), a kormányzást a csapás végi fordítás adja
+    if (act) { S.u += dt / 1.45 * (thrust < -0.05 ? -1 : 1); S.u -= Math.floor(S.u); }
+    // a vállak kb. (±0.2, 0.6, -1.0)-nél vannak, a kar kb. 0,5 m: minden fogás ezen belül marad
+    const s = S.side, u = S.u;
+    let lx, ly, lz;
+    if (u < 0.62) { const t = u / 0.62; lx = s * 0.36; ly = 0.24 - 0.04 * Math.sin(Math.PI * t); lz = -0.72 - 0.45 * t; }
+    else { const t = (u - 0.62) / 0.38, e = t * t * (3 - 2 * t); lx = s * (0.36 + 0.06 * Math.sin(Math.PI * t)); ly = 0.24 + 0.2 * Math.sin(Math.PI * t); lz = -1.17 + 0.45 * e; }
+    // nyugalomban keresztben az ölében tartja
+    S.L.set(s * 0.25, 0.3, -0.75).lerp(new V3(lx, ly, lz), S.k);
+    const Ud = new V3(-s * 0.4, 0.32, -0.75).lerp(new V3(-0.42 * lx, Math.min(ly + 0.62, 0.92), lz - 0.05), S.k);
+    const gd = 0.55 + 0.3 * S.k; // a két kéz távolsága a nyélen
+    S.ax.subVectors(Ud, S.L).normalize();
+    // az evező: alsó fogás a nyél 0 pontján, a felső gd-nél; a lapát előre-hátra néz
+    const y = S.ax, F = new V3(0, 0, 1), z = F.addScaledVector(y, -F.dot(y)).normalize(), x = new V3().crossVectors(y, z);
+    this.paddle.position.copy(S.L);
+    this.paddle.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+    const g = this.canoe.g; g.updateMatrixWorld(true);
+    const W = (v) => v.clone().applyMatrix4(g.matrixWorld);
+    const lower = W(S.L), upper = W(S.L.clone().addScaledVector(S.ax, gd));
+    // az alsó kéz a húzás oldalán van (a játékos jobb keze a -x oldal)
+    const lowerRight = S.L.x < 0;
+    const rig = this.player.rig;
+    if (rig) {
+      rig.ik = {
+        l: lowerRight ? upper : lower, r: lowerRight ? lower : upper,
+        pl: W(new V3(0.8, 0.2, -1.2)), pr: W(new V3(-0.8, 0.2, -1.2)),
+      };
+    }
+    this.paddleHeld = true;
+    const blade = W(S.L.clone().addScaledVector(S.ax, -0.75));
+    const inW = blade.y < -0.02;
+    const dip = inW && !S.prevIn; S.prevIn = inW;
+    return { dip, blade };
   }
 
   // ---------------------------------------------------------------- cölöpfalu

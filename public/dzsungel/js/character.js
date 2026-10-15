@@ -188,11 +188,17 @@ function buildRig(ch, clips) {
   };
   for (const [k, n, once] of [['aim', 'Pistol_Aim_Up'], ['throw', 'Sword_Attack', true], ['stab', 'Punch_Cross', true], ['torch', 'Idle_Torch_Loop']]) useU(k, n, once);
 
-  return new Rig(holder, mixer, act, { uact, make: useU });
+  // karok az IK-hoz (vállcsont, alkar, kéz)
+  const arm = (k) => ['upperarm_', 'lowerarm_', 'hand_'].map((n) => scene.getObjectByName(n + k));
+  const arms = { l: arm('l'), r: arm('r') };
+  return new Rig(holder, mixer, act, { uact, make: useU }, arms.l.every(Boolean) && arms.r.every(Boolean) ? arms : null);
 }
 
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _e = new THREE.Vector3(), _d = new THREE.Vector3(), _p = new THREE.Vector3();
+const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
 class Rig {
-  constructor(object, mixer, act, up) {
+  constructor(object, mixer, act, up, arms) {
+    this.arms = arms; this.ik = null; this.ikW = 0; this.ikS = { l: new THREE.Vector3(), r: new THREE.Vector3() }; this.ikFresh = true;
     this.object = object; this.mixer = mixer; this.act = act;
     this.phase = 0; this.lastHalf = 0; this.shot = null; this.shotT = 0; this.wasGround = true;
     this.up = up; this.upKey = null; this.upW = 0; this.upT = 0; this.upShotT = 0; this.upHold = null; this.upSpeed = 1;
@@ -281,6 +287,44 @@ class Rig {
       const t = U.once ? Math.min(this.upT, U.dur) : this.upT % Math.max(U.dur, 1e-3);
       for (const c of U.ch) c.bone.quaternion.slerp(this._q.fromArray(c.it.evaluate(t)), this.upW);
     }
+    // kéz-IK (pl. evező a kézben): a célpontok simítva követik a kért helyet, a súly be/ki úszik
+    if (this.arms) {
+      this.ikW = damp(this.ikW, this.ik ? 1 : 0, 8, dt);
+      if (this.ik) {
+        if (this.ikFresh) { this.ikS.l.copy(this.ik.l); this.ikS.r.copy(this.ik.r); this.ikFresh = false; }
+        else { const k = 1 - Math.exp(-22 * dt); this.ikS.l.lerp(this.ik.l, k); this.ikS.r.lerp(this.ik.r, k); }
+      } else this.ikFresh = true;
+      if (this.ikW > 0.002 && (this.ik || this.ikLast)) {
+        if (this.ik) this.ikLast = this.ik;
+        let top = this.object; while (top.parent && !top.parent.isScene) top = top.parent;
+        top.updateMatrixWorld(true);
+        this.solveArm(this.arms.l, this.ikS.l, this.ikLast.pl, this.ikW);
+        this.solveArm(this.arms.r, this.ikS.r, this.ikLast.pr, this.ikW);
+      }
+    }
     return step;
+  }
+
+  // kétcsontos IK: a könyök a pólus felé hajlik, a kéz a célpontba kerül (világkoordinátában)
+  solveArm([A, B, C], T, pole, w) {
+    A.getWorldPosition(_a); B.getWorldPosition(_b); C.getWorldPosition(_c);
+    const la = _a.distanceTo(_b), lb = _b.distanceTo(_c);
+    const d = Math.min(Math.max(_a.distanceTo(T), 0.02), (la + lb) * 0.999);
+    _d.subVectors(T, _a).normalize();
+    const ca = Math.min(1, Math.max(-1, (la * la + d * d - lb * lb) / (2 * la * d))), sa = Math.sqrt(1 - ca * ca);
+    _p.subVectors(pole, _a); _p.addScaledVector(_d, -_p.dot(_d)).normalize();
+    _e.copy(_a).addScaledVector(_d, ca * la).addScaledVector(_p, sa * la);
+    this.turnBone(A, _b.sub(_a).normalize(), _c.copy(_e).sub(_a).normalize(), w);
+    A.updateMatrixWorld(true);
+    B.getWorldPosition(_b); C.getWorldPosition(_c);
+    this.turnBone(B, _c.sub(_b).normalize(), _d.subVectors(T, _b).normalize(), w);
+    B.updateMatrixWorld(true);
+  }
+  // a csontot világtérben elforgatja úgy, hogy a 'from' irány a 'to' irányba nézzen
+  turnBone(bone, from, to, w) {
+    _q1.setFromUnitVectors(from, to);
+    bone.getWorldQuaternion(_q2); bone.parent.getWorldQuaternion(_q3);
+    _q2.premultiply(_q1).premultiply(_q3.invert());
+    bone.quaternion.slerp(_q2, w);
   }
 }
