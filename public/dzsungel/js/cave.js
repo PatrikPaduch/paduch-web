@@ -247,12 +247,12 @@ export class Cave {
     const gg = new THREE.BufferGeometry();
     gg.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
     const gm = new THREE.ShaderMaterial({
-      uniforms: { uTime: G.uTime },
-      vertexShader: `uniform float uTime; varying float vA;
+      uniforms: { uTime: G.uTime, uScreenH: G.uScreenH },
+      vertexShader: `uniform float uTime; uniform float uScreenH; varying float vA;
 void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float ph = fract(sin(dot(position.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.28;
   vA = 0.55 + 0.45 * sin(uTime * 0.7 + ph);
-  gl_PointSize = (10.0 + 6.0 * vA) / max(-mv.z, 0.5);
+  gl_PointSize = (10.0 + 6.0 * vA) * uScreenH / 600.0 / max(-mv.z, 0.5);
   gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `varying float vA;
 void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float a = exp(-dot(q, q) * 4.0) * vA;

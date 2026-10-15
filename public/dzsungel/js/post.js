@@ -138,6 +138,37 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+// Felskálázás (FSR 1 mintájára): élvédő Catmull-Rom bikubikus nagyítás a helyi 2x2 min/max közé szorítva (nincs
+// túllövés-glória), utána RCAS: kontraszt-adaptív élesítés teljes felbontáson. sRGB (perceptuális) térben dolgozik.
+const UPSCALE = `
+uniform sampler2D tSrc; uniform vec2 uInRes; varying vec2 vUv;
+void main(){
+  vec2 sp = vUv * uInRes, tp = floor(sp - 0.5) + 0.5, f = sp - tp;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f)), w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f)), w3 = f * f * (-0.5 + 0.5 * f);
+  vec2 w12 = w1 + w2, o12 = w2 / w12;
+  vec2 t0 = (tp - 1.0) / uInRes, t3 = (tp + 2.0) / uInRes, t12 = (tp + o12) / uInRes;
+  vec3 c = texture2D(tSrc, vec2(t0.x, t0.y)).rgb * w0.x * w0.y + texture2D(tSrc, vec2(t12.x, t0.y)).rgb * w12.x * w0.y + texture2D(tSrc, vec2(t3.x, t0.y)).rgb * w3.x * w0.y
+         + texture2D(tSrc, vec2(t0.x, t12.y)).rgb * w0.x * w12.y + texture2D(tSrc, vec2(t12.x, t12.y)).rgb * w12.x * w12.y + texture2D(tSrc, vec2(t3.x, t12.y)).rgb * w3.x * w12.y
+         + texture2D(tSrc, vec2(t0.x, t3.y)).rgb * w0.x * w3.y + texture2D(tSrc, vec2(t12.x, t3.y)).rgb * w12.x * w3.y + texture2D(tSrc, vec2(t3.x, t3.y)).rgb * w3.x * w3.y;
+  vec2 px = 1.0 / uInRes, b = tp / uInRes;
+  vec3 a1 = texture2D(tSrc, b).rgb, a2 = texture2D(tSrc, b + vec2(px.x, 0.0)).rgb, a3 = texture2D(tSrc, b + vec2(0.0, px.y)).rgb, a4 = texture2D(tSrc, b + px).rgb;
+  c = clamp(c, min(min(a1, a2), min(a3, a4)), max(max(a1, a2), max(a3, a4)));
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const RCAS = `
+uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uSharp; varying vec2 vUv;
+void main(){
+  vec3 b = texture2D(tSrc, vUv + vec2(0.0, -uTexel.y)).rgb, d = texture2D(tSrc, vUv + vec2(-uTexel.x, 0.0)).rgb;
+  vec3 e = texture2D(tSrc, vUv).rgb;
+  vec3 f = texture2D(tSrc, vUv + vec2(uTexel.x, 0.0)).rgb, h = texture2D(tSrc, vUv + vec2(0.0, uTexel.y)).rgb;
+  vec3 mn4 = min(min(b, d), min(f, h)), mx4 = max(max(b, d), max(f, h));
+  vec3 hitMin = mn4 / (4.0 * mx4 + 1e-4), hitMax = (1.0 - mx4) / (4.0 * mn4 - 4.0 - 1e-4);
+  vec3 lobeC = max(-hitMin, hitMax);
+  float lobe = max(-0.1875, min(max(lobeC.r, max(lobeC.g, lobeC.b)), 0.0)) * uSharp;
+  gl_FragColor = vec4(clamp((lobe * (b + d + f + h) + e) / (4.0 * lobe + 1.0), 0.0, 1.0), 1.0);
+}`;
+
 const sm = (frag, uniforms, extra = {}) => new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: frag, uniforms, depthTest: false, depthWrite: false, ...extra });
 
 export class Post {
@@ -164,11 +195,21 @@ export class Post {
     this.white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); this.white.needsUpdate = true;
     this.ssao = sm(SSAO, { tDepth: { value: null }, uProj: { value: new THREE.Matrix4() }, uInvProj: { value: new THREE.Matrix4() }, uRes: { value: new THREE.Vector2() }, uRadius: { value: 0.55 } });
     this.aoBlur = sm(AOBLUR, { tAO: { value: null }, uDir: { value: new THREE.Vector2() } });
+    this.upscale = sm(UPSCALE, { tSrc: { value: null }, uInRes: { value: new THREE.Vector2() } });
+    this.rcas = sm(RCAS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uSharp: { value: 0.8 } });
     this.useRays = true; this.useBloom = true; this.useAO = true;
   }
 
-  setSize(w, h, msaa) {
-    for (const t of [this.rtScene, this.rtA, this.rtB, ...(this.mips || [])]) if (t) t.dispose();
+  // w, h: belső (számolt) felbontás; ow, oh: a vászon felbontása (ha nagyobb, felskálázunk)
+  setSize(w, h, msaa, ow = w, oh = h) {
+    for (const t of [this.rtScene, this.rtA, this.rtB, this.rtOut, this.rtUp, ...(this.mips || [])]) if (t) t.dispose();
+    this.scaled = ow > w + 1 || oh > h + 1;
+    this.ow = ow; this.oh = oh;
+    if (this.scaled) {
+      const l = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
+      this.rtOut = new THREE.WebGLRenderTarget(w, h, l);
+      this.rtUp = new THREE.WebGLRenderTarget(ow, oh, l);
+    } else { this.rtOut = null; this.rtUp = null; }
     const o = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
     const dt = new THREE.DepthTexture(w, h); dt.type = THREE.FloatType;
     this.rtScene = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: msaa, depthBuffer: true, depthTexture: dt });
@@ -176,8 +217,10 @@ export class Post {
     this.rtA = new THREE.WebGLRenderTarget(hw, hh, o);
     this.rtB = new THREE.WebGLRenderTarget(hw, hh, o);
     for (const t of [this.rtAO1, this.rtAO2]) if (t) t.dispose();
-    this.rtAO1 = new THREE.WebGLRenderTarget(hw, hh, o);
-    this.rtAO2 = new THREE.WebGLRenderTarget(hw, hh, o);
+    // Ultrán teljes felbontású takarási árnyék (élesebb kontaktárnyékok), különben fél felbontás
+    const aw = this.aoFull ? w : hw, ah = this.aoFull ? h : hh;
+    this.rtAO1 = new THREE.WebGLRenderTarget(aw, ah, o);
+    this.rtAO2 = new THREE.WebGLRenderTarget(aw, ah, o);
     this.mips = [];
     let mw = w, mh = h;
     for (let i = 0; i < 6; i++) { mw = Math.max(1, mw >> 1); mh = Math.max(1, mh >> 1); this.mips.push(new THREE.WebGLRenderTarget(mw, mh, o)); }
@@ -187,7 +230,31 @@ export class Post {
 
   pass(mat, target) { this.quad.material = mat; this.r.setRenderTarget(target); this.r.render(this.scene, this.cam); }
 
+  // a videókártya valódi munkaideje képkockánként (EXT_disjoint_timer_query_webgl2), ha a böngésző engedi
+  gpuBegin() {
+    const gl = this.r.getContext();
+    if (this.tq === undefined) { this.tq = gl.getExtension('EXT_disjoint_timer_query_webgl2'); this.tqs = []; this.gpuMs = 0; }
+    const ext = this.tq; if (!ext) return;
+    for (let i = this.tqs.length - 1; i >= 0; i--) {
+      const q = this.tqs[i];
+      if (gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) {
+        if (!gl.getParameter(ext.GPU_DISJOINT_EXT)) { const ms = gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6; this.gpuMs = this.gpuMs ? this.gpuMs * 0.85 + ms * 0.15 : ms; }
+        gl.deleteQuery(q); this.tqs.splice(i, 1);
+      }
+    }
+    if (this.tqs.length > 4) return;
+    this.curQ = gl.createQuery(); gl.beginQuery(ext.TIME_ELAPSED_EXT, this.curQ);
+  }
+  gpuEnd() {
+    if (!this.curQ) return;
+    const gl = this.r.getContext(); gl.endQuery(this.tq.TIME_ELAPSED_EXT); this.tqs.push(this.curQ); this.curQ = null;
+  }
+
   render(scene, camera, P) {
+    this.gpuBegin();
+    try { this.renderInner(scene, camera, P); } finally { this.gpuEnd(); }
+  }
+  renderInner(scene, camera, P) {
     const r = this.r;
     r.setRenderTarget(this.rtScene);
     r.render(scene, camera);
@@ -239,6 +306,11 @@ export class Post {
     F.tScene.value = tex; F.tBloom.value = bloom; F.tRays.value = rays; F.tAO.value = ao;
     F.uBloom.value = P.bloom; F.uRays.value = P.raysStr; F.uExposure.value = P.exposure;
     F.uTime.value = P.time; F.uGrain.value = P.grain; F.uFade.value = P.fade ?? 1;
-    this.pass(this.final, null);
+    if (!this.scaled) { this.pass(this.final, null); return; }
+    this.pass(this.final, this.rtOut);
+    this.upscale.uniforms.tSrc.value = this.rtOut.texture; this.upscale.uniforms.uInRes.value.set(this.w, this.h);
+    this.pass(this.upscale, this.rtUp);
+    this.rcas.uniforms.tSrc.value = this.rtUp.texture; this.rcas.uniforms.uTexel.value.set(1 / this.ow, 1 / this.oh);
+    this.pass(this.rcas, null);
   }
 }

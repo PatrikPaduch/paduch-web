@@ -62,12 +62,12 @@ export class Story {
     geo.setAttribute('aOn', new THREE.InterleavedBufferAttribute(buf, 1, 3));
     this.sparkBuf = buf;
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uTime: G.uTime },
-      vertexShader: `attribute float aOn; uniform float uTime; varying float vA;
+      uniforms: { uTime: G.uTime, uScreenH: G.uScreenH },
+      vertexShader: `attribute float aOn; uniform float uTime; uniform float uScreenH; varying float vA;
 void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;
   float pulse = pow(0.5 + 0.5 * sin(uTime * 2.0 + position.x), 3.0);
   vA = aOn * smoothstep(22.0, 6.0, d) * smoothstep(0.6, 1.4, d) * (0.35 + 0.65 * pulse);
-  gl_PointSize = aOn * (110.0 + 60.0 * pulse) / max(d, 0.5); gl_Position = projectionMatrix * mv; }`,
+  gl_PointSize = aOn * (110.0 + 60.0 * pulse) * uScreenH / 600.0 / max(d, 0.5); gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `varying float vA;
 void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q);
   float star = max(0.0, 1.0 - abs(q.x) * 7.0) * max(0.0, 1.0 - abs(q.y)) + max(0.0, 1.0 - abs(q.y) * 7.0) * max(0.0, 1.0 - abs(q.x));

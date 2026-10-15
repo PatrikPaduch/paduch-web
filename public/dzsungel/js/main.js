@@ -30,15 +30,15 @@ const $ = (id) => document.getElementById(id);
 const tick = () => new Promise((r) => setTimeout(r, 16));
 
 const QUALITY = {
-  low: { label: 'Alacsony', scale: 0.7, prCap: 1, msaa: 0, shadow: 1024, shadowR: 40, rays: false, grass: 0.4, near: 0.7, trees: 0.65 },
-  medium: { label: 'Közepes', scale: 0.85, prCap: 1, msaa: 2, shadow: 2048, shadowR: 50, rays: true, grass: 0.7, near: 0.85, trees: 0.85 },
-  high: { label: 'Magas', scale: 1, prCap: 1.25, msaa: 4, shadow: 2048, shadowR: 60, rays: true, grass: 1, near: 1, trees: 1 },
-  ultra: { label: 'Ultra', scale: 1, prCap: 2, msaa: 4, shadow: 4096, shadowR: 70, rays: true, grass: 1, near: 1.3, trees: 1 },
+  low: { label: 'Alacsony', lod: 16, prCap: 1, msaa: 0, shadow: 1024, shadowR: 36, rays: false, ao: false, grass: 0.35, near: 0.65, trees: 0.6 },
+  medium: { label: 'Közepes', lod: 26, prCap: 1, msaa: 2, shadow: 2048, shadowR: 50, rays: true, grass: 0.7, near: 0.85, trees: 0.85 },
+  high: { label: 'Magas', lod: 40, prCap: 1.25, msaa: 4, shadow: 2048, shadowR: 60, rays: true, grass: 1, near: 1, trees: 1 },
+  ultra: { label: 'Ultra', lod: 70, aoFull: true, prCap: 2, msaa: 4, shadow: 4096, shadowR: 70, rays: true, grass: 1, near: 1.3, trees: 1 },
 };
 const QORDER = ['low', 'medium', 'high', 'ultra'];
 const TSPEED = [0, 1 / 120, 1 / 6];
 
-const settings = { rays: true, bloom: true, grain: true, q: 'high', tspeed: 1, sens: 1, invY: false };
+const settings = { rays: true, bloom: true, grain: true, q: 'high', rs: 'auto', tspeed: 1, sens: 1, invY: false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dzsungel-settings') || '{}')); } catch (e) { /* nincs tárolt beállítás */ }
 const saveSettings = () => { try { localStorage.setItem('dzsungel-settings', JSON.stringify(settings)); } catch (e) { /* privát mód */ } };
 
@@ -121,21 +121,32 @@ async function init() {
   const story = new Story({ scene, T, temple, cave, napkapu, hunt, surv, player, state: null });
 
   let Q = QUALITY.high, streamFrom = new THREE.Vector3(1e9, 0, 0);
-  function applyQuality(name) {
-    settings.q = name; Q = QUALITY[name];
+  // belső felbontás (felskálázás): 'auto' = dinamikus, különben fix arány a vászonhoz képest
+  let rsCur = settings.rs === 'auto' ? 0.85 : +settings.rs || 1;
+  function applyRes() {
+    post.aoFull = !!Q.aoFull;
     // rejtett/összecsukott ablaknál 0 a méret: ideiglenes alapméret, a resize esemény később javítja
     const W = innerWidth || 1280, H = innerHeight || 720;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, Q.prCap) * Q.scale);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, Q.prCap));
     renderer.setSize(W, H);
     const v = renderer.getDrawingBufferSize(new THREE.Vector2());
-    post.setSize(v.x, v.y, Q.msaa);
+    post.setSize(Math.max(320, Math.round(v.x * rsCur)), Math.max(180, Math.round(v.y * rsCur)), Q.msaa, v.x, v.y);
     camera.aspect = W / H; camera.updateProjectionMatrix();
+    G.uScreenH.value = post.h;
+    $('rsv').textContent = `${post.w}×${post.h}${post.scaled ? ` → ${post.ow}×${post.oh}` : ''}`;
+  }
+  function applyQuality(name) {
+    settings.q = name; Q = QUALITY[name];
+    applyRes();
     sky.setShadow(Q.shadow, Q.shadowR);
     flora.setTreeFrac(Q.trees);
+    flora.lodD = Q.lod; flora.updateLod(camera.position.x, camera.position.z);
+    if (flora.pachLeaf?.mesh) flora.pachLeaf.mesh.castShadow = name !== 'low';
     for (const s of flora.streams) { s.rMul = Q.near; s.frac = s.isGrass ? Q.grass : Math.min(1, Q.grass + 0.3); }
     flora.grassMat.userData.u.uGrassR.value = 65 * Q.near;
     post.useRays = Q.rays && settings.rays;
     post.useBloom = settings.bloom;
+    post.useAO = Q.ao !== false;
     streamFrom.set(1e9, 0, 0);
     document.querySelectorAll('#qseg button').forEach((b) => b.classList.toggle('on', b.dataset.q === name));
     saveSettings();
@@ -422,6 +433,17 @@ async function init() {
   function closeMenu() { state.menu = false; $('menu').classList.add('hidden'); lockPointer(); }
   $('resume').onclick = closeMenu;
   $('qseg').onclick = (e) => { const q = e.target.dataset.q; if (q) applyQuality(q); };
+  const syncRes = () => document.querySelectorAll('#rsseg button').forEach((b) => b.classList.toggle('on', b.dataset.r === String(settings.rs)));
+  $('rsseg').onclick = (e) => {
+    const r = e.target.dataset.r; if (!r) return;
+    settings.rs = r === 'auto' ? 'auto' : +r; rsCur = r === 'auto' ? rsCur : +r; saveSettings(); applyRes(); syncRes();
+  };
+  syncRes();
+  { // melyik videókártyán fut (ha a böngésző elárulja)
+    const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const gpu = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    $('gpuInfo').textContent = 'Videókártya: ' + String(gpu).replace(/^ANGLE \((.*)\)$/, '$1').replace(/ Direct3D.*$/, '').replace(/\s*\(0x[0-9A-Fa-f]+\)/, '').replace(/^(NVIDIA|AMD|Intel)[^,]*, /, '');
+  }
   $('tseg').onclick = (e) => { if (e.target.dataset.t !== undefined) { settings.tspeed = +e.target.dataset.t; syncMenu(); } };
   $('tod').oninput = (e) => { tod = +e.target.value; $('todv').textContent = fmtTime(tod); };
   $('vol').oninput = (e) => audio.setVolume(+e.target.value);
@@ -535,6 +557,7 @@ async function init() {
   const clock = new THREE.Clock();
   const tmpV = new THREE.Vector3(), sunUV = new THREE.Vector2();
   let fpsAcc = 0, fpsN = 0, fpsShown = 0, autoT = 0, autoDone = false, autoAcc = 0, autoN = 0, hudT = 0;
+  const dyn = { acc: 0, n: 0, peak: 0, cool: 3, fail: 2, failT: 0 };
   function frame() {
     requestAnimationFrame(frame);
     const rawDt = clock.getDelta();
@@ -578,6 +601,7 @@ async function init() {
     if (streamFrom.distanceToSquared(camera.position) > 36) {
       streamFrom.copy(camera.position);
       for (const s of flora.streams) s.update(camera.position.x, camera.position.z);
+      flora.updateLod(camera.position.x, camera.position.z);
     }
     sky.update(camera, state.mode === 'title' ? tmpV.set(6, 2, -20) : player.pos);
     sky.updateEnv();
@@ -679,7 +703,27 @@ async function init() {
     });
 
     fpsAcc += dt; fpsN++;
-    if (fpsAcc > 0.5) { fpsShown = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; $('fps').textContent = `${fpsShown} fps · ${Q.label}`; }
+    if (fpsAcc > 0.5) { fpsShown = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; $('fps').textContent = `${fpsShown} fps${post.gpuMs ? ` · GPU ${post.gpuMs.toFixed(1)} ms` : ''} · ${Q.label} · ${Math.round(rsCur * 100)}%`; }
+    // Dinamikus felbontás: ~60 FPS-t tart; ha van tartalék, a natív felé lép, ha esik, lejjebb (lassan visszafelé)
+    if (settings.rs === 'auto' && state.mode === 'play' && !state.menu && !state.noAuto && !document.hidden && document.hasFocus() && rawDt < 0.25) {
+      dyn.acc += rawDt; dyn.n++;
+      if (dyn.acc > 1.2) {
+        const fps = dyn.n / dyn.acc; dyn.acc = 0; dyn.n = 0;
+        dyn.peak = Math.max(dyn.peak * 0.995, fps); dyn.cool--; dyn.failT--;
+        // ha mérhető a GPU-idő, az alapján döntünk (a képfrissítési korlát nem takarja el a tartalékot)
+        const g = post.gpuMs;
+        if (g > 0) {
+          const next = Math.min(1, rsCur + 0.05);
+          if (g > 15.5 && rsCur > 0.5) { rsCur = Math.max(0.5, Math.round((rsCur - (g > 22 ? 0.12 : 0.06)) * 100) / 100); dyn.cool = 3; applyRes(); }
+          else if (rsCur < 1 && dyn.cool <= 0 && g * (next / rsCur) ** 2 < 12.5) { rsCur = next; dyn.cool = 2; applyRes(); }
+        } else if (fps < 52 && rsCur > 0.5) {
+          dyn.fail = rsCur; dyn.failT = 25; dyn.cool = 3;
+          rsCur = Math.max(0.5, Math.round((rsCur - (fps < 38 ? 0.12 : 0.06)) * 100) / 100); applyRes();
+        } else if (rsCur < 1 && dyn.cool <= 0 && fps >= 57 && fps >= Math.min(dyn.peak * 0.93, 72) && (dyn.failT <= 0 || rsCur + 0.05 < dyn.fail - 0.01)) {
+          rsCur = Math.min(1, Math.round((rsCur + 0.05) * 100) / 100); dyn.cool = 2; applyRes();
+        }
+      }
+    }
     // Automatikus minőség: csak látható, fókuszált lapon mér; fojtott (háttérben lévő) képkockánál újrakezdi
     if (state.mode === 'play' && !autoDone && !state.noAuto) {
       if (document.hidden || !document.hasFocus() || rawDt > 0.25) { autoT = 0; autoAcc = 0; autoN = 0; }
@@ -688,7 +732,7 @@ async function init() {
       if (autoT > 8) {
         autoDone = true;
         const avg = autoN / autoAcc, i = QORDER.indexOf(settings.q);
-        if (avg < 28 && i > 0) { applyQuality(QORDER[i - 1]); toast(`Grafika automatikusan: ${QUALITY[QORDER[i - 1]].label}`); }
+        if (avg < 28 && i > 0 && (settings.rs !== 'auto' || rsCur <= 0.55)) { applyQuality(QORDER[i - 1]); toast(`Grafika automatikusan: ${QUALITY[QORDER[i - 1]].label}`); }
       }
     }
   }

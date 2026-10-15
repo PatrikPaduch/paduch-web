@@ -17,6 +17,7 @@ export const G = {
   // barlangszáj a sziklafalban: a terep itt átlátszó (x, középmagasság, fél-szélesség, fél-magasság), z-sáv és padlószint
   uMouth: { value: new THREE.Vector4(0, -100, 0, 0) },
   uMouthZ: { value: new THREE.Vector3(0, 0, 0) },
+  uScreenH: { value: 900 }, // a belső kép magassága pixelben (pont-sprite-ok méretezéséhez)
 };
 
 export const NOISE = /* glsl */`

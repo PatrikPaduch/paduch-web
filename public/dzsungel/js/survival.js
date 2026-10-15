@@ -138,14 +138,14 @@ export class Survival {
     sg.setAttribute('position', new THREE.InterleavedBufferAttribute(this.spark = new THREE.InterleavedBuffer(sp, 4), 3, 0));
     sg.setAttribute('aOn', new THREE.InterleavedBufferAttribute(this.spark, 1, 3));
     const sm = new THREE.ShaderMaterial({
-      uniforms: { uTime: G.uTime },
-      vertexShader: `attribute float aOn; uniform float uTime; varying float vA;
+      uniforms: { uTime: G.uTime, uScreenH: G.uScreenH },
+      vertexShader: `attribute float aOn; uniform float uTime; uniform float uScreenH; varying float vA;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float d = -mv.z, ph = fract(sin(dot(position.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.28;
   float pulse = pow(0.5 + 0.5 * sin(uTime * 2.2 + ph), 3.0);
   vA = aOn * smoothstep(16.0, 6.0, d) * smoothstep(0.6, 1.4, d) * (0.25 + 0.75 * pulse);
-  gl_PointSize = aOn * (80.0 + 50.0 * pulse) / max(d, 0.5);
+  gl_PointSize = aOn * (80.0 + 50.0 * pulse) * uScreenH / 600.0 / max(d, 0.5);
   gl_Position = projectionMatrix * mv;
 }`,
       fragmentShader: `varying float vA;

@@ -192,3 +192,4 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 body.pad .padHelp { display: block; color: var(--ink); }
 #prompt b.pb { background: #3f9c4a; color: #fff; border-radius: 50%; width: 1.6em; height: 1.6em; display: inline-grid; place-items: center; padding: 0; }
 .recipe.sel { outline: 2px solid var(--accent); outline-offset: 2px; background: rgba(216, 194, 122, 0.14); }
+.hint.gpu { text-align: left; margin: -4px 0 10px; }

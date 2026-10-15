@@ -421,19 +421,41 @@ function makeGrassClump(rnd, blades = 9, hMul = 1) {
   return gb.build();
 }
 
+// Távoli LOD a levélkártyás lombhoz: az összefüggő levéldarabok kb. harmadát tartja meg, megnagyítva, hogy a lomb
+// ugyanolyan sűrűnek hasson (a háromszögszám így ~harmadára esik; ez a gyenge kártyákon a legtöbbet számít)
+function thinLeaves(geo, keep = 0.34, grow = 1.5) {
+  const idx = geo.index.array, pos = geo.attributes.position, n = pos.count;
+  const par = new Int32Array(n).map((_, i) => i);
+  const find = (a) => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+  for (let t = 0; t < idx.length; t += 3) { const a = find(idx[t]), b = find(idx[t + 1]), c = find(idx[t + 2]); par[b] = a; par[c] = a; }
+  const roots = new Map();
+  for (let v = 0; v < n; v++) { const r = find(v); let o = roots.get(r); if (!o) roots.set(r, (o = { x: 0, y: 0, z: 0, k: 0, id: roots.size })); o.x += pos.getX(v); o.y += pos.getY(v); o.z += pos.getZ(v); o.k++; }
+  const kept = (r) => ((roots.get(r).id * 0.61803398875) % 1) < keep;
+  const out = geo.clone(), P = out.attributes.position;
+  for (let v = 0; v < n; v++) {
+    const o = roots.get(find(v)); if (!kept(find(v))) continue;
+    const cx = o.x / o.k, cy = o.y / o.k, cz = o.z / o.k;
+    P.setXYZ(v, cx + (pos.getX(v) - cx) * grow, cy + (pos.getY(v) - cy) * grow, cz + (pos.getZ(v) - cz) * grow);
+  }
+  const ni = [];
+  for (let t = 0; t < idx.length; t += 3) if (kept(find(idx[t]))) ni.push(idx[t], idx[t + 1], idx[t + 2]);
+  out.setIndex(ni);
+  return out;
+}
+
 // Egy anyag = egy BatchedMesh = egy rajzolási hívás (multi-draw), példányonkénti látótér- és távolság-vágással
 class Batch {
   constructor(mat, opts = {}) { this.mat = mat; this.opts = opts; this.items = []; this.inst = []; this.frac = 1; this.rMul = 1; this.isGrass = !!opts.grass; }
-  add(geo, list, R = Infinity, sMul = 1) { if (list.length) this.items.push({ geo, list, R, sMul }); }
+  add(geo, list, R = Infinity, sMul = 1, lo = null) { if (list.length) this.items.push({ geo, list, R, sMul, lo }); }
   build(scene) {
     let nI = 0, nV = 0, nX = 0;
-    for (const it of this.items) { nI += it.list.length; nV += it.geo.attributes.position.count; nX += it.geo.index.count; }
+    for (const it of this.items) { nI += it.list.length; nV += it.geo.attributes.position.count; nX += it.geo.index.count; if (it.lo) { nV += it.lo.attributes.position.count; nX += it.lo.index.count; } }
     if (!nI) return;
     const bm = this.mesh = new THREE.BatchedMesh(nI, nV, nX, this.mat);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), P = new V3(), S = new V3(), W = new THREE.Color(1, 1, 1);
     let rank = 0;
     for (const it of this.items) {
-      const gid = bm.addGeometry(it.geo);
+      const gid = bm.addGeometry(it.geo), gLo = it.lo ? bm.addGeometry(it.lo) : -1;
       for (const o of it.list) {
         const id = bm.addInstance(gid);
         E.set(o.rx || 0, o.ry || 0, o.rz || 0); Q.setFromEuler(E);
@@ -441,7 +463,7 @@ class Batch {
         P.set(o.x, o.y, o.z); S.set(s * (o.sx || 1), s * (o.sy || 1), s * (o.sz || 1));
         M.compose(P, Q, S); bm.setMatrixAt(id, M);
         bm.setColorAt(id, o.c || W);
-        this.inst.push({ id, x: o.x, z: o.z, R: it.R, r: ((rank++) * 0.61803398875) % 1 });
+        this.inst.push({ id, x: o.x, z: o.z, R: it.R, r: ((rank++) * 0.61803398875) % 1, gHi: gid, gLo, far: false });
       }
     }
     bm.castShadow = !!this.opts.cast; bm.receiveShadow = true;
@@ -457,6 +479,16 @@ class Batch {
       let vis = o.r < this.frac;
       if (vis && o.R !== Infinity) { const R = o.R * this.rMul, dx = o.x - px, dz = o.z - pz; vis = dx * dx + dz * dz < R * R; }
       this.mesh.setVisibleAt(o.id, vis);
+    }
+  }
+  // távoli példányok egyszerűsített geometriára váltanak
+  updateLod(px, pz, D) {
+    if (!this.mesh) return;
+    const D2 = D * D;
+    for (const o of this.inst) {
+      if (o.gLo < 0) continue;
+      const dx = o.x - px, dz = o.z - pz, far = dx * dx + dz * dz > D2;
+      if (far !== o.far) { o.far = far; this.mesh.setGeometryIdAt(o.id, far ? o.gLo : o.gHi); }
     }
   }
 }
@@ -495,8 +527,8 @@ class Occ {
 }
 
 // Valódi modell-változatok szétosztása egy batch-be (lista elemei körbeforgó változattal)
-function addModel(batch, geos, list, R, sMul) {
-  geos.forEach((g, k) => batch.add(g, list.filter((_, i) => i % geos.length === k), R, sMul));
+function addModel(batch, geos, list, R, sMul, lod = false) {
+  geos.forEach((g, k) => batch.add(g, list.filter((_, i) => i % geos.length === k), R, sMul, lod ? thinLeaves(g, 0.4, 1.3) : null));
 }
 
 export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null, PL = null) {
@@ -898,12 +930,12 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   if (PL) {
     progress('Növénymodellek elhelyezése');
     SB.gFern = new Batch(PL.fern.mat, { cull: false, sort: false });
-    addModel(SB.gFern, PL.fern.geos, fernL.flat(), 85, 2.0);
+    addModel(SB.gFern, PL.fern.geos, fernL.flat(), 85, 2.0, true);
     const mon = monL.flat();
     SB.gAnth = new Batch(PL.anthurium.mat, { cull: false, sort: false });
-    addModel(SB.gAnth, PL.anthurium.geos, mon.filter((_, i) => i % 2 === 0), 95, 2.6);
+    addModel(SB.gAnth, PL.anthurium.geos, mon.filter((_, i) => i % 2 === 0), 95, 2.6, true);
     SB.gCal = new Batch(PL.calathea.mat, { cull: false, sort: false });
-    addModel(SB.gCal, PL.calathea.geos, mon.filter((_, i) => i % 2 === 1), 95, 2.8);
+    addModel(SB.gCal, PL.calathea.geos, mon.filter((_, i) => i % 2 === 1), 95, 2.8, true);
     // még több dús aljnövényzet az erdő szélén és a tó körül
     const extra = [];
     for (let a = 0, n = 0; a < 9000 && n < 900; a++) {
@@ -915,9 +947,9 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
       extra.push({ x, y: h - 0.04, z, ry: rnd() * 6.28, s: 0.7 + rnd() * 0.6, c: new THREE.Color().setRGB(0.9 + rnd() * 0.2, 0.95 + rnd() * 0.1, 0.85 + rnd() * 0.2) });
       n++;
     }
-    addModel(SB.gCal, PL.calathea.geos, extra.filter((_, i) => i % 3 === 0), 80, 2.6);
-    addModel(SB.gAnth, PL.anthurium.geos, extra.filter((_, i) => i % 3 === 1), 80, 2.4);
-    addModel(SB.gFern, PL.fern.geos, extra.filter((_, i) => i % 3 === 2), 80, 2.2);
+    addModel(SB.gCal, PL.calathea.geos, extra.filter((_, i) => i % 3 === 0), 80, 2.6, true);
+    addModel(SB.gAnth, PL.anthurium.geos, extra.filter((_, i) => i % 3 === 1), 80, 2.4, true);
+    addModel(SB.gFern, PL.fern.geos, extra.filter((_, i) => i % 3 === 2), 80, 2.2, true);
     // vízigesztenye-fák: fotós levelű aljnövényzeti fák
     const pach = [];
     for (let a = 0, n = 0; a < 8000 && n < 260; a++) {
@@ -935,7 +967,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     BT.pachLeaf = new Batch(PL.pachira.leaf.mat, { cast: true, depth: PL.pachira.leaf.depth });
     PL.pachira.pairs.forEach((p, k) => {
       const sub = pach.filter((_, i) => i % PL.pachira.pairs.length === k);
-      BT.pachBark.add(p.bark, sub); BT.pachLeaf.add(p.leaves, sub);
+      BT.pachBark.add(p.bark, sub); BT.pachLeaf.add(p.leaves, sub, Infinity, 1, thinLeaves(p.leaves));
     });
   }
 
@@ -986,5 +1018,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   for (const b of Object.values(BT)) { b.build(scene); treeMeshes.push(b); }
   for (const b of Object.values(SB)) { b.build(scene); streams.push(b); }
   out.setTreeFrac = (f) => { for (const b of treeMeshes) { b.frac = f; b.update(0, 0); } };
+  out.lodD = 40;
+  out.updateLod = (x, z) => { for (const b of treeMeshes) b.updateLod(x, z, out.lodD); for (const b of streams) b.updateLod(x, z, out.lodD * 0.45); };
+  out.pachLeaf = BT.pachLeaf;
   return out;
 }

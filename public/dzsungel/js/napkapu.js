@@ -104,12 +104,12 @@ void main() {
     sg.setAttribute('position', new THREE.Float32BufferAttribute(sp.filter((_, i) => i % 4 !== 3), 3));
     sg.setAttribute('aR', new THREE.Float32BufferAttribute(sp.filter((_, i) => i % 4 === 3), 1));
     this.moteMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: G.uTime, uK: { value: 0 } },
-      vertexShader: `attribute float aR; uniform float uTime; varying float vA;
+      uniforms: { uTime: G.uTime, uK: { value: 0 }, uScreenH: G.uScreenH },
+      vertexShader: `attribute float aR; uniform float uTime; uniform float uScreenH; varying float vA;
 void main() { vec3 p = position; p.y = mod(p.y + uTime * (1.2 + aR * 1.6), 30.0);
   p.xz *= 0.6 + 0.4 * sin(uTime * 0.5 + aR * 6.28);
   vec4 mv = modelViewMatrix * vec4(p, 1.0); vA = smoothstep(30.0, 18.0, p.y) * smoothstep(0.0, 1.0, p.y);
-  gl_PointSize = (40.0 + aR * 40.0) / max(-mv.z, 0.5); gl_Position = projectionMatrix * mv; }`,
+  gl_PointSize = (40.0 + aR * 40.0) * uScreenH / 600.0 / max(-mv.z, 0.5); gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform float uK; varying float vA;
 void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float a = exp(-dot(q, q) * 5.0) * vA * uK;
   gl_FragColor = vec4(vec3(1.0, 0.85, 0.5) * a * 1.8, 0.0); }`,
