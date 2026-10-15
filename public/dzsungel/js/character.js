@@ -171,6 +171,7 @@ function buildRig(ch, clips) {
   use('jumpS', 'Jump_Start', true); use('jumpL', 'Jump_Loop'); use('land', 'Jump_Land', true);
   use('interact', 'Interact', true);
   use('crouchI', 'Crouch_Idle_Loop'); use('crouchF', 'Crouch_Fwd_Loop');
+  use('sitI', 'Sitting_Idle_Loop');
   for (const k of ['walk', 'jog', 'sprint']) if (act[k]) act[k].a.timeScale = 0; // kézi fázis-vezérlés
   act.idle.w = 1;
 
@@ -216,7 +217,9 @@ class Rig {
     const A = this.act, T = {};
     for (const k in A) T[k] = 0;
     let step = false;
-    if (p.swim) {
+    if (p.sit) {
+      T.sitI = 1;
+    } else if (p.swim) {
       const m = Math.min(1, p.speed / 1.2);
       T.swimF = m; T.swimI = 1 - m;
       A.swimF.a.timeScale = Math.max(0.5, p.speed / 2.175);
@@ -248,6 +251,7 @@ class Rig {
       this.lastHalf = half;
     }
     // ugrás-átmenetek
+    if (p.sit) this.wasGround = true;
     if (this.wasGround && !p.onGround && !p.swim && p.vy > 0) this.oneShot('jumpS', 0.35);
     if (!this.wasGround && p.onGround && !p.swim) this.oneShot('land', 0.3);
     this.wasGround = p.onGround;

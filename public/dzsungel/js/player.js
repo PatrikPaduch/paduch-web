@@ -105,6 +105,8 @@ export class Player {
 
   update(dt, input) {
     const T = this.T;
+    // a kenuban ül: a helyét a kenu adja, csak az animáció fut
+    if (this.seated) { this.speed = 0; this.swim = false; this.wade = 0; this.onGround = true; this.moving = false; input.jump = false; this.animate(dt); return; }
     const fwd = new THREE.Vector2(-Math.sin(this.camYaw), -Math.cos(this.camYaw));
     const right = new THREE.Vector2(Math.cos(this.camYaw), -Math.sin(this.camYaw));
     let mx = (input.right ? 1 : 0) - (input.left ? 1 : 0), mz = (input.fwd ? 1 : 0) - (input.back ? 1 : 0);
@@ -153,6 +155,7 @@ export class Player {
     for (const c of this.colliders) {
       const dx = nx - c.x, dz = nz - c.z, mn = c.r + 0.35;
       if (Math.abs(dx) > mn || Math.abs(dz) > mn) continue;
+      if (c.y0 !== undefined && (this.pos.y < c.y0 || this.pos.y > c.h)) continue; // csak egy magassági sávban akadályoz (pl. cölöpház fala)
       const d = Math.hypot(dx, dz);
       if (d < mn && d > 1e-4) { nx = c.x + dx / d * mn; nz = c.z + dz / d * mn; }
     }
@@ -180,7 +183,7 @@ export class Player {
     if (this.rig) {
       this.root.position.copy(this.pos);
       this.root.rotation.y = this.facing;
-      const step = this.rig.update(dt, { speed: this.speed, swim: this.swim, onGround: this.onGround, vy: this.vy, crouch: this.crouch && !this.swim });
+      const step = this.rig.update(dt, { speed: this.speed, swim: this.swim, onGround: this.onGround, vy: this.vy, crouch: this.crouch && !this.swim, sit: this.seated });
       if (step && this.onStep) this.onStep(this.wade > 0.05 ? 'water' : 'ground', Math.min(1, Math.max(0, (this.speed - 3.5) / 3)));
       return;
     }

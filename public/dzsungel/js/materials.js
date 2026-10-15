@@ -1,6 +1,7 @@
 // Egyedi anyagok onBeforeCompile-lal: a three.js fény/árnyék rendszere megmarad, a felületek saját shadert kapnak
 import * as THREE from 'three';
 import { G, patch, BUMP, NFB_NOFLIP } from './shaders.js';
+import { MARSH } from './terrain.js';
 
 const WP_V = `
 { vec4 jwp4 = vec4(transformed, 1.0);
@@ -411,6 +412,10 @@ float rainRip(vec2 p){
   vec3 deep = s2l(vec3(0.03, 0.12, 0.11));
   vec3 wc = mix(shallow, deep, 1.0 - exp(-depth * 0.85));
   float alpha = 0.93 * (1.0 - exp(-depth * 1.7));
+  // a mocsár és a csatorna vize iszapos, barnászöld, nem lehet átlátni rajta
+  float murk = max(smoothstep(${(MARSH.r + 6).toFixed(1)}, ${(MARSH.r - 4).toFixed(1)}, length(vWP.xz - vec2(${MARSH.x.toFixed(1)}, ${MARSH.z.toFixed(1)}))), smoothstep(13.0, 7.0, length((vWP.xz - vec2(86.0, 115.0)) * vec2(0.55, 1.6))));
+  wc = mix(wc, s2l(vec3(0.17, 0.19, 0.1)) * (0.75 + 0.25 * exp(-depth * 2.0)), murk * 0.85);
+  alpha = mix(alpha, 0.985 * (1.0 - exp(-depth * 7.0)), murk);
   float fn = jn2(vWP.xz * 1.6 - flow * uTime * 1.3) * 0.6 + jn2(vWP.xz * 4.0 + uTime * 0.4) * 0.4;
   float edgeF = smoothstep(0.4, 0.0, depth) * smoothstep(0.38, 0.66, fn);
   float fallF = hd.a * smoothstep(0.42 - hd.a * 0.35, 0.8, fn);

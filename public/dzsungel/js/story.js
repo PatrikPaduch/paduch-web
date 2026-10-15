@@ -2,7 +2,7 @@
 // aktuális cél a HUD-on és az iránytűn.
 import * as THREE from 'three';
 import { G, ADD } from './shaders.js';
-import { CAMP, TEMPLE, NAPKAPU, CAVE_MOUTH, LIP_Z } from './terrain.js';
+import { CAMP, TEMPLE, NAPKAPU, CAVE_MOUTH, LIP_Z, VERA_CAMP, VILLAGE } from './terrain.js';
 
 const V3 = THREE.Vector3;
 const $ = (id) => document.getElementById(id);
@@ -15,8 +15,14 @@ export const NOTES = [
   { id: 'barlang1', date: '1931. március 10.', title: 'Az alagút', text: 'A gombák világítanak! Kékeszöld fényük végigkíséri a falak tövét, mintha utat jelölnének befelé. A mennyezeten ezernyi apró fénypont, akár a csillagos ég.\n\nOlyan mély a csend, hogy hallom a cseppek koppanását a túlsó teremben.' },
   { id: 'barlang2', date: '1931. március 10.', title: 'A kígyó terme', text: 'Itt van a Jáde Kígyó, a derengő tavacska partján, kőtalapzaton.\n\nA falon újabb faragás: a nap kapuja kör alakú kőudvarban áll, a völgy délnyugati végén, ahol a hegyek leérnek az erdőig.\n\nMegrándult a bokám, a kígyót nem tudom felvinni. Ha valaki megtalálja ezt a naplót: vidd el helyettem a két őrt a kapuhoz.' },
   { id: 'napkapu', date: 'Kőbe vésve', title: 'A Napkapu felirata', text: '„A jaguár a nappal, a kígyó az éjjel. Ha egymás mellett pihennek az oltáron, a kapu megnyílik, és a völgy szíve megmutatja magát.”\n\n(Vera fordítása a kő mellé tűzött lapon. Idáig eljutott, de a kígyó nélkül hiába.)' },
+  // 2. fejezet: Vera útja
+  { id: 'vtabor1', ch: 2, date: '1931. március 16.', title: 'Tábor a folyónál', text: 'A bokám lassan gyógyul, a barlang óta a folyóparton táborozom. Nem megyek vissza a hordárok után.\n\nA nádasban régi, fatörzsből vájt kenut találtam. Az oldala megrepedt, de kötéllel és liánnal összefogható, a rést nagy levelekkel ki lehet tömni.\n\nA folyó lejjebb kiszélesedik, onnan keletre mocsár kezdődik. A hordárok szerint ott cölöpökön álló falu volt, „a víz népe” lakta. A vízben kajmánok élnek, a parton nem érdemes sokáig ácsorogni.' },
+  { id: 'vtabor2', ch: 2, date: '1931. március 18.', title: 'A kenu', text: 'Kész a kenu! Összekötöttem, a repedést kitömtem, alig szivárog. Holnap indulok lefelé a folyón.\n\nHa valaki utánam jön: a széles szakasz után a bal parton, keletre nyílik egy keskeny ág. Az visz be a mocsárba, a falu cölöpjeihez. A kajmánok a kenut nem bántják, de úszni ott ne próbálj.' },
+  { id: 'falu1', ch: 2, date: '1931. április 2.', title: 'A mocsár népe', text: 'Élek. A víz népe talált rám, amikor a kenu a csatornában felborult. Bekötözték a bokámat, gyógyfüvet főztek, és nem kérdeztek semmit.\n\nKevesen maradtak, a falu nagy része már üres. Az öregek szerint a víz minden évben feljebb jön, és a kajmánok is egyre többen vannak. A fiatalok a folyó torkolatához, a tengerhez költöztek.' },
+  { id: 'falu2', ch: 2, date: '1931. május 10.', title: 'Búcsú', text: 'Holnap indulunk. A falu utolsó lakói elhagyják a mocsarat, és én velük megyek, le a folyón a tengerig. Onnan talán hazajutok, talán nem. Már nem is biztos, hogy akarok.\n\nA főnök asszonya zöld követ és kajmánfogat adott nekem. Azt mondják, aki viseli, azt a víz népe a sajátjának tekinti, és a kajmánok sem bántják. Itt hagyom az asztalon annak, aki a naplómat idáig követte. Neked már nagyobb szükséged lesz rá.\n\nKöszönöm, hogy eljöttél.' },
 ];
-const FINAL = { id: 'final', date: 'Ma', title: 'A völgy szíve', text: 'A két őr egymás mellett pihen az oltáron, a kapuból fényoszlop emelkedik az ég felé, a közepén a Napkorong lebeg.\n\nVera, sikerült. A völgy megnyílt.' };
+const FINAL = { id: 'final', date: 'Ma', title: 'A völgy szíve', text: 'A két őr egymás mellett pihen az oltáron, a kapuból fényoszlop emelkedik az ég felé, a közepén a Napkorong lebeg.\n\nVera, sikerült. A völgy megnyílt.\n\nDe mi lett Verával? A barlangból nem jutott vissza a táborba. Ha a sérült bokájával kijutott, a vízeséstől lefelé, a folyó mentén kellett tábort vernie.' };
+const FINAL2 = { id: 'final2', date: 'Ma', title: 'Vera útja', text: 'A cölöpfalu üres, a pallók recsegnek, a főnök házában ott a talizmán, ahogy Vera hagyta.\n\nHollós Vera nem tűnt el. Megtalálta, amit keresett, aztán a víz népével elindult a tenger felé. A völgy titka már nem az övé, hanem a tiéd.' };
 
 export class Story {
   constructor(o) {
@@ -28,7 +34,10 @@ export class Story {
     const T = this.T, at = (x, z) => ({ x, z, y: T.heightAt(x, z) });
     const tp = this.temple.idolPos;
     const nk = this.napkapu;
+    this.ch2 = o.ch2;
+    const P2 = Object.fromEntries(o.ch2.notePos.map((q) => [q.id, q]));
     this.pos = {
+      ...P2,
       tabor: at(CAMP.x + 2.6, CAMP.z + 1.4),
       templom: { x: tp.x + 1.15, z: tp.z + 0.4, y: T.heightAt(tp.x + 1.15, tp.z + 0.4) },
       parkany: at(-4.2, -48.3),
@@ -51,6 +60,7 @@ export class Story {
       const strap = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.345), leather); strap.position.set(0.07, 0.01, 0);
       g.add(cover, pg, strap);
       g.position.set(p.x, p.y + 0.02, p.z); g.rotation.y = Math.random() * 6.28;
+      if (n.ch === 2) { cover.material = leather.clone(); cover.material.color.set(0x2e3a22); } // a második füzet zöld
       g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       this.scene.add(g);
       this.pageMesh[n.id] = g;
@@ -103,7 +113,18 @@ void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q);
     if (!c.found) return { text: 'Hozd ki a Jáde Kígyót a barlang mélyéről', at: P(c.serpentPos.x, c.serpentPos.z) };
     if (!k.placed) return { text: k.seen ? 'Helyezd a két szobrot a Napkapu oltárára' : 'Vidd a két szobrot a Napkapuhoz, a völgy délnyugati végére', at: P(k.altar.x, k.altar.z) };
     if (!k.discTaken) return { text: 'Vedd el a Napkorongot a kapuból', at: P(k.discPos.x, k.discPos.z) };
-    return { text: 'A völgy titka feltárult. Fedezz fel szabadon!', at: null };
+    // 2. fejezet: Vera nyomában
+    const C2 = this.ch2, cn = C2.canoe, r = this.read;
+    if (!C2.campSeen) return { text: 'Keresd meg Vera utolsó táborát a folyóparton, a vízeséstől lefelé', at: P(VERA_CAMP.x, VERA_CAMP.z) };
+    if (!r.has('vtabor1')) return { text: 'Olvasd el Vera naplóját a sátornál', at: P(this.pos.vtabor1.x, this.pos.vtabor1.z) };
+    if (!C2.has.knife || !C2.has.rope || !C2.has.compass) return { text: 'Kutasd át Vera ládáját: kés, kötél, iránytű', at: P(C2.crate.x, C2.crate.z) };
+    if (!r.has('vtabor2')) return { text: 'Olvasd el Vera lapját a kenu mellett', at: P(this.pos.vtabor2.x, this.pos.vtabor2.z) };
+    if (!cn.fixed) return { text: 'Javítsd meg a kenut: Vera kötele, 3 lián, 2 nagy levél', at: P(cn.pos.x, cn.pos.z) };
+    if (!C2.villageSeen) return { text: 'Evezz le a folyón, és a széles szakasz után fordulj be a keleti ágba', at: P(84, 115.5) };
+    if (!r.has('falu1')) return { text: 'Szállj ki a cölöpfalu létrájánál, és olvasd el Vera lapját', at: P(this.pos.falu1.x, this.pos.falu1.z) };
+    if (!r.has('falu2')) return { text: 'Keresd meg Vera utolsó lapját a főnök házában', at: P(this.pos.falu2.x, this.pos.falu2.z) };
+    if (!C2.has.talisman) return { text: 'Vedd magadhoz Vera talizmánját az asztalról', at: P(C2.chief.x + 0.6, C2.chief.z - 1.2) };
+    return { text: 'Vera útja véget ért. A völgy a tiéd: fedezz fel szabadon!', at: null };
   }
 
   // ---------------------------------------------------------------- felfedezési köd
@@ -126,7 +147,8 @@ void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q);
   // ---------------------------------------------------------------- napló (J)
   openJournal(id) {
     const list = NOTES.filter((n) => this.read.has(n.id));
-    if (this.napkapu.placed) list.push(FINAL);
+    if (this.napkapu.placed) { const i2 = list.findIndex((n) => n.ch === 2); list.splice(i2 < 0 ? list.length : i2, 0, FINAL); }
+    if (this.ch2.has.talisman) list.push(FINAL2);
     if (id) this.sel = id;
     if (!list.some((n) => n.id === this.sel)) this.sel = list.length ? list[list.length - 1].id : null;
     $('jObj').textContent = this.objective().text;
@@ -134,7 +156,7 @@ void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q);
       ? list.map((n) => `<button data-n="${n.id}" class="${n.id === this.sel ? 'on' : ''}"><i>${n.date}</i>${n.title}</button>`).join('')
       : '<div class="jEmpty">Még egyetlen lapot sem találtál. Nézz körül a táborban!</div>';
     const cur = list.find((n) => n.id === this.sel);
-    $('jPage').innerHTML = cur ? `<div class="jDate">${cur.date}</div><h3>${cur.title}</h3>${cur.text.split('\n\n').map((p) => `<p>${p}</p>`).join('')}<div class="jSig">${cur.id === 'final' || cur.id === 'napkapu' ? '' : 'H. V.'}</div>` : '';
+    $('jPage').innerHTML = cur ? `<div class="jDate">${cur.date}</div><h3>${cur.title}</h3>${cur.text.split('\n\n').map((p) => `<p>${p}</p>`).join('')}<div class="jSig">${cur.id.startsWith('final') || cur.id === 'napkapu' ? '' : 'H. V.'}</div>` : '';
     $('jCount').textContent = `${NOTES.filter((n) => this.read.has(n.id)).length} / ${NOTES.length} lap`;
   }
 
@@ -209,6 +231,12 @@ void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q);
     if (S0.templeSeen) lab(TEMPLE.x, TEMPLE.z, '◆', 'Jaguár-templom'); else if (rd.has('tabor')) lab(TEMPLE.x, TEMPLE.z, '?', 'templom?', '#3b2a18', true);
     if (this.cave.seen) lab(CAVE_MOUTH.x - 9, CAVE_MOUTH.z - 6, '◖', 'Barlang'); else if (rd.has('templom') || this.temple.found) lab(CAVE_MOUTH.x - 9, CAVE_MOUTH.z - 6, '?', 'barlang?', '#3b2a18', true);
     if (this.napkapu.seen) lab(NAPKAPU.x, NAPKAPU.z, '☼', 'Napkapu', '#8a5a12'); else if (rd.has('barlang2') || this.cave.found) lab(NAPKAPU.x, NAPKAPU.z, '?', 'Napkapu?', '#8a5a12', true);
+    const C2 = this.ch2;
+    if (C2.campSeen) lab(VERA_CAMP.x - 4, VERA_CAMP.z, '△', 'Vera tábora'); else if (this.napkapu.discTaken) lab(VERA_CAMP.x - 4, VERA_CAMP.z, '?', 'Vera?', '#3b2a18', true);
+    if (C2.villageSeen) lab(VILLAGE.x, VILLAGE.z, '⌂', 'Cölöpfalu'); else if (rd.has('vtabor1')) lab(VILLAGE.x, VILLAGE.z, '?', 'cölöpfalu?', '#3b2a18', true);
+    if (C2.canoe.fixed && !C2.inCanoe && Math.hypot(C2.canoe.pos.x - VERA_CAMP.x, C2.canoe.pos.z - VERA_CAMP.z) > 14) lab(C2.canoe.pos.x, C2.canoe.pos.z, '⌒', 'kenu', '#5a3a1a');
+    // Vera iránytűje: az olvasatlan lapok helye halványan látszik a térképen
+    if (C2.has.compass) for (const n of NOTES) if (!rd.has(n.id)) lab(this.pos[n.id].x, this.pos[n.id].z, '✎', '', '#7a4a1a', true);
     if (extra.fire) lab(extra.fire.x, extra.fire.z, '🔥', '');
     if (extra.spear) lab(extra.spear.x, extra.spear.z, '↑', 'lándzsa', '#5a3a1a');
     // cél: lüktető arany csillag

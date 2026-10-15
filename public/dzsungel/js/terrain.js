@@ -12,6 +12,21 @@ export const TEMPLE = { x: -45, z: -95, y: 18.3 };
 export const NAPKAPU = { x: -100, z: 105, y: 0 };
 // Barlang a vízesés mögött: a nyugati parttól párkány vezet a szájához
 export const CAVE_MOUTH = { x: 7.6, z: -51.6, y: 0.35 };
+// 2. fejezet: Vera elhagyott tábora a folyó nyugati partján, a kenu a parton; lent a mocsár a cölöpfaluval
+export const VERA_CAMP = { x: 34, z: 58 };
+export const CANOE_SPOT = { x: 39.9, z: 59.5 };
+export const MARSH = { x: 103, z: 117, r: 25 };
+export const VILLAGE = { x: 106, z: 119 };
+const CHANNEL = [[66, 112], [78, 113.5], [90, 116], [100, 118]];
+function segPolyDist(x, z, P) {
+  let d = 1e9;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [ax, az] = P[i], [bx, bz] = P[i + 1], vx = bx - ax, vz = bz - az;
+    const t0 = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    d = Math.min(d, Math.hypot(x - ax - vx * t0, z - az - vz * t0));
+  }
+  return d;
+}
 const LEDGE = [[-0.8, -46.6], [1.6, -48.6], [5, -50.0], [7, -50.8], [7.6, -51.5], [7.6, -52.3]];
 export function ledgeDist(x, z) {
   let d = 1e9;
@@ -108,12 +123,33 @@ export function heightFn(x, z, skipNK = false) {
   const dp = Math.hypot(x - POND.x, z - POND.z);
   const pf = smoothstep(POND.r + 4, POND.r - 3, dp);
   if (pf > 0) L = lerp(L, -2.6 + 1.7 * smoothstep(0, POND.r, dp), pf);
-  let rf = 0;
+  let rf = 0, wf = 0;
   if (z > -60) {
     const rd = polyDist(x, z, RIVER);
-    const rw = 3.0 + 1.2 * simplex2(x * 0.03, z * 0.03);
+    // lefelé a folyó kiszélesedik (kenuval járható), a kajmánok szakaszán még jobban
+    const wide = smoothstep(32, 48, z) * 2.2 + smoothstep(80, 95, z) * (1 - smoothstep(142, 158, z)) * 3.2;
+    const rw = 3.0 + 1.2 * simplex2(x * 0.03, z * 0.03) + wide;
     rf = smoothstep(rw + 3.5, rw - 0.8, rd);
     if (rf > 0) L = lerp(L, -1.6, rf);
+  }
+  // csatorna a folyóból a mocsárba, és maga a mocsár: víztükrök és sáros zsombékok, a falu alatt nyílt víz
+  {
+    const cf = smoothstep(3.6, 1.4, segPolyDist(x, z, CHANNEL));
+    if (cf > 0) L = lerp(L, Math.min(L, -1.1), cf);
+    const dm = Math.hypot(x - MARSH.x, z - MARSH.z), mf = smoothstep(MARSH.r, MARSH.r - 9, dm);
+    wf = Math.max(cf, mf); // a peremhegység ne emelje meg
+    if (mf > 0) {
+      let mh = -0.25 + 0.6 * fbm(x * 0.09 + 3, z * 0.09 - 7, 3);
+      mh = lerp(mh, -0.8, smoothstep(13, 6, Math.hypot(x - VILLAGE.x, z - VILLAGE.z)));
+      mh = Math.min(mh, lerp(mh, -1.1, cf));
+      L = lerp(L, mh, mf);
+    }
+    // Vera táborhelye: kis sík tisztás
+    const dv = Math.hypot(x - VERA_CAMP.x, z - VERA_CAMP.z);
+    if (dv < 10 && L > 0.4) L = lerp(L, 1.45, smoothstep(10, 5, dv)); // csak szárazföldön (a folyót nem tölti fel)
+    // lankás partszakasz a tábor alatt: ide van kihúzva a kenu
+    const bw = smoothstep(3.6, 1.6, Math.abs(z - CANOE_SPOT.z)) * smoothstep(35.5, 37, x) * smoothstep(44, 42.5, x);
+    if (bw > 0) L = lerp(L, 1.35 - (x - 37) * 0.5, bw);
   }
   // párkány a sziklafal tövében a vízesés mögé (csak feltölt, nem mélyít)
   {
@@ -135,7 +171,7 @@ export function heightFn(x, z, skipNK = false) {
   if (dT < 36) h = lerp(h, TEMPLE.y, smoothstep(36, 25, dT));
   const rim = smoothstep(150, 196, r) * (22 + 14 * fbm(x * 0.012 + 40, z * 0.012, 3))
     + smoothstep(200, 430, r) * (55 + 45 * fbm(x * 0.004, z * 0.004, 3));
-  h += rim * (1 - Math.max(rf, uf * t));
+  h += rim * (1 - Math.max(rf, uf * t, wf));
   if (!skipNK) {
     const dN = Math.hypot(x - NAPKAPU.x, z - NAPKAPU.z);
     if (dN < 24) h = lerp(h, NAPKAPU.y, smoothstep(24, 12, dN));

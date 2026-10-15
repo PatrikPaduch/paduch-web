@@ -4,7 +4,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32, simplex2, smoothstep } from './noise.js';
 import { cellUV } from './textures.js';
 import { foliageMat, barkMat, plantMat, grassMat, rockMat, rockMatPBR } from './materials.js';
-import { POND, CAMP, TEMPLE, NAPKAPU, CAVE_MOUTH, ledgeDist, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
+import { POND, CAMP, TEMPLE, NAPKAPU, CAVE_MOUTH, VERA_CAMP, CANOE_SPOT, VILLAGE, ledgeDist, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
 
 const V3 = THREE.Vector3;
 const UP = new V3(0, 1, 0);
@@ -560,6 +560,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     // a templomrom alapterülete: fák messzebb, aljnövényzet a falakig, a lépcső előtti tér szabad
     const tx = Math.abs(x - TEMPLE.x), tz = z - TEMPLE.z;
     if (Math.hypot(x - NAPKAPU.x, z - NAPKAPU.z) < (o.big ? 17 : 10.5)) return null; // a Napkapu köre
+    if (Math.hypot(x - VERA_CAMP.x, z - VERA_CAMP.z) < (o.big ? 11 : 7) || Math.hypot(x - CANOE_SPOT.x, z - CANOE_SPOT.z) < 4.5) return null; // Vera tábora, a kenu
+    if (Math.hypot(x - VILLAGE.x, z - VILLAGE.z) < (o.big ? 20 : 14)) return null; // cölöpfalu
     if (!o.grass && ledgeDist(x, z) < (o.big ? 3 : 1.4)) return null; // a párkány járható maradjon
     if (o.big ? Math.hypot(tx, tz) < 20 : Math.max(tx, Math.abs(tz)) < 13.6 || (tx < 6 && tz > 0 && tz < 23)) return null;
     return h;
@@ -1076,3 +1078,6 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   out.imp = null; out.impD = 80;
   return out;
 }
+
+// a 2. fejezet mocsári fáihoz (ugyanazzal a stílussal)
+export { GB, tube, leafCluster, hangVine, LEAF_TINTS };
