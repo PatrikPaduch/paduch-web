@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { G, patch } from './shaders.js';
 import { POND, CAMP } from './terrain.js';
+import { smoothstep } from './noise.js';
 
 const V3 = THREE.Vector3;
 const rnd = Math.random;
@@ -55,6 +56,9 @@ export class Animals {
     this.scene = scene; this.T = T; this.flora = flora; this.audio = audio;
     this.time = 0;
     this.giants = flora.logs.filter((g) => g.H);
+    // fák valódi ágakon lévő ülőhelyekkel (flora.perchTrees); a szomszédos fák listája az ugrásokhoz
+    this.ptrees = (flora.perchTrees || []).filter((t) => t.perches.length);
+    for (const t of this.ptrees) t.nbrs = this.ptrees.filter((o) => o !== t && Math.hypot(o.x - t.x, o.z - t.z) < 17);
     this.mediums = flora.mediums || [];
     this.buildParrots();
     this.buildMonkeys();
@@ -83,7 +87,7 @@ export class Animals {
     this.flocks = [];
     const nF = Math.min(4, this.giants.length);
     for (let f = 0; f < nF; f++) {
-      const perch = this.pickGiant(60);
+      const perch = this.pickPerchTree(60);
       const birds = [];
       const n = 5 + Math.floor(rnd() * 5);
       for (let i = 0; i < n; i++) {
@@ -95,10 +99,26 @@ export class Animals {
         g.add(wr, wl);
         g.scale.setScalar(1.4);
         this.scene.add(g);
-        birds.push({ g, wr, wl, off: new V3((rnd() - 0.5) * 6, (rnd() - 0.5) * 3, (rnd() - 0.5) * 6), ph: rnd() * 10, seat: new V3((rnd() - 0.5) * 7, rnd() * 2, (rnd() - 0.5) * 7) });
+        birds.push({ g, wr, wl, off: new V3((rnd() - 0.5) * 6, (rnd() - 0.5) * 3, (rnd() - 0.5) * 6), ph: rnd() * 10, i, seat: null, seatFrom: null });
       }
       this.flocks.push({ birds, perch, state: 'perched', t: 0, wait: 30 + rnd() * 60, from: null, to: null, dur: 1 });
     }
+  }
+
+  // papagáj-ülőhely: egy fa ágai; minden madár saját pontot kap az ágon (a vastagság fölött)
+  pickPerchTree(maxD = 120, from = null) {
+    if (!this.ptrees.length) { const g = this.pickGiant(maxD, from); return { c: g, tree: null }; }
+    const c = from || new V3(4, 0, -12);
+    const cands = this.ptrees.filter((t) => { const d = Math.hypot(t.x - c.x, t.z - c.z); return d < maxD && d > (from ? 25 : 0) && t.perches.length >= 4; });
+    const L = cands.length ? cands : this.ptrees;
+    const tree = L[Math.floor(rnd() * L.length)];
+    const top = tree.perches.reduce((a, q) => a.add(q.p), new V3()).multiplyScalar(1 / tree.perches.length);
+    return { c: top, tree };
+  }
+  birdSeat(P, i) {
+    if (!P.tree) return P.c.clone().add(new V3(Math.sin(i * 2.4) * 2, 0, Math.cos(i * 2.4) * 2));
+    const ps = P.tree.perches, q = ps[(i * 3 + 1) % ps.length], k = Math.floor(i / ps.length);
+    return q.p.clone().addScaledVector(q.tan, (k % 2 ? -1 : 1) * 0.35 * (k + (i % 2) * 0.5)).add(new V3(0, q.r + 0.12, 0));
   }
 
   pickGiant(maxD = 120, from = null) {
@@ -113,21 +133,22 @@ export class Animals {
     for (const F of this.flocks) {
       if (F.state === 'perched') {
         F.wait -= dt;
-        const near = Math.hypot(player.pos.x - F.perch.x, player.pos.z - F.perch.z) < 16;
+        const near = Math.hypot(player.pos.x - F.perch.c.x, player.pos.z - F.perch.c.z) < 16;
         if (F.wait <= 0 || near) {
-          F.from = F.perch.clone(); F.to = this.pickGiant(140, F.perch);
+          F.fromP = F.perch; F.toP = this.pickPerchTree(140, F.perch.c);
+          F.from = F.fromP.c.clone(); F.to = F.toP.c.clone();
           F.dur = F.from.distanceTo(F.to) / 10 + 2; F.t = 0; F.state = 'flying';
           this.audio?.parrot(this.panOf(F.from, cam), this.volOf(F.from, cam, 0.12));
         }
       } else {
         F.t += dt / F.dur;
-        if (F.t >= 1) { F.state = 'perched'; F.perch = F.to; F.wait = 40 + rnd() * 80; }
+        if (F.t >= 1) { F.state = 'perched'; F.perch = F.toP; F.wait = 40 + rnd() * 80; }
         else if (rnd() < dt * 0.4) this.audio?.parrot(this.panOf(F.from, cam), this.volOf(F.birds[0].g.position, cam, 0.08));
       }
       for (const b of F.birds) {
         let p, look;
         if (F.state === 'perched') {
-          p = F.perch.clone().add(b.seat); p.y += Math.sin(t * 2 + b.ph) * 0.02;
+          p = this.birdSeat(F.perch, b.i); p.y += Math.sin(t * 2 + b.ph) * 0.01;
           look = new V3(Math.sin(b.ph), 0, Math.cos(b.ph));
           const fold = 0.15 + Math.max(0, Math.sin(t * 0.7 + b.ph * 3) - 0.95) * 8;
           b.wr.rotation.z = -1.25 + fold; b.wl.rotation.z = 1.25 - fold;
@@ -137,6 +158,9 @@ export class Animals {
           const mid = F.from.clone().lerp(F.to, 0.5); mid.y = Math.max(F.from.y, F.to.y) + 14;
           const a = F.from.clone().lerp(mid, u), c2 = mid.clone().lerp(F.to, u);
           p = a.lerp(c2, u).add(b.off.clone().multiplyScalar(Math.sin(u * Math.PI)));
+          // fel- és leszálláskor a saját ágpontjáról indul, oda érkezik (nincs ugrás)
+          if (u < 0.15) p.lerp(this.birdSeat(F.fromP, b.i), 1 - u / 0.15);
+          else if (u > 0.85) p.lerp(this.birdSeat(F.toP, b.i), (u - 0.85) / 0.15);
           const u2 = Math.min(1, u + 0.01);
           const a2 = F.from.clone().lerp(mid, u2), c3 = mid.clone().lerp(F.to, u2);
           look = a2.lerp(c3, u2).sub(a.lerp(c2, u)).normalize();
@@ -153,66 +177,208 @@ export class Animals {
 
   // ---------------------------------------------------------------- Majmok
   buildMonkeys() {
-    const fur = [0.22, 0.15, 0.1], face = [0.55, 0.42, 0.32];
+    const fur = [0.2, 0.14, 0.09], belly = [0.36, 0.27, 0.18], face = [0.62, 0.48, 0.38], dark = [0.06, 0.05, 0.04];
     const mat = animalMat(0.95);
     const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 3, 8);
-    this.monkeyParts = {
-      torso: merged([[cap(0.13, 0.22), fur, M4(0, 0.25, 0, 0, 0, 0, 1, 1, 0.85)], [new THREE.SphereGeometry(0.1, 10, 8), fur, M4(0, 0.52, 0.02)],
-        [new THREE.SphereGeometry(0.06, 8, 6), face, M4(0, 0.5, 0.09, 0, 0, 0, 1, 0.8, 0.6)], [new THREE.SphereGeometry(0.035, 6, 5), fur, M4(0.09, 0.55, 0)], [new THREE.SphereGeometry(0.035, 6, 5), fur, M4(-0.09, 0.55, 0)]]),
-      limb: merged([[cap(0.04, 0.22), fur, M4(0, -0.14, 0)]]),
-      tail: merged([[new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new V3(0, 0, 0), new V3(0, -0.2, -0.15), new V3(0, -0.45, -0.1), new V3(0, -0.6, 0.08)]), 10, 0.025, 5), fur]]),
+    const P = this.monkeyParts = {
+      torso: merged([[cap(0.115, 0.2), fur, M4(0, 0.22, 0, 0, 0, 0, 1, 1, 0.85)], [cap(0.08, 0.14), belly, M4(0, 0.2, 0.045, 0, 0, 0, 0.9, 1, 0.6)]]),
+      head: merged([
+        [new THREE.SphereGeometry(0.095, 12, 9), fur, M4(0, 0, 0)],
+        [new THREE.SphereGeometry(0.068, 10, 8), face, M4(0, -0.012, 0.062, 0, 0, 0, 1, 0.85, 0.6)],
+        [new THREE.SphereGeometry(0.014, 6, 5), dark, M4(0.03, 0.018, 0.112)], [new THREE.SphereGeometry(0.014, 6, 5), dark, M4(-0.03, 0.018, 0.112)],
+        [new THREE.SphereGeometry(0.032, 6, 5), face, M4(0.09, 0.01, 0, 0, 0, 0, 0.5, 1, 1)], [new THREE.SphereGeometry(0.032, 6, 5), face, M4(-0.09, 0.01, 0, 0, 0, 0, 0.5, 1, 1)],
+      ]),
+      arm: merged([[cap(0.03, 0.3), fur, M4(0, -0.17, 0)], [new THREE.SphereGeometry(0.034, 6, 5), dark, M4(0, -0.35, 0.01)]]),
+      leg: merged([[cap(0.036, 0.22), fur, M4(0, -0.13, 0)], [new THREE.SphereGeometry(0.036, 6, 5), dark, M4(0, -0.27, 0.02, 0, 0, 0, 1, 0.7, 1.3)]]),
+      // hosszú, a végén begörbülő farok
+      tail: merged([[new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new V3(0, 0, 0), new V3(0, -0.15, -0.12), new V3(0, -0.45, -0.12), new V3(0, -0.7, -0.02), new V3(0.06, -0.78, 0.08), new V3(0.08, -0.72, 0.14)]), 16, 0.022, 5), fur]]),
     };
     this.monkeys = [];
-    const trees = [...this.giants.map((g) => ({ x: g.x, z: g.z, y: g.y, H: g.H * 0.7, R: 5 })), ...this.mediums.filter((m) => m.H > 9).map((m) => ({ x: m.x, z: m.z, y: m.y, H: m.H * 0.85, R: 2.2 }))]
-      .filter((t) => Math.hypot(t.x - 4, t.z + 10) < 90);
-    this.monkeyTrees = trees;
-    for (let i = 0; i < 12 && trees.length; i++) {
+    // a tábor körüli óriásfákon csapatokban (valódi ágakon ülnek)
+    const trees = this.ptrees.filter((t) => t.kind === 'giant' && Math.hypot(t.x - 4, t.z + 10) < 95 && t.perches.length >= 6);
+    if (!trees.length) return;
+    const used = new Set();
+    for (let i = 0; i < 12; i++) {
       const g = new THREE.Group();
-      const torso = new THREE.Mesh(this.monkeyParts.torso, mat); g.add(torso);
-      const limbs = [];
-      for (const [x, y] of [[0.12, 0.38], [-0.12, 0.38], [0.08, 0.12], [-0.08, 0.12]]) {
-        const p = new THREE.Group(); p.position.set(x, y, 0); p.add(new THREE.Mesh(this.monkeyParts.limb, mat)); g.add(p); limbs.push(p);
-      }
-      const tail = new THREE.Mesh(this.monkeyParts.tail, mat); tail.position.set(0, 0.12, -0.08); g.add(tail);
-      g.scale.setScalar(1.3);
+      g.add(new THREE.Mesh(P.torso, mat));
+      const head = new THREE.Group(); head.position.set(0, 0.44, 0.02); head.add(new THREE.Mesh(P.head, mat)); g.add(head);
+      const limb = (geo, x, y) => { const q = new THREE.Group(); q.position.set(x, y, 0); q.add(new THREE.Mesh(geo, mat)); g.add(q); return q; };
+      const arms = [limb(P.arm, 0.115, 0.35), limb(P.arm, -0.115, 0.35)];
+      const legs = [limb(P.leg, 0.07, 0.1), limb(P.leg, -0.07, 0.1)];
+      const tail = new THREE.Group(); tail.position.set(0, 0.1, -0.08); tail.add(new THREE.Mesh(P.tail, mat)); g.add(tail);
+      g.scale.setScalar(1.25);
+      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       this.scene.add(g);
-      const tr = trees[Math.floor(rnd() * trees.length)];
-      this.monkeys.push({ g, limbs, tail, tree: tr, seat: this.seatOn(tr), state: 'sit', t: 0, wait: 4 + rnd() * 15, ph: rnd() * 10, from: null, to: null });
+      const tr = trees[Math.floor(i / 3) % trees.length];
+      let perch = tr.perches.find((q) => !used.has(q) && q.r > 0.12) || tr.perches[0];
+      used.add(perch);
+      const m = { g, head, arms, legs, tail, perch, state: 'sit', t: 0, wait: 3 + rnd() * 12, ph: rnd() * 10, yaw: 0, from: null, to: null };
+      this.sitOn(m, perch);
+      this.monkeys.push(m);
     }
     this.howlT = 8 + rnd() * 20;
   }
-  seatOn(tr) { const a = rnd() * Math.PI * 2, r = tr.R * (0.4 + rnd() * 0.6); return new V3(tr.x + Math.cos(a) * r, tr.y + tr.H * (0.85 + rnd() * 0.25), tr.z + Math.sin(a) * r); }
+  // leül az ág tetejére, az ágra merőlegesen (lábai lelógnak)
+  sitOn(m, q) {
+    m.perch = q;
+    m.seat = q.p.clone().add(new V3(0, q.r * 0.95, 0));
+    m.yaw = Math.atan2(q.tan.x, q.tan.z) + (rnd() < 0.5 ? 1 : -1) * Math.PI / 2;
+  }
+  // következő cél: ugyanazon az ágon (szalad), másik ágon vagy a szomszéd fán (ugrik)
+  nextPerch(m) {
+    const q0 = m.perch, here = q0.p;
+    const opts = [];
+    for (const q of q0.tree.perches) if (q !== q0 && q.r > 0.07 && q.p.distanceTo(here) < 7.5) opts.push(q);
+    for (const t of q0.tree.nbrs || []) for (const q of t.perches) if (q.r > 0.07 && q.p.distanceTo(here) < 8.5) opts.push(q);
+    for (const o of this.monkeys) if (o !== m) { const i = opts.indexOf(o.perch); if (i >= 0) opts.splice(i, 1); }
+    if (!opts.length) return null;
+    const same = opts.filter((q) => q.tree === q0.tree && q.b === q0.b);
+    return same.length && rnd() < 0.45 ? same[Math.floor(rnd() * same.length)] : opts[Math.floor(rnd() * opts.length)];
+  }
 
-  updateMonkeys(dt, cam, day) {
+  // a törzs sugara egy adott magasságban (a gyökérfalak miatt lent vastagabb)
+  trunkR(tr, yr) { return tr.r0 * (1 - 0.55 * Math.min(1, Math.max(0, yr / tr.H))) * (1 + 1.3 * (1 - smoothstep(0, 6, yr))) + 0.1; }
+  trunkPt(tr, ang, yr) { const r = this.trunkR(tr, yr); return new V3(tr.x + Math.cos(ang) * r, tr.y + yr, tr.z + Math.sin(ang) * r); }
+  startLeap(m, to, after, next = null) {
+    m.from = m.g.position.clone(); m.to = to.clone(); m.after = after; m.next = next;
+    m.dur = 0.45 + m.from.distanceTo(m.to) / 8; m.t = 0; m.state = 'leap';
+    m.yaw = Math.atan2(m.to.x - m.from.x, m.to.z - m.from.z);
+  }
+  landLeap(m) {
+    if (m.after === 'climbDown') { m.state = 'climbDown'; return; }
+    if (m.after === 'ground') { m.state = 'ground'; m.sub = 'eat'; m.st = 3 + rnd() * 4; m.gt = 25 + rnd() * 25; return; }
+    this.sitOn(m, m.next); m.state = 'sit';
+  }
+  // a törzshöz legközelebbi ülőhely (ide mászik vissza)
+  lowPerch(tr) { return tr.perches.filter((q) => q.r > 0.12).reduce((a, q) => (!a || q.t < a.t || (q.t === a.t && q.p.y < a.p.y) ? q : a), null) || tr.perches[0]; }
+
+  updateMonkeys(dt, cam, day, player) {
     const t = this.time;
+    let onGround = this.monkeys.filter((o) => o.state === 'ground' || o.state.startsWith('climb')).length;
     for (const m of this.monkeys) {
-      m.g.visible = day > 0.2 && m.g.position.distanceTo(cam.position) < 110;
+      const vis = day > 0.2 && m.g.position.distanceTo(cam.position) < 110;
+      m.g.visible = vis;
+      const A = m.arms, L = m.legs;
+      // éjjel mindenki a fán alszik
+      if (day <= 0.2 && m.state !== 'sit') { this.sitOn(m, this.lowPerch(m.perch.tree)); m.state = 'sit'; }
+      if (m.state === 'climbDown' || m.state === 'climbUp') {
+        // a törzsön mászik: arccal a törzs felé, felváltva nyúló karok
+        const tr = m.home, sp = m.state === 'climbDown' ? -2.2 : 2.0;
+        m.cy += sp * dt;
+        const pos = this.trunkPt(tr, m.cang, m.cy);
+        m.g.position.copy(pos);
+        m.yaw = Math.atan2(tr.x - pos.x, tr.z - pos.z);
+        const gp = t * 9;
+        m.g.rotation.set(-0.1, m.yaw, 0, 'YXZ');
+        m.head.rotation.set(m.state === 'climbDown' ? 0.5 : -0.5, 0, 0);
+        A[0].rotation.set(-2.6 + Math.sin(gp) * 0.45, 0, 0.3); A[1].rotation.set(-2.6 + Math.sin(gp + Math.PI) * 0.45, 0, -0.3);
+        L[0].rotation.set(-1.0 + Math.sin(gp + Math.PI) * 0.4, 0, 0.35); L[1].rotation.set(-1.0 + Math.sin(gp) * 0.4, 0, -0.35);
+        m.tail.rotation.set(0.2, 0, 0);
+        if (m.state === 'climbDown' && m.cy <= 0.7) {
+          const gx = tr.x + Math.cos(m.cang) * (this.trunkR(tr, 0) + 1.3), gz = tr.z + Math.sin(m.cang) * (this.trunkR(tr, 0) + 1.3);
+          this.startLeap(m, new V3(gx, this.T.heightAt(gx, gz), gz), 'ground');
+        } else if (m.state === 'climbUp' && m.cy >= m.cyTop) this.startLeap(m, m.next.p.clone().add(new V3(0, m.next.r * 0.95, 0)), 'sit', m.next);
+        continue;
+      }
+      if (m.state === 'ground') {
+        const P = player.pos, pd = Math.hypot(P.x - m.g.position.x, P.z - m.g.position.z);
+        m.gt -= dt;
+        if (m.sub !== 'return' && (m.gt <= 0 || pd < 7)) { m.sub = 'return'; m.fast = pd < 7; }
+        let tgt = null, spd = 0;
+        if (m.sub === 'eat') {
+          // a földön ül és eszik: kéz a szájhoz
+          m.st -= dt;
+          m.g.position.y = this.T.heightAt(m.g.position.x, m.g.position.z);
+          m.g.rotation.set(0.05, m.yaw, 0, 'YXZ');
+          m.head.rotation.set(0.25 + Math.sin(t * 3 + m.ph) * 0.1, Math.sin(t * 0.6 + m.ph) * 0.5, 0);
+          const bite = Math.max(0, Math.sin(t * 2.2 + m.ph));
+          A[0].rotation.set(-1.2 - bite * 1.1, 0, -0.35); A[1].rotation.set(-0.7, 0, -0.2);
+          L[0].rotation.set(-1.35, 0, 0.3); L[1].rotation.set(-1.35, 0, -0.3);
+          m.tail.rotation.set(1.3, 0, Math.sin(t + m.ph) * 0.3);
+          if (m.st <= 0) {
+            m.sub = 'walk';
+            const a = rnd() * 6.28, d = 2 + rnd() * 5, tr = m.home, r = this.trunkR(tr, 0) + d;
+            m.gtarget = new V3(tr.x + Math.cos(a) * r, 0, tr.z + Math.sin(a) * r);
+          }
+        } else if (m.sub === 'walk') { tgt = m.gtarget; spd = 1.5; }
+        else { tgt = this.trunkPt(m.home, m.cang, 0.7); spd = m.fast ? 4.2 : 2.0; }
+        if (tgt) {
+          const dx = tgt.x - m.g.position.x, dz = tgt.z - m.g.position.z, dd = Math.hypot(dx, dz);
+          m.yaw = Math.atan2(dx, dz);
+          const k = Math.min(dd, spd * dt);
+          m.g.position.x += dx / (dd || 1) * k; m.g.position.z += dz / (dd || 1) * k;
+          m.g.position.y = this.T.heightAt(m.g.position.x, m.g.position.z) + 0.3 + Math.abs(Math.sin(t * 10)) * 0.04; // a lábakon áll
+          const Pp = 1.2, gp = t * (spd > 3 ? 15 : 10);
+          m.g.rotation.set(Pp, m.yaw, 0, 'YXZ');
+          m.head.rotation.set(-1.0, 0, 0);
+          A[0].rotation.set(-Pp + Math.sin(gp) * 0.7, 0, 0.1); A[1].rotation.set(-Pp + Math.sin(gp + Math.PI) * 0.7, 0, -0.1);
+          L[0].rotation.set(-Pp + Math.sin(gp + Math.PI) * 0.7, 0, 0); L[1].rotation.set(-Pp + Math.sin(gp) * 0.7, 0, 0);
+          m.tail.rotation.set(-0.6, 0, 0);
+          if (dd < 0.3) {
+            if (m.sub === 'walk') { m.sub = 'eat'; m.st = 4 + rnd() * 6; }
+            else { m.next = this.lowPerch(m.home); m.cyTop = m.next.p.y - m.home.y - 0.4; m.cy = 0.7; m.state = 'climbUp'; }
+          }
+        }
+        continue;
+      }
       if (m.state === 'sit') {
         m.g.position.copy(m.seat);
-        m.g.rotation.y = m.ph + Math.sin(t * 0.3 + m.ph) * 0.6;
-        m.limbs[0].rotation.x = -0.6 + Math.sin(t * 1.3 + m.ph) * 0.2; m.limbs[1].rotation.x = -0.4;
-        m.limbs[2].rotation.x = -1.3; m.limbs[3].rotation.x = -1.3;
-        m.tail.rotation.z = Math.sin(t * 1.1 + m.ph) * 0.4;
+        m.g.rotation.set(0.12, m.yaw, 0, 'YXZ');
+        m.head.rotation.set(Math.sin(t * 0.37 + m.ph) * 0.25, Math.sin(t * 0.5 + m.ph) * 0.8 + Math.sin(t * 2.3 + m.ph) * 0.1, 0);
+        // lelógó, lóbált lábak; egyik kéz az ágon, a másik néha vakaródzik
+        L[0].rotation.x = -0.35 + Math.sin(t * 1.6 + m.ph) * 0.25; L[1].rotation.x = -0.35 + Math.sin(t * 1.6 + m.ph + 2.1) * 0.25;
+        L[0].rotation.z = 0.12; L[1].rotation.z = -0.12;
+        const scratch = Math.max(0, Math.sin(t * 0.33 + m.ph * 2) - 0.85) * 6.6;
+        A[0].rotation.set(-0.5 - scratch * 1.5 + Math.sin(t * 14) * 0.15 * scratch, 0, 0.15);
+        A[1].rotation.set(-0.45, 0, -0.18);
+        m.tail.rotation.set(0.15, 0, Math.sin(t * 0.9 + m.ph) * 0.35);
         m.wait -= dt;
-        if (m.wait <= 0 && this.monkeyTrees.length > 1) {
-          const near = this.monkeyTrees.filter((tr) => tr !== m.tree && Math.hypot(tr.x - m.tree.x, tr.z - m.tree.z) < 22);
-          if (near.length) {
-            const tr = near[Math.floor(rnd() * near.length)];
-            m.from = m.seat.clone(); m.tree = tr; m.seat = this.seatOn(tr); m.to = m.seat.clone();
-            m.state = 'leap'; m.t = 0; m.dur = 0.6 + m.from.distanceTo(m.to) / 14;
+        if (m.wait <= 0 && vis) {
+          m.wait = 5 + rnd() * 16;
+          // néha lemászik a földre enni (egyszerre legfeljebb négyen)
+          const tr = m.perch.tree;
+          if (tr.kind === 'giant' && onGround < 4 && rnd() < 0.3) {
+            onGround++;
+            m.home = tr; m.cang = Math.atan2(m.perch.p.z - tr.z, m.perch.p.x - tr.x); m.cy = m.perch.p.y - tr.y - 0.3;
+            this.startLeap(m, this.trunkPt(tr, m.cang, m.cy), 'climbDown');
+            continue;
           }
-          m.wait = 6 + rnd() * 20;
+          const q = this.nextPerch(m);
+          if (q) {
+            m.from = m.seat.clone(); m.to = q.p.clone().add(new V3(0, q.r * 0.95, 0)); m.next = q; m.after = 'sit';
+            const d = m.from.distanceTo(m.to);
+            m.state = q.tree === m.perch.tree && q.b === m.perch.b ? 'walk' : 'leap';
+            m.dur = m.state === 'walk' ? 0.4 + d / 1.4 : 0.45 + d / 8; m.t = 0;
+            m.yaw = Math.atan2(m.to.x - m.from.x, m.to.z - m.from.z);
+          }
         }
-      } else {
+      } else if (m.state === 'walk') {
+        // négy lábon szalad az ágon
         m.t += dt / m.dur;
         const u = Math.min(1, m.t);
-        const p = m.from.clone().lerp(m.to, u); p.y += Math.sin(u * Math.PI) * (2 + m.from.distanceTo(m.to) * 0.15);
-        m.g.position.copy(p);
-        const d = m.to.clone().sub(m.from); m.g.rotation.y = Math.atan2(d.x, d.z);
-        const s = Math.sin(u * Math.PI);
-        m.limbs[0].rotation.x = m.limbs[1].rotation.x = -2.6 * s; m.limbs[2].rotation.x = m.limbs[3].rotation.x = 1.2 * s;
-        m.tail.rotation.z = 0;
-        if (m.t >= 1) m.state = 'sit';
+        m.g.position.copy(m.from).lerp(m.to, u);
+        const P = 1.15, gp = t * 11;
+        m.g.rotation.set(P, m.yaw, 0, 'YXZ');
+        m.head.rotation.set(-1.0, 0, 0);
+        A[0].rotation.set(-P + Math.sin(gp) * 0.7, 0, 0.1); A[1].rotation.set(-P + Math.sin(gp + Math.PI) * 0.7, 0, -0.1);
+        L[0].rotation.set(-P + Math.sin(gp + Math.PI) * 0.7, 0, 0); L[1].rotation.set(-P + Math.sin(gp) * 0.7, 0, 0);
+        m.tail.rotation.set(-0.9, 0, Math.sin(gp * 0.5) * 0.2);
+        m.g.position.y += 0.3 + Math.abs(Math.sin(gp)) * 0.05; // a lábakon áll az ágon
+        if (u >= 1) { this.sitOn(m, m.next); m.state = 'sit'; }
+      } else {
+        // ugrás ívben: karok előre a cél felé, lábak hátra
+        m.t += dt / m.dur;
+        const u = Math.min(1, m.t), d = m.from.distanceTo(m.to);
+        m.g.position.copy(m.from).lerp(m.to, u);
+        m.g.position.y += Math.sin(u * Math.PI) * (0.5 + d * 0.22);
+        const P = 0.9 + Math.sin(u * Math.PI) * 0.35;
+        m.g.rotation.set(P, m.yaw, 0, 'YXZ');
+        m.head.rotation.set(-0.8, 0, 0);
+        const reach = u < 0.15 ? u / 0.15 : 1;
+        A[0].rotation.set(-P - 1.5 * reach, 0, 0.25); A[1].rotation.set(-P - 1.5 * reach, 0, -0.25);
+        L[0].rotation.set(-P + 1.1 * reach, 0, 0.1); L[1].rotation.set(-P + 1.1 * reach, 0, -0.1);
+        m.tail.rotation.set(-1.3, 0, 0);
+        if (u >= 1) this.landLeap(m);
       }
     }
     // bőgőmajmok távoli kórusa, főleg reggel
@@ -468,7 +634,7 @@ export class Animals {
     const { player, camera, sky, fx, hooks } = ctx;
     sky_day_cache = sky.day * (1 - G.uRain.value * 0.7);
     this.updateParrots(dt, player, camera);
-    this.updateMonkeys(dt, camera, sky.day * (1 - G.uRain.value * 0.6));
+    this.updateMonkeys(dt, camera, sky.day * (1 - G.uRain.value * 0.6), player);
     this.updateFrogs(dt, player, fx);
     this.updateFish(dt, fx);
     this.updateBats(dt, sky.night);

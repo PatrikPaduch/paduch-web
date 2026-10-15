@@ -193,17 +193,21 @@ function makeGiant(seed) {
   const base = LEAF_TINTS[Math.floor(rnd() * 3)];
   const cl = (C, R, n, flat) => leafCluster(leaf, C, R, Math.round(n * 1.45), 1, 2.0, 3.0, flat, rnd, base);
   const nb = 5 + Math.floor(rnd() * 3);
+  const perches = []; // ülőhelyek az ágakon (majmoknak, madaraknak): pont, irány, ágvastagság, ág-azonosító
+  const addPerch = (E, b, ts, r0) => { for (const t of ts) perches.push({ p: E.getPointAt(t), tan: E.getTangentAt(t), r: r0 * (1 - 0.72 * t), b, t }); };
   for (let b = 0; b < nb; b++) {
     const S = trunk.getPointAt(0.62 + rnd() * 0.3);
     const ang = b / nb * Math.PI * 2 + rnd() * 0.7;
     const D = new V3(Math.cos(ang), 0.45 + rnd() * 0.45, Math.sin(ang)).normalize();
     const E = branch(bark, S, D, 6.5 + rnd() * 5, R0 * 0.36, rnd);
+    addPerch(E, b, [0.2, 0.36, 0.52, 0.66], R0 * 0.36);
     cl(E.getPointAt(1).add(new V3(0, 1.0, 0)), 3.8 + rnd() * 1.6, 95, 0.5);
     const mid = E.getPointAt(0.55);
     cl(mid.clone().add(new V3(0, 1.6, 0)), 2.8, 45, 0.55);
     if (rnd() < 0.8) {
       const D2 = D.clone().applyAxisAngle(UP, (rnd() < 0.5 ? -1 : 1) * (0.6 + rnd() * 0.5)); D2.y += 0.2; D2.normalize();
       const E2 = branch(bark, mid, D2, 3.5 + rnd() * 2, R0 * 0.16, rnd);
+      addPerch(E2, b + 100, [0.3, 0.55], R0 * 0.16);
       cl(E2.getPointAt(1).add(new V3(0, 0.8, 0)), 2.6 + rnd(), 50, 0.55);
     }
     if (rnd() < 0.85) { const nv = 1 + Math.floor(rnd() * 2); for (let k = 0; k < nv; k++) hangVine(leaf, E.getPointAt(0.3 + rnd() * 0.6), 4 + rnd() * 9, rnd); }
@@ -214,11 +218,11 @@ function makeGiant(seed) {
     const S = trunk.getPointAt(0.55 + rnd() * 0.35), a = rnd() * Math.PI * 2, d = 3 + rnd() * 4;
     liana(bark, S, new V3(Math.cos(a) * d, -0.3, Math.sin(a) * d), rnd);
   }
-  return { bark: bark.build(true), leaf: leaf.build(), H, R0 };
+  return { bark: bark.build(true), leaf: leaf.build(), H, R0, perches };
 }
 
 function makeMedium(seed) {
-  const rnd = mulberry32(seed), bark = new GB(), leaf = new GB();
+  const rnd = mulberry32(seed), bark = new GB(), leaf = new GB(), perches = [];
   const H = 8 + rnd() * 6, R0 = 0.2 + rnd() * 0.14;
   const lx = (rnd() - 0.5) * 1.6, lz = (rnd() - 0.5) * 1.6;
   const pts = [];
@@ -237,11 +241,12 @@ function makeMedium(seed) {
     const ang = b / nb * Math.PI * 2 + rnd() * 0.8;
     const D = new V3(Math.cos(ang), 0.6 + rnd() * 0.5, Math.sin(ang)).normalize();
     const E = branch(bark, S, D, 2.5 + rnd() * 2, R0 * 0.45, rnd);
+    for (const t of [0.35, 0.6]) perches.push({ p: E.getPointAt(t), tan: E.getTangentAt(t), r: R0 * 0.45 * (1 - 0.72 * t), b, t });
     leafCluster(leaf, E.getPointAt(1).add(new V3(0, 0.5, 0)), 2.0 + rnd() * 0.9, 66, cellPick, 1.3, 2.1, 0.65, rnd, base);
   }
   leafCluster(leaf, trunk.getPointAt(1).add(new V3(0, 0.8, 0)), 2.4, 70, cellPick, 1.3, 2.1, 0.65, rnd, base);
   if (rnd() < 0.4) hangVine(leaf, trunk.getPointAt(0.8).add(new V3(0.6, 0, 0)), 3 + rnd() * 4, rnd);
-  return { bark: bark.build(true), leaf: leaf.build(), H };
+  return { bark: bark.build(true), leaf: leaf.build(), H, perches };
 }
 
 function makePalm(seed) {
@@ -585,6 +590,16 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   };
   out.bark = bark;
   const impDefs = []; // fa-párok (törzs + lomb) az impostorokhoz
+  // fák ülőhelyei világkoordinátában (a példány forgatásával, méretezésével, helyével)
+  out.perchTrees = [];
+  const perchTree = (kind, list, x, y, z, ry, s, r0 = 0.3, H = 10) => {
+    const c = Math.cos(ry), sn = Math.sin(ry);
+    const rot = (v) => new V3(c * v.x + sn * v.z, v.y, -sn * v.x + c * v.z);
+    const ps = list.map((q) => ({ p: rot(q.p).multiplyScalar(s).add(new V3(x, y, z)), tan: rot(q.tan).normalize(), r: q.r * s, b: q.b, t: q.t }));
+    const tr = { kind, x, z, y, r0, H, perches: ps };
+    for (const q of ps) q.tree = tr;
+    out.perchTrees.push(tr);
+  };
   const BT = {
     gBark: new Batch(bark.giant, { cast: true }),
     gLeaf: new Batch(fol.giant.mat, { cast: true, depth: fol.giant.depth }),
@@ -603,8 +618,10 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     if (!trees.free(x, z, r + (forced ? 2 : 4))) return false;
     trees.add(x, z, r + 1); colliders.push({ x, z, r });
     const c = new THREE.Color().setRGB(0.85 + rnd() * 0.2, 0.9 + rnd() * 0.15, 0.8 + rnd() * 0.25);
-    gLists[v].push({ x, y: h - 0.4, z, ry: rnd() * Math.PI * 2, s, c });
+    const ry = rnd() * Math.PI * 2;
+    gLists[v].push({ x, y: h - 0.4, z, ry, s, c });
     out.logs.push({ x, z, r: giants[v].R0 * s, y: h - 0.4, H: giants[v].H * s });
+    perchTree('giant', giants[v].perches, x, h - 0.4, z, ry, s, giants[v].R0 * s, giants[v].H * s);
     return true;
   };
   for (const [x, z] of heroes) placeGiant(x, z, true);
@@ -648,7 +665,9 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     const v = Math.floor(rnd() * 4);
     const ms = 0.8 + rnd() * 0.45;
     (out.mediums ||= []).push({ x, z, y: h - 0.3, H: meds[v].H * ms });
-    mLists[v].push({ x, y: h - 0.3, z, ry: rnd() * Math.PI * 2, s: ms, c: new THREE.Color().setRGB(0.85 + rnd() * 0.25, 0.9 + rnd() * 0.15, 0.8 + rnd() * 0.3) });
+    const mry = rnd() * Math.PI * 2;
+    if (meds[v].H * ms > 9) perchTree('med', meds[v].perches, x, h - 0.3, z, mry, ms);
+    mLists[v].push({ x, y: h - 0.3, z, ry: mry, s: ms, c: new THREE.Color().setRGB(0.85 + rnd() * 0.25, 0.9 + rnd() * 0.15, 0.8 + rnd() * 0.3) });
     n++;
   }
   meds.forEach((g, i) => impPair(BT.mBark, BT.mLeaf, g.bark, g.leaf, bark.medium, fol.medium.mat, mLists[i]));
