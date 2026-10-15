@@ -113,7 +113,8 @@ export class Player {
     this.moving = len > 0.01;
     if (this.moving) dir.multiplyScalar(1 / len);
 
-    const ground0 = T.heightAt(this.pos.x, this.pos.z), lvl0 = T.waterLevelAt(this.pos.x, this.pos.z);
+    const gAt = this.groundFn || T.heightAt, wAt = this.waterFn || T.waterLevelAt;
+    const ground0 = gAt(this.pos.x, this.pos.z), lvl0 = wAt(this.pos.x, this.pos.z);
     const depth0 = lvl0 - ground0;
     this.swim = depth0 > 1.25;
     this.wade = Math.max(0, Math.min(1, (lvl0 - this.pos.y) / 1.2));
@@ -135,9 +136,9 @@ export class Player {
     let nx = this.pos.x + moveDir.x * this.speed * dt, nz = this.pos.z + moveDir.y * this.speed * dt;
 
     const blocked = (x, z) => {
-      const h1 = T.heightAt(x, z), d = Math.hypot(x - this.pos.x, z - this.pos.z);
+      const h1 = gAt(x, z), d = Math.hypot(x - this.pos.x, z - this.pos.z);
       if (d < 1e-5) return false;
-      return !this.swim && (h1 - ground0) / d > 1.05 && h1 > T.waterLevelAt(x, z) - 1.0;
+      return !this.swim && (h1 - ground0) / d > 1.05 && h1 > wAt(x, z) - 1.0;
     };
     if (blocked(nx, nz)) {
       if (!blocked(nx, this.pos.z)) nz = this.pos.z;
@@ -154,7 +155,7 @@ export class Player {
     if (rr > 182) { nx *= 182 / rr; nz *= 182 / rr; }
     this.pos.x = nx; this.pos.z = nz;
 
-    const ground = T.heightAt(nx, nz), lvl = T.waterLevelAt(nx, nz);
+    const ground = gAt(nx, nz), lvl = wAt(nx, nz);
     if (lvl - ground > 1.25) {
       this.pos.y = damp(this.pos.y, lvl - (this.rig ? 0.14 : 1.02) + Math.sin(performance.now() * 0.002) * 0.04, 6, dt);
       this.vy = 0; this.onGround = true;
@@ -261,7 +262,8 @@ export class Player {
     }
     this.camHit = damp(this.camHit ?? dist, dist, dist < (this.camHit ?? dist) ? 20 : 4, dt);
     const c = dir.multiplyScalar(Math.min(camD, this.camHit)).add(this.camTarget);
-    c.y = Math.max(c.y, T.heightAt(c.x, c.z) + 0.4, T.waterLevelAt(c.x, c.z) + 0.3);
+    c.y = Math.max(c.y, (this.groundFn || T.heightAt)(c.x, c.z) + 0.4, (this.waterFn || T.waterLevelAt)(c.x, c.z) + 0.3);
+    if (this.camCeil) c.y = Math.min(c.y, this.camCeil(c.x, c.z) - 0.35); // barlang mennyezete
     camera.position.copy(c);
     camera.lookAt(this.camTarget);
   }

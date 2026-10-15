@@ -14,6 +14,9 @@ export const G = {
   uWet: { value: 0 },    // felületek nedvessége 0..1 (késve követi az esőt)
   uFlash: { value: 0 },  // villámfény
   uBoltDir: { value: new THREE.Vector3(1, 0.3, 0).normalize() },
+  // barlangszáj a sziklafalban: a terep itt átlátszó (x, középmagasság, fél-szélesség, fél-magasság), z-sáv és padlószint
+  uMouth: { value: new THREE.Vector4(0, -100, 0, 0) },
+  uMouthZ: { value: new THREE.Vector3(0, 0, 0) },
 };
 
 export const NOISE = /* glsl */`

@@ -8,6 +8,20 @@ export const POND = { x: 10, z: -44, r: 11 };
 export const CAMP = { x: -4, z: 3 };
 // Ősi templomrom a fennsíkon (a lépcső dél felé, +z irányba néz)
 export const TEMPLE = { x: -45, z: -95, y: 18.3 };
+// A Napkapu: kőkör a völgy délnyugati végén (y-t a modul végén számoljuk a kiegyenlítés előtti terepből)
+export const NAPKAPU = { x: -100, z: 105, y: 0 };
+// Barlang a vízesés mögött: a nyugati parttól párkány vezet a szájához
+export const CAVE_MOUTH = { x: 7.6, z: -51.6, y: 0.35 };
+const LEDGE = [[-0.8, -46.6], [1.6, -48.6], [5, -50.0], [7, -50.8], [7.6, -51.5], [7.6, -52.3]];
+export function ledgeDist(x, z) {
+  let d = 1e9;
+  for (let i = 0; i < LEDGE.length - 1; i++) {
+    const [ax, az] = LEDGE[i], [bx, bz] = LEDGE[i + 1], vx = bx - ax, vz = bz - az;
+    const t0 = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    d = Math.min(d, Math.hypot(x - ax - vx * t0, z - az - vz * t0));
+  }
+  return d;
+}
 
 function catmull(pts, sub) {
   const out = [];
@@ -84,7 +98,7 @@ export function forestFn(x, z) {
   return f;
 }
 
-export function heightFn(x, z) {
+export function heightFn(x, z, skipNK = false) {
   const r = Math.hypot(x, z);
   const rc = Math.hypot(x, z - 6);
   let L = 2.4 + 2.6 * fbm(x * 0.011, z * 0.011, 4) + 0.7 * fbm(x * 0.05 + 7, z * 0.05 - 3, 3);
@@ -100,6 +114,11 @@ export function heightFn(x, z) {
     const rw = 3.0 + 1.2 * simplex2(x * 0.03, z * 0.03);
     rf = smoothstep(rw + 3.5, rw - 0.8, rd);
     if (rf > 0) L = lerp(L, -1.6, rf);
+  }
+  // párkány a sziklafal tövében a vízesés mögé (csak feltölt, nem mélyít)
+  {
+    const lf = smoothstep(1.7, 0.75, ledgeDist(x, z));
+    if (lf > 0) L = lerp(L, Math.max(L, 0.36 + 0.08 * simplex2(x * 0.7, z * 0.7)), lf);
   }
   const t = cliffT(x, z);
   let h = L, uf = 0;
@@ -117,8 +136,13 @@ export function heightFn(x, z) {
   const rim = smoothstep(150, 196, r) * (22 + 14 * fbm(x * 0.012 + 40, z * 0.012, 3))
     + smoothstep(200, 430, r) * (55 + 45 * fbm(x * 0.004, z * 0.004, 3));
   h += rim * (1 - Math.max(rf, uf * t));
+  if (!skipNK) {
+    const dN = Math.hypot(x - NAPKAPU.x, z - NAPKAPU.z);
+    if (dN < 24) h = lerp(h, NAPKAPU.y, smoothstep(24, 12, dN));
+  }
   return h;
 }
+NAPKAPU.y = heightFn(NAPKAPU.x, NAPKAPU.z, true);
 
 export function buildTerrain() {
   const H = new Float32Array(N * N), NY = new Float32Array(N * N);

@@ -145,6 +145,7 @@ void main(){
     });
     const pts = new THREE.Points(g, this.splashMat);
     pts.frustumCulled = false;
+    this.splashPts = pts;
     this.scene.add(pts);
   }
 
@@ -231,7 +232,9 @@ void main(){
     const wetRate = this.rain > G.uWet.value ? 0.06 : 0.012; // gyorsan ázik, lassan szárad
     G.uWet.value += Math.sign(this.rain - G.uWet.value) * Math.min(Math.abs(this.rain - G.uWet.value), wetRate * dt);
     G.uRain.value = this.rain;
-    this.rainMesh.geometry.instanceCount = Math.floor(this.rainN * Math.min(1, this.rain * 1.25));
+    // barlangban (shelter=1) nem esik és alig hallani
+    if (this.splashPts) this.splashPts.visible = !(this.shelter > 0.3);
+    this.rainMesh.geometry.instanceCount = Math.floor(this.rainN * Math.min(1, this.rain * 1.25) * (this.shelter > 0.3 ? 0 : 1));
     this.stormy = this.rain > 0.85;
 
     // villámok
@@ -278,6 +281,6 @@ void main(){
     this.splashMat.uniforms.uScreenH.value = ctx.screenH;
     const cov = this.canopy ? this.canopy.at(camera.position.x, camera.position.z) : 0;
     this.coverHere = cov;
-    audio?.setRain(r, cov);
+    audio?.setRain(r * (1 - 0.85 * (this.shelter || 0)), Math.max(cov, this.shelter || 0));
   }
 }

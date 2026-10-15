@@ -128,6 +128,25 @@ export class JungleAudio {
   }
   squeal(pan = 0, vol = 0.3) { this.grunt(pan, vol, true); }
   sizzle() { if (this.ctx) { this.burst(4200, 0.4, 0.07, 1.6); this.burst(2600, 0.6, 0.05, 1.1); } }
+  // barlang: vízcsepp kis visszhanggal; Napkapu: felcsendülő akkord
+  drip(k = 1) {
+    if (!this.ctx) return;
+    const f = 1400 + Math.random() * 1600;
+    this.burst(f, 9, 0.05 * k, 0.07);
+    setTimeout(() => this.ctx && this.burst(f * 0.97, 9, 0.018 * k, 0.12), 140 + Math.random() * 60);
+  }
+  chord(vol = 0.25) {
+    if (!this.ctx) return;
+    const C = this.ctx, s = C.currentTime;
+    [196, 293.7, 392, 493.9, 587.3, 784].forEach((fr, i) => {
+      const o = C.createOscillator(), g = C.createGain();
+      o.type = i % 2 ? 'triangle' : 'sine'; o.frequency.value = fr;
+      o.connect(g).connect(this.master);
+      const t0 = s + i * 0.35;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol / (1 + i * 0.4), t0 + 1.2); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 7);
+      o.start(t0); o.stop(t0 + 7.2);
+    });
+  }
   plop() { if (this.ctx) this.burst(500 + Math.random() * 300, 1.2, 0.12, 0.18); }
   // jaguár: mély, reszelős morgás
   growl(vol = 0.5) {

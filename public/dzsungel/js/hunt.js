@@ -158,6 +158,10 @@ export class Hunt {
     this.noise = 0;            // zaj (pl. becsapódó lándzsa) a csordák riasztásához
   }
 
+  // a játékos felszíne (barlangban a barlang padlója)
+  gAt(x, z) { return (this.player.groundFn || this.T.heightAt)(x, z); }
+  wAt(x, z) { return (this.player.waterFn || this.T.waterLevelAt)(x, z); }
+
   okLand(x, z, shore = false) {
     const T = this.T, h = T.heightAt(x, z);
     if (Math.hypot(x, z) > 172 || T.slopeAt(x, z) > 0.55) return false;
@@ -222,7 +226,7 @@ export class Hunt {
     let tgt = null;
     for (let s = 1; s < 70; s += 0.5) {
       const x = o.x + d.x * s, y = o.y + d.y * s, z = o.z + d.z * s;
-      if (y < this.T.heightAt(x, z)) { tgt = new V3(x, y, z); break; }
+      if (y < this.gAt(x, z) || (this.player.camCeil && y > this.player.camCeil(x, z) + 0.3)) { tgt = new V3(x, y, z); break; }
     }
     // a célpont közelében álló vadra pontosítunk (a sugár a hátukon csúszna át)
     let best = 1e9;
@@ -323,12 +327,12 @@ export class Hunt {
           continue;
         }
         // víz: hal, aztán fennmarad a felszínen
-        const lvl = T.waterLevelAt(tip.x, tip.z), floor = T.heightAt(tip.x, tip.z);
+        const lvl = this.wAt(tip.x, tip.z), floor = this.gAt(tip.x, tip.z);
         if (tip.y < lvl && lvl - floor > 0.15) {
           // a víz alatt még kb. 1,4 m-t halad tovább: ezen a szakaszon keressük a halat
           for (let k = 0; k <= 1.4 && !S.fish; k += 0.1) {
             const q2 = tip.clone().addScaledVector(dir, k);
-            if (q2.y < T.heightAt(q2.x, q2.z)) break;
+            if (q2.y < this.gAt(q2.x, q2.z)) break;
             for (const fi of this.animals.fish) {
               if (fi.caught || !fi.m.visible) continue;
               if (fi.m.position.distanceTo(q2) < 0.38) { fi.caught = true; S.fish = fi; msg = 'Halat szigonyoztál! Hozd ki a lándzsát.'; break; }
@@ -352,8 +356,8 @@ export class Hunt {
           }
         }
         if (S.state !== 'fly') break;
-        // talaj (és a templom kövei)
-        if (tip.y < floor) {
+        // talaj (és a templom kövei), barlangban a mennyezet is
+        if (tip.y < floor || (this.player.camCeil && tip.y > this.player.camCeil(tip.x, tip.z) + 0.3)) {
           S.state = 'stuck';
           const steep = dir.y > -0.25; // laposan érkezve elfekszik
           const d2 = steep ? new V3(dir.x, -0.18, dir.z).normalize() : dir;
@@ -369,10 +373,10 @@ export class Hunt {
       const c = S.mid || (S.mid = S.pos.clone().addScaledVector(S.dir, 0.7));
       S.vel.multiplyScalar(Math.exp(-dt * 1.5));
       c.addScaledVector(S.vel, dt);
-      const lvl = T.waterLevelAt(c.x, c.z);
+      const lvl = this.wAt(c.x, c.z);
       c.y = damp(c.y, lvl - 0.02 + Math.sin(this.time * 1.7) * 0.01, 3, dt);
       S.dir.y = damp(S.dir.y, 0, 2, dt); S.dir.normalize();
-      if (T.heightAt(c.x, c.z) > lvl - 0.05) S.vel.set(0, 0, 0); // partra sodródott
+      if (this.gAt(c.x, c.z) > lvl - 0.05) S.vel.set(0, 0, 0); // partra sodródott
       this.placeSpear(S, c.clone().addScaledVector(S.dir, 0.75), S.dir);
     } else if (S.state === 'carcass') {
       S.prey.mesh.getMatrixAt(S.prey.i, _m);

@@ -144,9 +144,12 @@ varying vec3 vWP; varying vec3 vWN;
 uniform sampler2D tSplat; uniform sampler2D tCanopy;
 uniform sampler2D tGd; uniform sampler2D tGn; uniform sampler2D tFd; uniform sampler2D tFn;
 uniform sampler2D tMd; uniform sampler2D tMn; uniform sampler2D tRd; uniform sampler2D tRn; uniform sampler2D tRa;
+uniform vec4 uMouth; uniform vec3 uMouthZ;
 ${TRI}
 vec3 jN; float jRough; float jCaus;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
+{ vec2 mq = (vWP.xy - uMouth.xy) / max(uMouth.zw, vec2(1e-3));
+  if (dot(mq, mq) < 1.0 && vWP.y > uMouthZ.z && vWP.z < uMouthZ.x && vWP.z > uMouthZ.y) discard; }
 {
   vec2 tuv = (vWP.xz + 200.0) / 400.0 * (400.0 / 401.0) + 0.5 / 401.0;
   vec4 sp = texture2D(tSplat, tuv);
@@ -276,6 +279,52 @@ vec3 jN; float jRough; float jIn;`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = jRough;')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize((viewMatrix * vec4(jN, 0.0)).xyz);')
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.indirectDiffuse *= 1.0 - jIn * 0.5;');
+  });
+}
+
+// Barlangkő: nedves, sötét szikla vízcsíkokkal; a szájtól befelé (aS = távolság a bejárattól) fogy a szórt és a napfény
+export function caveMatPBR(T) {
+  const m = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
+  m.userData.u = { tRd: { value: T.diff }, tRn: { value: T.nor }, tRa: { value: T.arm } };
+  return patch(m, 'cavePBR', sh => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+attribute float aS;
+varying float vS;
+varying vec3 vWP;
+varying vec3 vWN;`)
+      .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+vS = aS;
+` + WP_V + WN_V);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying float vS; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tRd; uniform sampler2D tRn; uniform sampler2D tRa;
+${TRI}
+vec3 jN; float jRough; float jSunK;`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{ vec3 N = normalize(vWN);
+  vec3 rD, rN, rA;
+  triSample(tRd, tRn, tRa, vWP / 3.2, N, rD, rN, rA);
+  float l = dot(rD, vec3(0.33));
+  vec3 c = mix(vec3(l), rD, 0.5) * vec3(0.62, 0.64, 0.66);
+  // lefolyó víz csíkjai a falon, sáros-nedves padló
+  float streak = smoothstep(0.55, 0.85, jn2(vec2((vWP.x - vWP.z) * 1.1, vWP.y * 0.1))) * (1.0 - abs(N.y));
+  float floorK = smoothstep(0.55, 0.85, N.y);
+  c = mix(c, c * vec3(0.75, 0.68, 0.58), floorK);
+  c *= 1.0 - streak * 0.35;
+  diffuseColor.rgb *= c * mix(1.0, rA.r, 0.8);
+  jN = rN; jRough = mix(mix(rA.g * 0.85, 0.22, streak), 0.35, floorK * 0.6);
+  jSunK = 1.0 - smoothstep(0.5, 4.0, vS); }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = jRough;`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+normal = normalize((viewMatrix * vec4(jN, 0.0)).xyz);`)
+      // az #include a patch után bomlik ki, ezért a teljes darabot cseréljük
+      .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace('getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight ); directLight.color *= jSunK;'))
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+{ float ind = mix(1.0, 0.035, smoothstep(0.5, 11.0, vS));
+  reflectedLight.indirectDiffuse *= ind; reflectedLight.indirectSpecular *= ind; }`);
   });
 }
 

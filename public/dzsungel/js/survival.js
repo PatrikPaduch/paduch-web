@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { G, patch, ADD } from './shaders.js';
-import { CAMP, POND, RIVER, TEMPLE, cliffZ, cliffW } from './terrain.js';
+import { CAMP, POND, RIVER, TEMPLE, NAPKAPU, cliffZ, cliffW } from './terrain.js';
 import { cellUV } from './textures.js';
 
 const V3 = THREE.Vector3;
@@ -79,6 +79,7 @@ export class Survival {
       const h = T.heightAt(x, z);
       if (h < T.waterLevelAt(x, z) + 0.3 || T.slopeAt(x, z) > 0.55 || Math.hypot(x, z) > 175) return null;
       if (Math.hypot(x - TEMPLE.x, z - TEMPLE.z) < 20) return null;
+      if (Math.hypot(x - NAPKAPU.x, z - NAPKAPU.z) < 11) return null;
       return h;
     };
     const spots = { stick: [], stone: [], vine: [], leaf: [], coconut: [] };

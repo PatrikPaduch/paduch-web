@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 60C14 46 10 26 32 4c22 22 18 42 0 56z' fill='%232f7d32'/%3E%3Cpath d='M32 58V12' stroke='%23b8e08a' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
 { "imports": {
@@ -28,6 +28,7 @@
     <div class="stat" data-k="stam" title="Állóképesség"><svg viewBox="0 0 24 24"><path d="M13.5 2L4 14h6.5l-1 8L19 10h-6.5z"/></svg><div class="bar"><i></i></div></div>
   </div>
   <div id="compass"><div id="cstrip"></div><div id="cmarks"></div><div id="cneedle"></div></div>
+  <div id="objective"><span>◎</span><b></b></div>
   <div id="clock"><span id="clockIcon">☀</span><span id="clockT">07:30</span></div>
   <div id="prompt"></div>
   <div id="toast"></div>
@@ -39,6 +40,7 @@
     <div><kbd>W A S D</kbd> mozgás &nbsp; <kbd>Shift</kbd> futás &nbsp; <kbd>Szóköz</kbd> ugrás</div>
     <div><kbd>Tab</kbd> barkácsolás &nbsp; <kbd>F</kbd> evés &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> balta, lándzsa, fáklya</div>
     <div><kbd>Bal gomb</kbd> döfés, nyomva tartva célzás és dobás (vagy <kbd>Q</kbd>) &nbsp; <kbd>X</kbd> lopakodás</div>
+    <div><kbd>M</kbd> térkép &nbsp; <kbd>J</kbd> napló</div>
     <div><kbd>E</kbd> felvétel / használat &nbsp; <kbd>C</kbd> séta / kocogás &nbsp; <kbd>Görgő</kbd> kamera távolság &nbsp; <kbd>H</kbd> fotó mód</div>
     <div><kbd>← →</kbd> kamera forgatása &nbsp; <kbd>T</kbd> idő gyorsítása &nbsp; <kbd>R</kbd> időjárás &nbsp; <kbd>Esc</kbd> menü</div>
   </div>
@@ -63,6 +65,27 @@
     <div class="hint top">Gyűjts ágat, követ, liánt és nagy levelet (E), aztán készíts eszközöket.</div>
     <div id="recipes"></div>
     <button id="craftClose" class="primary">Bezárás (Tab)</button>
+  </div>
+</div>
+
+<div id="journal" class="hidden">
+  <div class="book">
+    <div class="bLeft">
+      <div class="bHead">Hollós Vera naplója <span id="jCount"></span></div>
+      <div class="jObjWrap"><span>Jelenlegi cél</span><div id="jObj"></div></div>
+      <div id="jList"></div>
+    </div>
+    <div class="bRight"><div id="jPage"></div></div>
+    <button class="bClose" id="jClose">Bezárás (J)</button>
+  </div>
+</div>
+
+<div id="mapPanel" class="hidden">
+  <div class="mapWrap">
+    <div class="mapHead">A völgy térképe</div>
+    <canvas id="mapCanvas" width="900" height="900"></canvas>
+    <div id="mapInfo"></div>
+    <button class="bClose" id="mapClose">Bezárás (M)</button>
   </div>
 </div>
 

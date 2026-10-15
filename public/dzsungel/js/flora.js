@@ -4,7 +4,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32, simplex2, smoothstep } from './noise.js';
 import { cellUV } from './textures.js';
 import { foliageMat, barkMat, plantMat, grassMat, rockMat, rockMatPBR } from './materials.js';
-import { POND, CAMP, TEMPLE, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
+import { POND, CAMP, TEMPLE, NAPKAPU, CAVE_MOUTH, ledgeDist, cliffZ, cliffW, RIVER, polyInfo } from './terrain.js';
 
 const V3 = THREE.Vector3;
 const UP = new V3(0, 1, 0);
@@ -519,6 +519,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     if (Math.hypot(x - 2, z - 18) < (o.spawn ?? 4)) return null;
     // a templomrom alapterülete: fák messzebb, aljnövényzet a falakig, a lépcső előtti tér szabad
     const tx = Math.abs(x - TEMPLE.x), tz = z - TEMPLE.z;
+    if (Math.hypot(x - NAPKAPU.x, z - NAPKAPU.z) < (o.big ? 17 : 10.5)) return null; // a Napkapu köre
+    if (!o.grass && ledgeDist(x, z) < (o.big ? 3 : 1.4)) return null; // a párkány járható maradjon
     if (o.big ? Math.hypot(tx, tz) < 20 : Math.max(tx, Math.abs(tz)) < 13.6 || (tx < 6 && tz > 0 && tz < 23)) return null;
     return h;
   };
@@ -792,6 +794,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   const rocks = [0, 1, 2, 3, 4].map(i => makeRock(1700 + i * 3));
   const rkL = [[], [], [], [], []];
   const addRock = (x, z, s, sink = 0.3, flatY = 1) => {
+    if (ledgeDist(x, z) < s + 1.0 || Math.hypot(x - CAVE_MOUTH.x, z - CAVE_MOUTH.z) < s + 2.2) return; // a párkány és a barlangszáj szabadon marad
     const h = T.heightAt(x, z);
     const g = 0.75 + rnd() * 0.35;
     rkL[Math.floor(rnd() * 5)].push({ x, y: h - s * sink, z, ry: rnd() * 6.28, rx: (rnd() - 0.5) * 0.3, rz: (rnd() - 0.5) * 0.3, s, sy: flatY, c: new THREE.Color(g, g * (0.97 + rnd() * 0.05), g * 0.95) });
