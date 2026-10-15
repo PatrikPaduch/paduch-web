@@ -515,6 +515,16 @@ export class JaguarBody extends Gait {
 // ---------------------------------------------------------------- letöltött, textúrázott modell (Sketchfab: "Jaguarsf")
 // A modell saját csontvázát a közös járás-logika mozgatja: a nyugalmi pózra a test tengelyei körüli elforgatások
 // kerülnek (medence-dőlés, gerinc, nyak, fej, állkapocs, fülek, farok), a lábakat IK teszi a talppontokra.
+// általános GLB-betöltő (a hiba nem állítja meg a játékot: null, és marad a tartalék)
+export async function loadModel(url) {
+  try {
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    return await new GLTFLoader().loadAsync(url);
+  } catch (e) {
+    console.warn('A modell nem tölthető be:', url, e);
+    return null;
+  }
+}
 export async function loadJaguarModel() {
   try {
     const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');

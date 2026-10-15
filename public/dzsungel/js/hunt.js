@@ -4,6 +4,7 @@
 // vízen fennmarad, és vissza kell érte menni.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { patch } from './shaders.js';
 import { POND, RIVER, CAMP, TEMPLE } from './terrain.js';
 
@@ -107,16 +108,18 @@ function capybaraGeo() {
 const SPECIES = {
   peccary: { name: 'Pekari', icon: '🐗', geo: peccaryGeo, meat: 3, hear: 17, walk: 0.75, flee: 6.8, stride: 0.55, len: 0.36, hy: 0.44, r: 0.25, cadence: 1.0 },
   capybara: { name: 'Kapibara', icon: '🦫', geo: capybaraGeo, meat: 4, hear: 11, walk: 0.55, flee: 4.6, stride: 0.45, len: 0.4, hy: 0.48, r: 0.31, cadence: 0.8 },
+  // letöltött, animált modell (Sketchfab, WildMesh 3D): fehérfarkú szarvas méretűre kicsinyítve; óvatos, messziről meghall
+  deer: { name: 'Szarvas', icon: '🦌', model: 'deer', k: 0.72, clipSpeed: 1.72, meat: 6, hear: 24, walk: 0.9, flee: 6.4, stride: 1, len: 0.36, hy: 0.72, r: 0.27, cadence: 1, drop: -0.24 },
 };
 
 export class Hunt {
-  constructor(scene, T, flora, audio, fx, surv, player, animals) {
-    Object.assign(this, { scene, T, flora, audio, fx, surv, player, animals });
+  constructor(scene, T, flora, audio, fx, surv, player, animals, models = {}) {
+    Object.assign(this, { scene, T, flora, audio, fx, surv, player, animals, models });
     this.time = 0;
     [this.mat, this.depth] = preyMat();
     this.groups = []; this.prey = [];
     this.meshes = {};
-    const spots = { peccary: [], capybara: [] };
+    const spots = { peccary: [], capybara: [], deer: [] };
     // pekari-csordák az erdőben
     for (let h = 0, tries = 0; h < 6 && tries < 400; tries++) {
       const x = -165 + rnd() * 330, z = -165 + rnd() * 330;
@@ -133,7 +136,16 @@ export class Hunt {
       if (!this.okLand(x, z, true) || this.groups.some((g) => Math.hypot(g.cx - x, g.cz - z) < 30)) continue;
       spots.capybara.push(this.addGroup('capybara', x, z, 2 + Math.floor(rnd() * 2))); h++;
     }
+    // szarvasok: kis csoportok az erdő szélén, tisztásokon (csak ha a modell betöltődött)
+    if (models.deer) for (let h = 0, tries = 0; h < 4 && tries < 400; tries++) {
+      const x = -165 + rnd() * 330, z = -165 + rnd() * 330, fo = this.T.forestAt(x, z);
+      if (!this.okLand(x, z) || fo < 0.15 || fo > 0.85 || Math.hypot(x - CAMP.x, z - CAMP.z) < 40) continue;
+      if (this.groups.some((g) => Math.hypot(g.cx - x, g.cz - z) < 45)) continue;
+      spots.deer.push(this.addGroup('deer', x, z, 1 + Math.floor(rnd() * 3))); h++;
+    }
+    for (const p of this.prey) if (SPECIES[p.sp].model) this.makeModelPrey(p, models[SPECIES[p.sp].model]);
     for (const sp of Object.keys(SPECIES)) {
+      if (SPECIES[sp].model) continue;
       const list = this.prey.filter((p) => p.sp === sp);
       const geo = SPECIES[sp].geo();
       const anim = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, list.length) * 3), 3);
@@ -157,6 +169,42 @@ export class Hunt {
     this.stab = 0;
     this.noise = 0;            // zaj (pl. becsapódó lándzsa) a csordák riasztásához
   }
+
+  // modellel ábrázolt vad: saját klón csontvázzal és animációkkal; a példány-mátrix kezelése ugyanazon a felületen,
+  // mint az InstancedMesh-é (setMatrixAt / getMatrixAt), így a mozgás, az elejtés és a beleállt lándzsa kódja közös
+  makeModelPrey(p, src) {
+    const S = SPECIES[p.sp], o = skClone(src.scene), K = new THREE.Matrix4().makeScale(S.k, S.k, S.k), Ki = K.clone().invert();
+    o.matrixAutoUpdate = false;
+    const antlers = rnd() < 0.5; // a suták agancs nélkül
+    o.traverse((c) => {
+      if (!c.isMesh) return;
+      c.castShadow = true; c.receiveShadow = true; c.frustumCulled = false;
+      if (!c.material.userData.patched) { patch(c.material, 'preyGLB'); c.material.userData.patched = true; if (!/Antler/.test(c.material.name)) c.material.color.setRGB(1.18, 1.0, 0.82); } // melegebb, vörösesbarna bunda
+      if (/Antler/.test(c.name) && !antlers) c.visible = false;
+    });
+    this.scene.add(o);
+    const mixer = new THREE.AnimationMixer(o);
+    const idle = mixer.clipAction(src.animations.find((a) => /Idle/.test(a.name))), walk = mixer.clipAction(src.animations.find((a) => /Walk/.test(a.name)));
+    idle.play(); walk.play(); walk.setEffectiveWeight(0); idle.time = rnd() * idle.getClip().duration;
+    Object.assign(p, { obj: o, mixer, acts: { idle, walk }, ww: 0, i: 0 });
+    p.mesh = {
+      setMatrixAt: (i, M) => { o.matrix.multiplyMatrices(M, K); o.matrixWorldNeedsUpdate = true; o.visible = Math.abs(M.elements[0]) + Math.abs(M.elements[1]) + Math.abs(M.elements[2]) > 1e-6; },
+      getMatrixAt: (i, M) => M.multiplyMatrices(o.matrix, Ki),
+      instanceMatrix: { needsUpdate: false },
+    };
+    p.anim = { setXYZ: () => {}, needsUpdate: false };
+  }
+  // animáció-keverés: áll/legel (Idle) és lépked (WalkFast) a sebesség szerint; menekülve szökken
+  animModel(m, S, dt) {
+    const moving = m.state !== 'dead' && m.speed > 0.1;
+    m.ww = damp(m.ww, moving ? 1 : 0, 6, dt);
+    m.acts.walk.setEffectiveWeight(m.ww); m.acts.idle.setEffectiveWeight(1 - m.ww);
+    m.acts.walk.timeScale = Math.min(3.2, Math.max(0.5, m.speed / (S.clipSpeed * S.k * m.s)));
+    m.mixer.timeScale = m.state === 'dead' ? 0 : 1;
+    if (m.obj.visible && m.pos.distanceTo(this.player.pos) < 90) m.mixer.update(dt);
+  }
+  hop(m) { return m.state === 'flee' && m.alive ? Math.abs(Math.sin(this.time * 6.5 + m.phase)) * 0.32 * Math.min(1, Math.max(0, (m.speed - 3) / 3)) : 0; }
+  label(p) { const S = SPECIES[p.sp]; return `${S.icon} ${S.name}`; }
 
   // a játékos felszíne (barlangban a barlang padlója)
   gAt(x, z) { return (this.player.groundFn || this.T.heightAt)(x, z); }
@@ -269,7 +317,7 @@ export class Hunt {
   kill(p, at) {
     p.alive = false; p.state = 'dead'; p.deadK = 0; p.speed = 0;
     const S = SPECIES[p.sp];
-    this.audio?.squeal(0, p.sp === 'peccary' ? 0.35 : 0.15);
+    this.audio?.squeal(0, p.sp === 'peccary' ? 0.35 : p.sp === 'deer' ? 0.22 : 0.15);
     this.alarm(p.g, this.player.pos);
     for (const g of this.groups) if (g !== p.g && Math.hypot(g.cx - p.pos.x, g.cz - p.pos.z) < 30) this.alarm(g, p.pos);
     if (at) { at.prey = p; }
@@ -530,9 +578,10 @@ export class Hunt {
     // példány-mátrix: helyzet, irány, elejtve oldalra dől
     const roll = m.deadK * Math.PI / 2 * 0.92 * (m.rollSign || 1);
     _q.setFromAxisAngle(UP, m.yaw); _q2.setFromAxisAngle(_v.set(0, 0, 1), roll); _q.multiply(_q2);
-    _v2.set(m.pos.x, m.pos.y - m.deadK * 0.18 * m.s, m.pos.z);
+    _v2.set(m.pos.x, m.pos.y - m.deadK * (S.drop ?? 0.18) * m.s + (S.model ? this.hop(m) : 0), m.pos.z);
     _m.compose(_v2, _q, _s.setScalar(m.s));
     m.mesh.setMatrixAt(m.i, _m); m.mesh.instanceMatrix.needsUpdate = true;
+    if (S.model) this.animModel(m, S, dt);
   }
 
   // ---------------------------------------------------------------- frame

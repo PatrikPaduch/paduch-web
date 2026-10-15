@@ -8,7 +8,7 @@ import { loadPlants } from './plants.js';
 import { loadCharacter } from './character.js';
 import { Weather, WEATHER_LABELS } from './weather.js';
 import { Animals } from './animals.js';
-import { loadJaguarModel } from './jaguar.js';
+import { loadJaguarModel, loadModel } from './jaguar.js';
 import { Temple } from './temple.js';
 import { Survival, ITEMS, TOOLS } from './survival.js';
 import { Hunt } from './hunt.js';
@@ -119,7 +119,8 @@ async function init() {
   const terrainHeight = T.heightAt;
   T.heightAt = (x, z) => Math.max(terrainHeight(x, z), temple.heightAt(x, z));
   const surv = new Survival(scene, T, flora, player);
-  const hunt = sceneDiff(() => new Hunt(scene, T, flora, audio, fx, surv, player, animals));
+  const DEERM = A && !qs.has('noglb') ? await loadModel('assets/models/deer.glb') : null;
+  const hunt = sceneDiff(() => new Hunt(scene, T, flora, audio, fx, surv, player, animals, { deer: DEERM }));
   // barlang a vízesés mögött: a játékos a barlang padlóján jár, a kamera nem megy ki a sziklába
   const cave = new Cave(scene, A ? A.rock_face_03 : flora.rockTex, flora);
   const inCave = () => cave.near(player.pos) && player.pos.z < -51.0;
@@ -362,7 +363,7 @@ async function init() {
     if (hunt.aim) return hunt.charge() > 0.02 ? `Erő ${Math.round(hunt.charge() * 100)}% · engedd el a dobáshoz` : 'Célzás… (rövid kattintás: döfés)';
     if (hunt.nearSpear(player.pos)) return `<b>E</b>🔱 Lándzsa visszavétele${hunt.shot.fish ? ' a hallal' : ''}`;
     const cc = hunt.nearCarcass(player.pos);
-    if (cc) return `<b>E</b>${cc.sp === 'peccary' ? '🐗 Pekari' : '🦫 Kapibara'} feldolgozása`;
+    if (cc) return `<b>E</b>${hunt.label(cc)} feldolgozása`;
     if (surv.canCook(player.pos)) return '<b>E</b>🔥 Sütés a tűzön';
     const it = surv.nearestItem(player.pos);
     if (it) return `<b>E</b>${ITEMS[it.type].icon} ${ITEMS[it.type].name} felvétele`;
