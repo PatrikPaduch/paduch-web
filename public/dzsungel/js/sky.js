@@ -188,11 +188,18 @@ export class Sky {
     if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
     u.normalize();
     const v = new THREE.Vector3().crossVectors(lz, u);
-    let du = focus.dot(u), dv = focus.dot(v);
-    du = Math.round(du / texel) * texel; dv = Math.round(dv / texel) * texel;
-    const c = new THREE.Vector3().addScaledVector(u, du).addScaledVector(v, dv).addScaledVector(lz, focus.dot(lz));
-    this.light.target.position.copy(c);
-    this.light.position.copy(c).addScaledVector(lz, 180);
-    this.light.target.updateMatrixWorld();
+    // az árnyék-kamera csak akkor ugrik, ha a fókusz a sugár negyedénél messzebb került, vagy a nap ~0,2°-ot fordult;
+    // így az árnyék-gyorsítótár (shadowcache.js) a legtöbb képkockán érvényes marad
+    const moved = !this.shC || this.shC.distanceTo(focus) > R * 0.25 || !this.shDir || this.shDir.dot(lz) < 0.999994 || this.shR !== R;
+    if (moved) {
+      this.shC = (this.shC || new THREE.Vector3()).copy(focus); this.shDir = (this.shDir || new THREE.Vector3()).copy(lz); this.shR = R;
+      let du = focus.dot(u), dv = focus.dot(v);
+      du = Math.round(du / texel) * texel; dv = Math.round(dv / texel) * texel;
+      const c = new THREE.Vector3().addScaledVector(u, du).addScaledVector(v, dv).addScaledVector(lz, focus.dot(lz));
+      this.light.target.position.copy(c);
+      this.light.position.copy(c).addScaledVector(lz, 180);
+      this.light.target.updateMatrixWorld();
+      this.shadowMoved = true;
+    }
   }
 }

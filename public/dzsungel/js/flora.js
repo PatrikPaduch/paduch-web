@@ -446,7 +446,7 @@ function thinLeaves(geo, keep = 0.34, grow = 1.5) {
 // Egy anyag = egy BatchedMesh = egy rajzolási hívás (multi-draw), példányonkénti látótér- és távolság-vágással
 class Batch {
   constructor(mat, opts = {}) { this.mat = mat; this.opts = opts; this.items = []; this.inst = []; this.frac = 1; this.rMul = 1; this.isGrass = !!opts.grass; }
-  add(geo, list, R = Infinity, sMul = 1, lo = null) { if (list.length) this.items.push({ geo, list, R, sMul, lo }); }
+  add(geo, list, R = Infinity, sMul = 1, lo = null) { if (!list.length) return null; const it = { geo, list, R, sMul, lo, refs: [] }; this.items.push(it); return it; }
   build(scene) {
     let nI = 0, nV = 0, nX = 0;
     for (const it of this.items) { nI += it.list.length; nV += it.geo.attributes.position.count; nX += it.geo.index.count; if (it.lo) { nV += it.lo.attributes.position.count; nX += it.lo.index.count; } }
@@ -463,7 +463,8 @@ class Batch {
         P.set(o.x, o.y, o.z); S.set(s * (o.sx || 1), s * (o.sy || 1), s * (o.sz || 1));
         M.compose(P, Q, S); bm.setMatrixAt(id, M);
         bm.setColorAt(id, o.c || W);
-        this.inst.push({ id, x: o.x, z: o.z, R: it.R, r: ((rank++) * 0.61803398875) % 1, gHi: gid, gLo, far: false });
+        const ref = { id, x: o.x, z: o.z, R: it.R, r: ((rank++) * 0.61803398875) % 1, gHi: gid, gLo, far: false, imp: false };
+        this.inst.push(ref); it.refs.push(ref);
       }
     }
     bm.castShadow = !!this.opts.cast; bm.receiveShadow = true;
@@ -476,11 +477,13 @@ class Batch {
   update(px, pz) {
     if (!this.mesh) return;
     for (const o of this.inst) {
-      let vis = o.r < this.frac;
+      let vis = o.r < this.frac && !o.imp;
       if (vis && o.R !== Infinity) { const R = o.R * this.rMul, dx = o.x - px, dz = o.z - pz; vis = dx * dx + dz * dz < R * R; }
       this.mesh.setVisibleAt(o.id, vis);
     }
   }
+  // impostor váltás: a távoli példány rejtve, helyette az impostor-lap látszik
+  setImp(o, imp) { o.imp = imp; if (this.mesh) this.mesh.setVisibleAt(o.id, !imp && o.r < this.frac); }
   // távoli példányok egyszerűsített geometriára váltanak
   updateLod(px, pz, D) {
     if (!this.mesh) return;
@@ -581,6 +584,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     still: barkMat(BX.bark, null),
   };
   out.bark = bark;
+  const impDefs = []; // fa-párok (törzs + lomb) az impostorokhoz
   const BT = {
     gBark: new Batch(bark.giant, { cast: true }),
     gLeaf: new Batch(fol.giant.mat, { cast: true, depth: fol.giant.depth }),
@@ -609,7 +613,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     if (rnd() > Math.pow(T.forestAt(x, z), 1.5)) continue;
     if (placeGiant(x, z, false)) n++;
   }
-  giants.forEach((g, i) => { BT.gBark.add(g.bark, gLists[i]); BT.gLeaf.add(g.leaf, gLists[i]); });
+  const impPair = (bb, bl, gb, gl, mb, ml, list) => { const a = bb.add(gb, list), b = bl.add(gl, list); if (a && b) impDefs.push({ parts: [[gb, mb], [gl, ml]], list, items: [a, b], batches: [bb, bl] }); };
+  giants.forEach((g, i) => impPair(BT.gBark, BT.gLeaf, g.bark, g.leaf, bark.giant, fol.giant.mat, gLists[i]));
 
   // --- Pálmák
   progress('Pálmák és fák');
@@ -629,7 +634,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     pLists[v].push({ x, y: h - 0.2, z, ry: rnd() * Math.PI * 2, s: 0.85 + rnd() * 0.3, c: new THREE.Color().setRGB(0.9 + rnd() * 0.15, 0.95 + rnd() * 0.1, 0.85 + rnd() * 0.2) });
     n++;
   }
-  palms.forEach((g, i) => { BT.pBark.add(g.bark, pLists[i]); BT.pLeaf.add(g.leaf, pLists[i]); });
+  palms.forEach((g, i) => impPair(BT.pBark, BT.pLeaf, g.bark, g.leaf, bark.palm, fol.palm.mat, pLists[i]));
 
   // --- Közepes fák
   const meds = [0, 1, 2, 3].map(i => makeMedium(500 + i * 23));
@@ -646,7 +651,7 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     mLists[v].push({ x, y: h - 0.3, z, ry: rnd() * Math.PI * 2, s: ms, c: new THREE.Color().setRGB(0.85 + rnd() * 0.25, 0.9 + rnd() * 0.15, 0.8 + rnd() * 0.3) });
     n++;
   }
-  meds.forEach((g, i) => { BT.mBark.add(g.bark, mLists[i]); BT.mLeaf.add(g.leaf, mLists[i]); });
+  meds.forEach((g, i) => impPair(BT.mBark, BT.mLeaf, g.bark, g.leaf, bark.medium, fol.medium.mat, mLists[i]));
 
   // --- Banánok + fürtök
   progress('Banánok és aljnövényzet');
@@ -967,7 +972,8 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
     BT.pachLeaf = new Batch(PL.pachira.leaf.mat, { cast: true, depth: PL.pachira.leaf.depth });
     PL.pachira.pairs.forEach((p, k) => {
       const sub = pach.filter((_, i) => i % PL.pachira.pairs.length === k);
-      BT.pachBark.add(p.bark, sub); BT.pachLeaf.add(p.leaves, sub, Infinity, 1, thinLeaves(p.leaves));
+      const a = BT.pachBark.add(p.bark, sub), b = BT.pachLeaf.add(p.leaves, sub, Infinity, 1, thinLeaves(p.leaves));
+      if (a && b) impDefs.push({ parts: [[p.bark, PL.pachira.bark.mat], [p.leaves, PL.pachira.leaf.mat]], list: sub, items: [a, b], batches: [BT.pachBark, BT.pachLeaf] });
     });
   }
 
@@ -1017,9 +1023,12 @@ export async function buildFlora(scene, T, atlas, barkTex, progress, pbr = null,
   await tick();
   for (const b of Object.values(BT)) { b.build(scene); treeMeshes.push(b); }
   for (const b of Object.values(SB)) { b.build(scene); streams.push(b); }
-  out.setTreeFrac = (f) => { for (const b of treeMeshes) { b.frac = f; b.update(0, 0); } };
+  out.setTreeFrac = (f) => { out.treeFrac = f; for (const b of treeMeshes) { b.frac = f; b.update(0, 0); } };
   out.lodD = 40;
-  out.updateLod = (x, z) => { for (const b of treeMeshes) b.updateLod(x, z, out.lodD); for (const b of streams) b.updateLod(x, z, out.lodD * 0.45); };
+  out.updateLod = (x, z) => { for (const b of treeMeshes) b.updateLod(x, z, out.lodD); for (const b of streams) b.updateLod(x, z, out.lodD * 0.45); out.imp?.update(x, z, out.impD, out.treeFrac ?? 1); };
   out.pachLeaf = BT.pachLeaf;
+  // impostor-definíciók: a példány-hivatkozások a build után töltődnek ki
+  out.impDefs = impDefs.map((d) => ({ ...d, refs: d.items.map((it) => it.refs) }));
+  out.imp = null; out.impD = 80;
   return out;
 }

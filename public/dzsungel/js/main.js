@@ -16,6 +16,8 @@ import { Napkapu } from './napkapu.js';
 import { Story } from './story.js';
 import { Cloud } from './cloud.js';
 import { Pad } from './gamepad.js';
+import { ShadowCache } from './shadowcache.js';
+import { Impostors } from './impostor.js';
 import { buildFlora } from './flora.js';
 import { Sky } from './sky.js';
 import { Post } from './post.js';
@@ -30,10 +32,10 @@ const $ = (id) => document.getElementById(id);
 const tick = () => new Promise((r) => setTimeout(r, 16));
 
 const QUALITY = {
-  low: { label: 'Alacsony', lod: 16, prCap: 1, msaa: 0, shadow: 1024, shadowR: 36, rays: false, ao: false, grass: 0.35, near: 0.65, trees: 0.6 },
-  medium: { label: 'Közepes', lod: 26, prCap: 1, msaa: 2, shadow: 2048, shadowR: 50, rays: true, grass: 0.7, near: 0.85, trees: 0.85 },
-  high: { label: 'Magas', lod: 40, prCap: 1.25, msaa: 4, shadow: 2048, shadowR: 60, rays: true, grass: 1, near: 1, trees: 1 },
-  ultra: { label: 'Ultra', lod: 70, aoFull: true, prCap: 2, msaa: 4, shadow: 4096, shadowR: 70, rays: true, grass: 1, near: 1.3, trees: 1 },
+  low: { label: 'Alacsony', lod: 16, imp: 40, prCap: 1, msaa: 0, shadow: 1024, shadowR: 36, rays: false, ao: false, grass: 0.35, near: 0.65, trees: 0.6 },
+  medium: { label: 'Közepes', lod: 26, imp: 55, prCap: 1, msaa: 2, shadow: 2048, shadowR: 50, rays: true, grass: 0.7, near: 0.85, trees: 0.85 },
+  high: { label: 'Magas', lod: 40, imp: 75, prCap: 1.25, msaa: 4, shadow: 2048, shadowR: 60, rays: true, grass: 1, near: 1, trees: 1 },
+  ultra: { label: 'Ultra', lod: 70, imp: 110, aoFull: true, prCap: 2, msaa: 4, shadow: 4096, shadowR: 70, rays: true, grass: 1, near: 1.3, trees: 1 },
 };
 const QORDER = ['low', 'medium', 'high', 'ultra'];
 const TSPEED = [0, 1 / 120, 1 / 6];
@@ -88,6 +90,8 @@ async function init() {
   const atlas = makeAtlas(PL ? PL.leafPhoto : null), barkTex = makeBark(), wing = makeWing();
   let fp = 0.25;
   const flora = await buildFlora(scene, T, atlas, barkTex, (s) => { fp += 0.06; setProgress(fp, s); }, A, PL);
+  setProgress(0.8, 'Távoli fák előrajzolása'); await tick();
+  flora.imp = qs.has('noimp') ? null : new Impostors(renderer, scene, flora.impDefs);
 
   setProgress(0.82, 'Égbolt és fények'); await tick();
   const sky = new Sky(scene, renderer);
@@ -102,14 +106,16 @@ async function init() {
   const fx = new FX(scene, T, flora, atlas, wing);
   const post = new Post(renderer);
   const audio = new JungleAudio();
-  const animals = new Animals(scene, T, flora, audio);
+  const dynRoots = [];
+  const sceneDiff = (fn) => { const before = new Set(scene.children); const r = fn(); for (const c of scene.children) if (!before.has(c)) dynRoots.push(c); return r; };
+  const animals = sceneDiff(() => new Animals(scene, T, flora, audio));
   player.onStep = (s, run) => audio.step(s, run);
   // templomrom: a járható felülete (teraszok, lépcső, szentélyfalak) a domborzat fölé kerül
   const temple = new Temple(scene, flora, PL, atlas);
   const terrainHeight = T.heightAt;
   T.heightAt = (x, z) => Math.max(terrainHeight(x, z), temple.heightAt(x, z));
   const surv = new Survival(scene, T, flora, player);
-  const hunt = new Hunt(scene, T, flora, audio, fx, surv, player, animals);
+  const hunt = sceneDiff(() => new Hunt(scene, T, flora, audio, fx, surv, player, animals));
   // barlang a vízesés mögött: a játékos a barlang padlóján jár, a kamera nem megy ki a sziklába
   const cave = new Cave(scene, A ? A.rock_face_03 : flora.rockTex, flora);
   const inCave = () => cave.near(player.pos) && player.pos.z < -51.0;
@@ -119,6 +125,7 @@ async function init() {
   player.camBlock = (x, z) => Math.max(temple.heightAt(x, z), inCave() && cave.inRock(x, z) ? Infinity : -Infinity);
   const napkapu = new Napkapu(scene, flora, flora.rockTex, temple.idol, cave.serpent);
   const story = new Story({ scene, T, temple, cave, napkapu, hunt, surv, player, state: null });
+  let shadowCache = null;
 
   let Q = QUALITY.high, streamFrom = new THREE.Vector3(1e9, 0, 0);
   // belső felbontás (felskálázás): 'auto' = dinamikus, különben fix arány a vászonhoz képest
@@ -140,8 +147,9 @@ async function init() {
     applyRes();
     sky.setShadow(Q.shadow, Q.shadowR);
     flora.setTreeFrac(Q.trees);
-    flora.lodD = Q.lod; flora.updateLod(camera.position.x, camera.position.z);
-    if (flora.pachLeaf?.mesh) flora.pachLeaf.mesh.castShadow = name !== 'low';
+    flora.lodD = Q.lod; flora.impD = Q.imp; flora.updateLod(camera.position.x, camera.position.z);
+    if (flora.pachLeaf?.mesh) { flora.pachLeaf.mesh.userData.noShadow = name === 'low'; flora.pachLeaf.mesh.castShadow = name !== 'low'; }
+    shadowCache?.invalidate();
     for (const s of flora.streams) { s.rMul = Q.near; s.frac = s.isGrass ? Q.grass : Math.min(1, Q.grass + 0.3); }
     flora.grassMat.userData.u.uGrassR.value = 65 * Q.near;
     post.useRays = Q.rays && settings.rays;
@@ -602,6 +610,7 @@ async function init() {
       streamFrom.copy(camera.position);
       for (const s of flora.streams) s.update(camera.position.x, camera.position.z);
       flora.updateLod(camera.position.x, camera.position.z);
+      shadowCache.invalidate();
     }
     sky.update(camera, state.mode === 'title' ? tmpV.set(6, 2, -20) : player.pos);
     sky.updateEnv();
@@ -696,11 +705,16 @@ async function init() {
     sunUV.set((tmpV.x + 1) / 2, (tmpV.y + 1) / 2);
     const facing = camera.getWorldDirection(new THREE.Vector3()).dot(sky.sunDir);
     const vis = smoothstep(-0.1, 0.4, facing) * (tmpV.z < 1 ? 1 : 0);
+    // árnyék-gyorsítótár: a statikus térkép ritkán frissül, a mozgó dolgok minden képkockán
+    if (sky.shadowMoved) { sky.shadowMoved = false; shadowCache.invalidate(); }
+    shadowCache.before(dt, scene, camera);
+    flora.imp?.setLight(sky);
     post.render(scene, camera, {
       sunUV, rays: sky.post.rays * vis, raysStr: sky.post.rays * vis * 1.2,
       bloom: settings.bloom ? sky.post.bloom : 0, exposure: sky.post.exposure * (1 + 0.7 * caveK), time: G.uTime.value,
       grain: settings.grain ? 0.014 : 0, fade: state.fade,
     });
+    shadowCache.after();
 
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { fpsShown = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; $('fps').textContent = `${fpsShown} fps${post.gpuMs ? ` · GPU ${post.gpuMs.toFixed(1)} ms` : ''} · ${Q.label} · ${Math.round(rsCur * 100)}%`; }
@@ -736,6 +750,9 @@ async function init() {
       }
     }
   }
+  shadowCache = new ShadowCache(renderer, sky.light);
+  shadowCache.collect(scene, [player.root, ...dynRoots]);
+  shadowCache.enabled = !qs.has('noshc');
   frame();
   // Összehasonlító képekhez rögzített nézőpontok
   const VIEWS = {
@@ -761,7 +778,7 @@ async function init() {
     tod = v.t; settings.tspeed = 0;
   };
   if (qs.has('view')) setView(qs.get('view'));
-  window.__dz = { temple, surv, hunt, cave, napkapu, story, animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
+  window.__dz = { shadowCache, temple, surv, hunt, cave, napkapu, story, animals, weather, setView, state, scene, camera, renderer, sky, player, flora, T, post, fx, setTod: (h) => { tod = h; } };
 }
 
 init().catch((e) => {
