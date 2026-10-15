@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { G, patch } from './shaders.js';
 import { POND, CAMP } from './terrain.js';
 import { smoothstep } from './noise.js';
+import { JaguarBody, JaguarModel } from './jaguar.js';
 
 const V3 = THREE.Vector3;
 const rnd = Math.random;
@@ -30,29 +31,9 @@ const M4 = (x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1)
 const animalMat = (rough = 0.8) => patch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: 0 }), 'basic');
 
 // Jaguár-bunda: rozetta-foltok objektumtérben (vertex-szín = alapszín, a foltokat a shader rajzolja)
-function jaguarMat() {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 });
-  return patch(m, 'jaguar', (sh) => {
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vOP;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvOP = position;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vOP;')
-      .replace('#include <color_fragment>', `#include <color_fragment>
-{ vec3 p = vOP * 9.0;
-  vec3 c = floor(p); vec3 f = fract(p); float dmin = 9.0;
-  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec3 o = vec3(float(x), float(y), float(z));
-    vec3 r = o + vec3(jh13(c + o), jh13(c + o + 7.1), jh13(c + o + 3.3)) - f;
-    dmin = min(dmin, length(r));
-  }
-  float ring = smoothstep(0.34, 0.26, dmin) * smoothstep(0.1, 0.18, dmin);
-  float dot2 = smoothstep(0.16, 0.1, dmin) * 0.6;
-  float spots = max(ring, dot2) * step(0.05, diffuseColor.r - diffuseColor.b);
-  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.03, 0.02, 0.015), spots * 0.9); }`);
-  });
-}
-
 export class Animals {
-  constructor(scene, T, flora, audio) {
+  constructor(scene, T, flora, audio, jagModel = null) {
+    this.jagModel = jagModel;
     this.scene = scene; this.T = T; this.flora = flora; this.audio = audio;
     this.time = 0;
     this.giants = flora.logs.filter((g) => g.H);
@@ -512,43 +493,29 @@ export class Animals {
 
   // ---------------------------------------------------------------- Jaguár (éjjel)
   buildJaguar() {
-    const coat = [0.78, 0.55, 0.25], belly = [0.92, 0.85, 0.7], dark = [0.05, 0.04, 0.03];
-    const mat = jaguarMat();
-    const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(merged([
-      [cap(0.26, 0.85), coat, M4(0, 0.62, 0, Math.PI / 2)],
-      [cap(0.2, 0.6), belly, M4(0, 0.5, 0.05, Math.PI / 2, 0, 0, 0.9, 1, 0.8)],
-      [new THREE.SphereGeometry(0.3, 12, 10), coat, M4(0, 0.68, 0.4, 0, 0, 0, 1, 1.05, 1.1)],
-    ]), mat);
-    g.add(body);
-    const head = new THREE.Group(); head.position.set(0, 0.82, 0.72); g.add(head);
-    head.add(new THREE.Mesh(merged([
-      [new THREE.SphereGeometry(0.19, 12, 10), coat, M4(0, 0, 0, 0, 0, 0, 1, 0.9, 1)],
-      [new THREE.SphereGeometry(0.11, 10, 8), belly, M4(0, -0.06, 0.15, 0, 0, 0, 1, 0.75, 0.9)],
-      [new THREE.SphereGeometry(0.035, 6, 5), dark, M4(0, -0.02, 0.24)],
-      [new THREE.ConeGeometry(0.06, 0.09, 6), coat, M4(0.12, 0.15, -0.02)],
-      [new THREE.ConeGeometry(0.06, 0.09, 6), coat, M4(-0.12, 0.15, -0.02)],
-    ]), mat));
-    // szemek: éjjel fényvisszaverő (tapetum) zöldessárga ragyogás
-    this.eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 3.2, 0.8), fog: false });
-    for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), this.eyeMat); e.position.set(s * 0.075, 0.04, 0.16); head.add(e); }
-    const legGeo = merged([[cap(0.075, 0.28), coat, M4(0, -0.18, 0)]]);
-    const lowGeo = merged([[cap(0.06, 0.26), coat, M4(0, -0.16, 0)], [new THREE.SphereGeometry(0.075, 8, 6), coat, M4(0, -0.33, 0.03, 0, 0, 0, 1, 0.6, 1.3)]]);
-    this.jLegs = [];
-    for (const [x, z, front] of [[0.16, 0.42, 1], [-0.16, 0.42, 1], [0.16, -0.42, 0], [-0.16, -0.42, 0]]) {
-      const hip = new THREE.Group(); hip.position.set(x, 0.62, z); g.add(hip);
-      hip.add(new THREE.Mesh(legGeo, mat));
-      const knee = new THREE.Group(); knee.position.y = -0.33; hip.add(knee); knee.add(new THREE.Mesh(lowGeo, mat));
-      this.jLegs.push({ hip, knee, front, ph: (x > 0 ? 0 : Math.PI) + (front ? 0 : Math.PI) + (front ? 0.3 : 0) });
+    // a letöltött, textúrázott modell, ha betölthető; különben az eljárásos test
+    this.jbody = this.jagModel ? new JaguarModel(this.scene, this.jagModel) : new JaguarBody(this.scene);
+    const g = this.jbody.g; g.visible = false;
+    this.jag = { g, state: 'away', t: 25 + rnd() * 30, pos: new V3(), yaw: 0, speed: 0, growlT: 0, ang: 0, jawT: 0, pounce: 0, aware: 0, drinkAt: null, drinkDir: 0 };
+  }
+  // tesztekhez: a jaguár megjelenítése adott helyen és állapotban
+  spawnJaguar(x, z, yaw = 0, state = 'roam', t = 60) {
+    const J = this.jag; J.pos.set(x, this.T.heightAt(x, z), z); J.yaw = yaw; J.state = state; J.t = t; J.g.visible = true; J.speed = 0; J.aware = 0;
+    this.jbody.placed = false;
+  }
+  // nappali itatóhely: szárazföldi pont, ahonnan 2 m-en belül mély víz van, a játékostól dmin..dmax távolságra
+  findDrinkSpot(P, dmin, dmax) {
+    for (let k = 0; k < 60; k++) {
+      const a = rnd() * Math.PI * 2, d = dmin + rnd() * (dmax - dmin), x = P.x + Math.cos(a) * d, z = P.z + Math.sin(a) * d;
+      if (Math.hypot(x, z) > 168) continue;
+      const h = this.T.heightAt(x, z);
+      if (h < 0.15 || h > 3 || this.T.waterLevelAt(x, z) - h > 0.05) continue;
+      for (let j = 0; j < 8; j++) {
+        const bb = j / 8 * Math.PI * 2, wx = x + Math.cos(bb) * 2, wz = z + Math.sin(bb) * 2;
+        if (this.T.waterLevelAt(wx, wz) - this.T.heightAt(wx, wz) > 0.35) return { spot: new V3(x, h, z), dir: Math.atan2(wx - x, wz - z) };
+      }
     }
-    const tail = new THREE.Mesh(merged([[new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new V3(0, 0, 0), new V3(0, -0.15, -0.3), new V3(0, -0.3, -0.6), new V3(0, -0.25, -0.85)]), 12, 0.045, 6), coat]]), mat);
-    tail.position.set(0, 0.68, -0.55); g.add(tail);
-    g.traverse((o) => { if (o.isMesh && o.material !== this.eyeMat) { o.castShadow = true; o.receiveShadow = true; } });
-    g.scale.setScalar(1.15);
-    g.visible = false;
-    this.scene.add(g);
-    this.jag = { g, head, tail, state: 'away', t: 20 + rnd() * 40, pos: new V3(), yaw: 0, speed: 0, phase: 0, growlT: 0, ang: 0 };
+    return null;
   }
 
   updateJaguar(dt, player, night, hooks) {
@@ -557,20 +524,32 @@ export class Animals {
     const safe = hooks.isSafe ? hooks.isSafe(P) : Math.hypot(P.x - CAMP.x, P.z - CAMP.z) < 9;
     const torch = hooks.hasTorch ? hooks.hasTorch() : false;
     const dP = Math.hypot(J.pos.x - P.x, J.pos.z - P.z);
-    let target = null, spd = 0;
+    const growl = (v) => { this.audio?.growl(v); J.jawT = 0.9; };
+    let target = null, spd = 0, face = null;
+    J.jawT -= dt; J.pounce = Math.max(0, J.pounce - dt * 2.2);
     if (J.state === 'away') {
       J.g.visible = false;
       J.t -= dt;
       if (night > 0.6 && J.t <= 0 && !player.swim) {
-        // a játékostól 35-45 m-re, az erdőben bukkan fel
+        // éjjel: a játékostól 35-45 m-re, az erdőben bukkan fel, és becserkészi
         for (let k = 0; k < 20; k++) {
           const a = rnd() * Math.PI * 2, d = 35 + rnd() * 10;
           const x = P.x + Math.cos(a) * d, z = P.z + Math.sin(a) * d;
           if (Math.hypot(x, z) > 175 || this.T.heightAt(x, z) < 0.4 || this.T.forestAt(x, z) < 0.35) continue;
-          J.pos.set(x, this.T.heightAt(x, z), z); J.ang = Math.atan2(z - P.z, x - P.x);
-          J.state = 'stalk'; J.t = 60 + rnd() * 60; J.g.visible = true; break;
+          this.spawnJaguar(x, z, Math.atan2(P.x - x, P.z - z), 'stalk', 60 + rnd() * 60);
+          J.ang = Math.atan2(z - P.z, x - P.x); break;
         }
         if (J.state === 'away') J.t = 10;
+      } else if (night < 0.3 && J.t <= 0 && !player.swim) {
+        // nappal: inni megy a folyóhoz; ha észrevesz, elkerül
+        const ds = this.findDrinkSpot(P, 26, 42);
+        if (ds) {
+          const away = new V3(ds.spot.x - P.x, 0, ds.spot.z - P.z).normalize();
+          let sx = ds.spot.x + away.x * 16, sz = ds.spot.z + away.z * 16;
+          if (this.T.heightAt(sx, sz) < 0.3) { sx = ds.spot.x - Math.sin(ds.dir) * 14; sz = ds.spot.z - Math.cos(ds.dir) * 14; }
+          this.spawnJaguar(sx, sz, Math.atan2(ds.spot.x - sx, ds.spot.z - sz), 'roam', 80);
+          J.drinkAt = ds.spot; J.drinkDir = ds.dir;
+        } else J.t = 15;
       }
     } else if (J.state === 'stalk') {
       J.t -= dt;
@@ -582,44 +561,61 @@ export class Animals {
       if (fd < 14) target.add(new V3(target.x - CAMP.x, 0, target.z - CAMP.z).normalize().multiplyScalar(14 - fd));
       spd = 1.6;
       J.growlT -= dt;
-      if (dP < 22 && J.growlT <= 0) { this.audio?.growl(Math.min(1, 10 / dP)); J.growlT = 6 + rnd() * 6; }
-      if (dP < 8.5 && !safe && !player.swim) { J.state = 'charge'; J.t = 4; this.audio?.growl(1.2); }
+      if (dP < 22 && J.growlT <= 0) { growl(Math.min(1, 10 / dP)); J.growlT = 6 + rnd() * 6; }
+      if (dP < 8.5 && !safe && !player.swim) { J.state = 'charge'; J.t = 4; growl(1.2); }
       if (J.t <= 0 || night < 0.4 || dP > 70) J.state = 'leave';
     } else if (J.state === 'charge') {
       J.t -= dt; target = P.clone(); spd = 9;
+      if (dP < 3.0 && J.pounce <= 0.05) J.pounce = 1;
       if (dP < 1.7) { hooks.onAttack(); J.state = 'leave'; J.t = 0; }
       if (J.t <= 0 || safe || player.swim) J.state = 'leave';
+    } else if (J.state === 'roam' || J.state === 'drink' || J.state === 'wander' || J.state === 'watch') {
+      // nappali viselkedés: odasétál a vízhez, iszik, továbbáll; ha észreveszi a játékost, megáll, néz, majd elinal
+      J.t -= dt;
+      const notice = player.crouch ? 7.5 : player.running ? 24 : 16;
+      J.aware = Math.max(0, Math.min(1.5, J.aware + (dP < notice ? dt * 1.6 : -dt * 0.5)));
+      if (J.aware > 0.6 && J.state !== 'watch') { J.state = 'watch'; J.t = 1.2 + rnd() * 1.2; if (dP < 12) growl(0.5); }
+      if (J.state === 'roam') {
+        target = J.drinkAt; spd = 1.25;
+        if (!J.drinkAt || Math.hypot(J.drinkAt.x - J.pos.x, J.drinkAt.z - J.pos.z) < 0.7) { J.state = 'drink'; J.t = 9 + rnd() * 8; }
+      } else if (J.state === 'drink') {
+        face = J.drinkDir;
+        if (J.t <= 0) { J.state = 'wander'; J.t = 60; const a = J.drinkDir + Math.PI + (rnd() - 0.5) * 1.6; J.drinkAt = J.pos.clone().add(new V3(Math.sin(a) * 45, 0, Math.cos(a) * 45)); }
+      } else if (J.state === 'wander') {
+        target = J.drinkAt; spd = 1.4;
+        if (dP > 55 || J.t <= 0) { J.state = 'away'; J.t = 150 + rnd() * 150; }
+      } else if (J.state === 'watch') {
+        face = Math.atan2(P.x - J.pos.x, P.z - J.pos.z);
+        if (J.t <= 0) J.state = 'leave';
+      }
     } else if (J.state === 'leave') {
       const away = new V3(J.pos.x - P.x, 0, J.pos.z - P.z).normalize();
       target = J.pos.clone().addScaledVector(away, 20); spd = 6;
-      if (dP > 50) { J.state = 'away'; J.t = 90 + rnd() * 120; }
+      if (dP > 50) { J.state = 'away'; J.t = night > 0.5 ? 90 + rnd() * 120 : 150 + rnd() * 150; }
     }
+    if (!J.g.visible) return;
     if (target) {
       const d = new V3(target.x - J.pos.x, 0, target.z - J.pos.z), L = d.length();
       if (L > 0.3) {
         const want = Math.atan2(d.x, d.z);
         let dy = want - J.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
-        J.yaw += dy * (1 - Math.exp(-dt * 4));
-        J.speed = damp(J.speed, Math.min(spd, L * 1.5), 3, dt);
+        J.yaw += dy * (1 - Math.exp(-dt * (spd > 4 ? 4 : 2.5)));
+        // éles fordulónál lelassít
+        J.speed = damp(J.speed, Math.min(spd, L * 1.5) * (1 - Math.min(0.7, Math.abs(dy) * 0.5)), 3, dt);
         J.pos.x += Math.sin(J.yaw) * J.speed * dt; J.pos.z += Math.cos(J.yaw) * J.speed * dt;
       } else J.speed = damp(J.speed, 0, 4, dt);
-      J.pos.y = this.T.heightAt(J.pos.x, J.pos.z);
+    } else {
+      J.speed = damp(J.speed, 0, 5, dt);
+      J.pos.x += Math.sin(J.yaw) * J.speed * dt; J.pos.z += Math.cos(J.yaw) * J.speed * dt;
+      if (face !== null) { let dy = face - J.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; J.yaw += dy * (1 - Math.exp(-dt * 2.5)); }
     }
-    // animáció: séta / vágta, lopakodó testtartás
-    const g = J.g; g.position.copy(J.pos); g.rotation.y = J.yaw;
-    const run = Math.min(1, Math.max(0, (J.speed - 3) / 4));
-    J.phase += dt * (J.speed * 2.2 + 0.3);
-    for (const L of this.jLegs) {
-      const s = Math.sin(J.phase + L.ph);
-      L.hip.rotation.x = -s * (0.45 + 0.4 * run) * Math.min(1, J.speed);
-      L.knee.rotation.x = (L.front ? -1 : 1) * Math.max(0, Math.cos(J.phase + L.ph)) * 0.6 * Math.min(1, J.speed);
-    }
-    const crouch = J.state === 'stalk' ? 0.12 : 0;
-    g.children[0].position.y = -crouch + Math.abs(Math.sin(J.phase)) * 0.03 * run;
-    J.head.position.y = 0.82 - crouch * 1.2;
-    J.head.rotation.y = J.state === 'stalk' ? Math.sin(this.time * 0.6) * 0.25 : 0;
-    J.tail.rotation.y = Math.sin(this.time * 1.7) * 0.35;
-    this.eyeMat.color.setRGB(3, 3.2, 0.8).multiplyScalar(night);
+    J.pos.y = this.T.heightAt(J.pos.x, J.pos.z);
+    const looking = J.state === 'stalk' || J.state === 'charge' || J.state === 'watch' || J.aware > 0.25;
+    this.jbody.update(dt, J, {
+      T: this.T, time: this.time, night, camera: this.cam,
+      crouch: J.state === 'stalk' ? 1 : J.state === 'watch' ? 0.35 : 0, drink: J.state === 'drink' ? 1 : 0,
+      look: looking ? new V3(P.x, P.y + 1.4, P.z) : null, jaw: J.jawT > 0 ? 1 : 0, pounce: J.pounce,
+    });
   }
 
   panOf(p, cam) {
@@ -632,6 +628,7 @@ export class Animals {
   update(dt, ctx) {
     this.time += dt;
     const { player, camera, sky, fx, hooks } = ctx;
+    this.cam = camera;
     sky_day_cache = sky.day * (1 - G.uRain.value * 0.7);
     this.updateParrots(dt, player, camera);
     this.updateMonkeys(dt, camera, sky.day * (1 - G.uRain.value * 0.6), player);

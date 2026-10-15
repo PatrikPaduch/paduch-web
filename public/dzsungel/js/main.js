@@ -8,6 +8,7 @@ import { loadPlants } from './plants.js';
 import { loadCharacter } from './character.js';
 import { Weather, WEATHER_LABELS } from './weather.js';
 import { Animals } from './animals.js';
+import { loadJaguarModel } from './jaguar.js';
 import { Temple } from './temple.js';
 import { Survival, ITEMS, TOOLS } from './survival.js';
 import { Hunt } from './hunt.js';
@@ -110,7 +111,8 @@ async function init() {
   const audio = new JungleAudio();
   const dynRoots = [];
   const sceneDiff = (fn) => { const before = new Set(scene.children); const r = fn(); for (const c of scene.children) if (!before.has(c)) dynRoots.push(c); return r; };
-  const animals = sceneDiff(() => new Animals(scene, T, flora, audio));
+  const JAGM = A && !qs.has('procjag') ? await loadJaguarModel() : null;
+  const animals = sceneDiff(() => new Animals(scene, T, flora, audio, JAGM));
   player.onStep = (s, run) => audio.step(s, run);
   // templomrom: a járható felülete (teraszok, lépcső, szentélyfalak) a domborzat fölé kerül
   const temple = new Temple(scene, flora, PL, atlas);
