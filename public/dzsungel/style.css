@@ -177,3 +177,18 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #mapInfo { font: 500 13px Inter, sans-serif; color: #e9dfc6; text-shadow: 0 1px 3px #000; text-align: center; max-width: min(78vh, calc(100vw - 32px)); }
 .mapWrap .bClose { position: static; margin-top: 4px; }
 @media (max-width: 700px) { .book { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .bLeft { max-height: 40vh; } }
+/* felhőmentés a menüben */
+.row.cloud { flex-direction: column; align-items: stretch; gap: 6px; }
+.row.cloud label span { font: 500 11px Inter, sans-serif; color: var(--muted); margin-left: 6px; }
+.cloudRow { display: flex; gap: 8px; align-items: center; }
+#cloudCode { flex: 1; font: 600 15px/1 ui-monospace, Consolas, monospace; letter-spacing: 0.08em; padding: 9px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--line); color: var(--ink); text-align: center; }
+#cloudIn { flex: 1; min-width: 0; font: 500 13px ui-monospace, Consolas, monospace; letter-spacing: 0.05em; padding: 9px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); color: var(--ink); text-transform: uppercase; }
+.cloudRow button { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.1); color: var(--ink); font: 600 12px Inter, sans-serif; cursor: pointer; white-space: nowrap; }
+.cloudRow button:hover { background: rgba(255, 255, 255, 0.18); }
+.row.cloud .hint { text-align: left; margin: 0; }
+.panel { max-height: calc(100vh - 32px); overflow-y: auto; }
+/* kontroller */
+.padHelp { display: none; }
+body.pad .padHelp { display: block; color: var(--ink); }
+#prompt b.pb { background: #3f9c4a; color: #fff; border-radius: 50%; width: 1.6em; height: 1.6em; display: inline-grid; place-items: center; padding: 0; }
+.recipe.sel { outline: 2px solid var(--accent); outline-offset: 2px; background: rgba(216, 194, 122, 0.14); }

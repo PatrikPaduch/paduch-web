@@ -107,7 +107,11 @@ export class Player {
     const T = this.T;
     const fwd = new THREE.Vector2(-Math.sin(this.camYaw), -Math.cos(this.camYaw));
     const right = new THREE.Vector2(Math.cos(this.camYaw), -Math.sin(this.camYaw));
-    const mx = (input.right ? 1 : 0) - (input.left ? 1 : 0), mz = (input.fwd ? 1 : 0) - (input.back ? 1 : 0);
+    let mx = (input.right ? 1 : 0) - (input.left ? 1 : 0), mz = (input.fwd ? 1 : 0) - (input.back ? 1 : 0);
+    // kontroller bal kar: analóg irány és sebesség (enyhe kitérés = séta, teljes = kocogás)
+    let analog = 1;
+    const sm = Math.hypot(input.sx || 0, input.sy || 0);
+    if (sm > 0.05) { mx = input.sx; mz = -input.sy; analog = Math.min(1, sm); }
     const dir = new THREE.Vector2().addScaledVector(fwd, mz).addScaledVector(right, mx);
     const len = dir.length();
     this.moving = len > 0.01;
@@ -124,6 +128,7 @@ export class Player {
       ? (this.swim ? 2.2 : this.running ? 6.8 : this.crouch ? 1.25 : input.walk ? 1.3 : 3.8)
       : (this.swim ? 2.2 : this.running ? 6.4 : this.crouch ? 1.4 : 3.0);
     if (this.aim) target = Math.min(target, 1.6);
+    if (analog < 1 && !this.running && !this.swim) target = this.crouch || input.walk ? target * Math.max(0.35, analog) : 1.0 + (target - 1.0) * Math.min(1, Math.max(0, (analog - 0.3) / 0.6));
     if (!this.swim) target *= 1 - this.wade * 0.45;
     this.speed = damp(this.speed, this.moving ? target : 0, this.moving ? 8 : 10, dt);
     if (this.running) this.stamina = Math.max(0, this.stamina - dt * 0.12);

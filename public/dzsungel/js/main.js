@@ -14,6 +14,8 @@ import { Hunt } from './hunt.js';
 import { Cave } from './cave.js';
 import { Napkapu } from './napkapu.js';
 import { Story } from './story.js';
+import { Cloud } from './cloud.js';
+import { Pad } from './gamepad.js';
 import { buildFlora } from './flora.js';
 import { Sky } from './sky.js';
 import { Post } from './post.js';
@@ -160,8 +162,9 @@ async function init() {
   const state = { mode: 'title', menu: false, hud: true, transT: 0, fade: 0, hp: 1, food: 0.8, water: 0.7, t: 0 };
   story.state = state;
   const input = { fwd: false, back: false, left: false, right: false, run: false, jump: false, turnL: false, turnR: false };
-  const keymap = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', KeyD: 'right', ArrowLeft: 'turnL', ArrowRight: 'turnR', ShiftLeft: 'run', ShiftRight: 'run' };
+  const keymap = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', KeyD: 'right', ArrowLeft: 'turnL', ArrowRight: 'turnR', ShiftLeft: 'runKey', ShiftRight: 'runKey' };
   addEventListener('keydown', (e) => {
+    document.body.classList.remove('pad');
     if (e.code === 'Tab') { e.preventDefault(); if (state.mode === 'play') (state.craft ? closeCraft() : (!state.menu && openCraft())); return; }
     if (state.craft && e.code === 'Escape') { closeCraft(); return; }
     if (state.panel && (e.code === 'Escape' || e.code === state.panel)) { closePanel(); return; }
@@ -203,6 +206,7 @@ async function init() {
     if (state.mode !== 'play' || state.menu) return;
     if (document.pointerLockElement !== canvas && !dragging) return;
     let dx = e.movementX, dy = e.movementY;
+    if (Math.abs(dx) + Math.abs(dy) > 3) document.body.classList.remove('pad');
     // Chrome/érintőpad hiba: befogott egérnél néha óriási ugrásokat jelent, ezeket eldobjuk
     if (Math.abs(dx) > 120 || Math.abs(dy) > 120) return;
     dx = clamp(dx, -40, 40); dy = clamp(dy, -40, 40);
@@ -334,6 +338,7 @@ async function init() {
       h += `<div class="recipe${ok ? '' : ' no'}"><div class="ri">${t.icon}</div><div class="rb"><div class="rn">${t.name}${id !== 'fire' && surv.tools[id] ? ' <em>megvan</em>' : ''}</div><div class="rd">${t.desc}</div><div class="rr">${req}</div></div><button data-c="${id}" ${ok ? '' : 'disabled'}>Elkészít</button></div>`;
     }
     $('recipes').innerHTML = h;
+    if (document.body.classList.contains('pad')) $('recipes').children[state.craftSel || 0]?.classList.add('sel');
   }
   $('recipes').onclick = (e) => { const id = e.target.dataset.c; if (id) { const m = surv.craft(id); if (m) toast(m); refreshHotbar(); renderCraft(); saveGame(); } };
   // napló (J) és térkép (M): megállítják a játékot, mint a menü
@@ -364,7 +369,7 @@ async function init() {
     if (state.mode !== 'play' || state.noAuto) return;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
-        v: 1, pos: [player.pos.x, player.pos.y, player.pos.z], facing: player.facing, hp: state.hp, food: state.food, water: state.water,
+        v: 1, t: Date.now(), pos: [player.pos.x, player.pos.y, player.pos.z], facing: player.facing, hp: state.hp, food: state.food, water: state.water,
         tod, surv: surv.serialize(), found: state.found, templeSeen: state.templeSeen, firstKill: state.firstKill,
         story: story.serialize(), caveSeen: cave.seen, serpent: cave.found, napSeen: napkapu.seen, placed: napkapu.placed, disc: napkapu.discTaken,
       }));
@@ -385,7 +390,24 @@ async function init() {
     napkapu.seen = !!s.napSeen; napkapu.restore(!!s.placed, !!s.disc);
     return true;
   }
-  addEventListener('beforeunload', saveGame);
+  // felhő: kilépéskor és háttérbe kerüléskor azonnal, játék közben 30 mp-enként (ha változott)
+  const cloud = new Cloud(SAVE_KEY);
+  const flushSave = () => { saveGame(); if (!state.noAuto && state.mode === 'play') cloud.push(true, true); };
+  addEventListener('beforeunload', flushSave);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+  function syncCloudUI() {
+    $('cloudCode').textContent = cloud.code;
+    $('cloudSt').textContent = cloud.status || (cloud.ok === false ? 'nem érhető el' : '');
+  }
+  $('cloudCopy').onclick = async () => { try { await navigator.clipboard.writeText(cloud.code); $('cloudSt').textContent = 'Kód vágólapra másolva'; } catch (e) { $('cloudSt').textContent = 'Jelöld ki és másold kézzel'; } };
+  $('cloudLoad').onclick = async () => {
+    const v = $('cloudIn').value;
+    $('cloudSt').textContent = 'Betöltés…';
+    const r = await cloud.useCode(v);
+    if (r.err) { $('cloudSt').textContent = r.err; return; }
+    if (r.loaded) { state.noAuto = true; removeEventListener('beforeunload', flushSave); location.reload(); return; }
+    $('cloudSt').textContent = 'Ehhez a kódhoz még nem volt mentés: mostantól ide ment'; syncCloudUI();
+  };
 
   // ---------------- Menü
   function syncMenu() {
@@ -396,7 +418,7 @@ async function init() {
     $('cInv').checked = settings.invY; $('sens').value = settings.sens; $('sensv').textContent = (+settings.sens).toFixed(2);
     saveSettings();
   }
-  function openMenu() { state.menu = true; hunt.cancelAim(); $('menu').classList.remove('hidden'); syncMenu(); for (const k in input) input[k] = false; }
+  function openMenu() { state.menu = true; hunt.cancelAim(); syncCloudUI(); $('menu').classList.remove('hidden'); syncMenu(); for (const k in input) input[k] = false; }
   function closeMenu() { state.menu = false; $('menu').classList.add('hidden'); lockPointer(); }
   $('resume').onclick = closeMenu;
   $('qseg').onclick = (e) => { const q = e.target.dataset.q; if (q) applyQuality(q); };
@@ -415,10 +437,11 @@ async function init() {
   // ---------------- Indítás
   // banánfürtök eredeti helye (újranövéshez)
   for (const b of flora.bananas) { b.m0 = new THREE.Matrix4(); flora.bunchMesh.getMatrixAt(b.i, b.m0); }
+  if (!qs.has('view') && !qs.has('play')) { setProgress(1, 'Mentés keresése a felhőben'); await cloud.pull(); }
   const hasSave = !qs.has('view') && !qs.has('play') && loadGame();
   refreshHotbar();
   if (hasSave) { $('go').textContent = 'Folytatás'; $('newgame').classList.remove('hidden'); }
-  $('newgame').onclick = () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* */ } location.reload(); };
+  $('newgame').onclick = () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* */ } cloud.markFresh(); state.noAuto = true; removeEventListener('beforeunload', flushSave); location.reload(); };
   $('load').classList.add('hidden');
   $('go').classList.remove('hidden');
   $('start').classList.remove('loading');
@@ -437,6 +460,59 @@ async function init() {
   if (qs.has('play')) $('go').onclick();
 
   // jaguártámadás: sebzés, piros villanás, kamera-rázkódás
+  // ---------------- Kontroller
+  function craftDo() {
+    const id = Object.keys(TOOLS)[state.craftSel || 0];
+    if (!surv.canCraft(id) || (id !== 'fire' && surv.tools[id])) { toast('Ehhez nincs elég nyersanyag'); return; }
+    toast(surv.craft(id)); refreshHotbar(); renderCraft(); saveGame();
+  }
+  function onPad(a) {
+    if (a === 'connected') { toast('🎮 Kontroller csatlakoztatva'); return; }
+    if (a === 'disconnected') { toast('Kontroller leválasztva'); document.body.classList.remove('pad'); return; }
+    if (a === 'active') { document.body.classList.add('pad'); $('help').classList.remove('dim'); setTimeout(() => $('help').classList.add('dim'), 12000); return; }
+    document.body.classList.add('pad');
+    if (state.mode === 'title') { if (a === 'jump' || a === 'use' || a === 'menu') $('go').click(); return; }
+    if (state.mode !== 'play') return;
+    if (state.craft) {
+      const n = Object.keys(TOOLS).length;
+      if (a === 'back' || a === 'menu') closeCraft();
+      else if (a === 'tool1') { state.craftSel = ((state.craftSel || 0) + n - 1) % n; renderCraft(); }
+      else if (a === 'craft') { state.craftSel = ((state.craftSel || 0) + 1) % n; renderCraft(); }
+      else if (a === 'jump' || a === 'use') craftDo();
+      return;
+    }
+    if (state.panel) {
+      if (a === 'back' || a === 'menu' || (a === 'map' && state.panel === 'KeyM') || (a === 'journal' && state.panel === 'KeyJ')) closePanel();
+      else if (state.panel === 'KeyJ' && (a === 'tool1' || a === 'craft')) {
+        const bs = [...$('jList').querySelectorAll('button')], i = bs.findIndex((b) => b.classList.contains('on'));
+        const nb = bs[Math.max(0, Math.min(bs.length - 1, i + (a === 'craft' ? 1 : -1)))];
+        if (nb) story.openJournal(nb.dataset.n);
+      }
+      return;
+    }
+    if (state.menu) { if (a === 'back' || a === 'menu') closeMenu(); return; }
+    switch (a) {
+      case 'jump': input.jump = true; break;
+      case 'back': player.crouch = !player.crouch; toast(player.crouch ? 'Lopakodás: a vad később vesz észre' : 'Felálltál'); break;
+      case 'use': interact(); break;
+      case 'eat': toast(surv.eat(state)); refreshHotbar(); break;
+      case 'journal': openPanel('KeyJ'); break;
+      case 'map': openPanel('KeyM'); break;
+      case 'menu': state.ignoreUnlock = true; document.exitPointerLock?.(); openMenu(); break;
+      case 'walk': input.walk = !input.walk; toast(input.walk ? 'Séta' : 'Kocogás'); break;
+      case 'photo': state.hud = !state.hud; $('hud').classList.toggle('off', !state.hud); break;
+      case 'tool1': toast(surv.equip('axe')); refreshHotbar(); break;
+      case 'tool2': toast(surv.equip('spear')); refreshHotbar(); break;
+      case 'tool3': toast(surv.equip('torch')); refreshHotbar(); break;
+      case 'craft': state.craftSel = 0; openCraft(); break;
+      case 'stab': if (hunt.startAim()) { hunt.aim.t = 0; huntRelease(); } else if (surv.equipped !== 'spear') toast('Vedd kézbe a lándzsát (iránykereszt balra)'); break;
+      case 'aimStart': if (!hunt.startAim() && surv.equipped !== 'spear') toast('Vedd kézbe a lándzsát (iránykereszt balra)'); break;
+      case 'aimEnd': if (hunt.aim) { huntRelease(); pad.rumble(0.25, 0.4, 120); } break;
+      default: break;
+    }
+  }
+  const pad = new Pad(onPad);
+
   const animalHooks = {
     isSafe: (p) => surv.isSafe(p) || napkapu.discTaken,
     hasTorch: () => surv.equipped === 'torch',
@@ -448,7 +524,7 @@ async function init() {
         player.rig?.oneShot('interact', 0.6);
         return;
       }
-      state.hp = Math.max(0.05, state.hp - 0.35);
+      state.hp = Math.max(0.05, state.hp - 0.35); pad.rumble(1, 0.8, 380);
       toast('A jaguár rád vetette magát!');
       const h = $('hurt'); h.classList.remove('on'); void h.offsetWidth; h.classList.add('on');
       player.camYaw += (Math.random() - 0.5) * 0.3; player.camPitch += 0.1;
@@ -465,6 +541,7 @@ async function init() {
     const dt = Math.min(rawDt, 0.05);
     state.t += dt;
     G.uTime.value += dt;
+    pad.poll(); // menükben és a kezdőképernyőn is
     if (!state.menu) tod = (tod + dt * TSPEED[settings.tspeed]) % 24;
     sky.setTime(tod);
     weather.update(dt, { camera, sky, audio, screenH: post.h });
@@ -477,6 +554,14 @@ async function init() {
       if (!state.menu) {
         const turn = (input.turnL ? 1 : 0) - (input.turnR ? 1 : 0);
         player.yawT += turn * dt * 1.9 * settings.sens;
+        // kontroller: bal kar mozgás, jobb kar kamera, bal ravasz futás
+        input.sx = pad.move.x; input.sy = pad.move.y;
+        input.run = input.runKey || pad.lt > 0.4;
+        if (pad.look.x || pad.look.y) {
+          const ks = settings.sens * (hunt.aim ? 0.5 : 1);
+          player.yawT -= pad.look.x * Math.abs(pad.look.x) * dt * 3.0 * ks;
+          player.pitchT = clamp(player.pitchT + pad.look.y * Math.abs(pad.look.y) * dt * 2.0 * ks * (settings.invY ? -1 : 1), -0.35, 1.25);
+        }
         player.update(dt, input);
       } else player.animate(dt);
       if (state.mode === 'trans') {
@@ -543,14 +628,14 @@ async function init() {
         saveGame();
       }
       state.saveT = (state.saveT || 0) - dt;
-      if (state.saveT <= 0) { state.saveT = 10; saveGame(); }
+      if (state.saveT <= 0) { state.saveT = 10; saveGame(); if (!state.noAuto) cloud.push(); }
       hudT -= dt;
       if (hudT < 0) {
         hudT = 0.1;
         bars.hp.style.width = `${state.hp * 100}%`; bars.food.style.width = `${state.food * 100}%`;
         bars.water.style.width = `${state.water * 100}%`; bars.stam.style.width = `${player.stamina * 100}%`;
         const txt = promptText(), p = $('prompt');
-        if (txt) p.innerHTML = txt;
+        if (txt) p.innerHTML = document.body.classList.contains('pad') ? txt.replace('<b>E</b>', '<b class="pb">X</b>') : txt;
         p.classList.toggle('on', !!txt);
       }
     }
