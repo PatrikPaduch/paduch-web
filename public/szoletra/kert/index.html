@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a1222">
+<title>Szemiramisz függőkertje · Szólétra</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:Segoe UI,system-ui,sans-serif;color:#eef3ff;user-select:none}
+  canvas#c{display:block;width:100%;height:100%;touch-action:none}
+  .panel{position:fixed;background:#0a1222d9;border:1px solid #2a3a5c;border-radius:14px;backdrop-filter:blur(6px);box-shadow:0 8px 30px #0008}
+  #ui{left:12px;top:12px;width:268px;padding:11px 12px}
+  #ui h1{font-size:15px;margin:0 0 2px;letter-spacing:.3px}
+  #ui .sub{font-size:12px;color:#8fa3c8;margin-bottom:8px}
+  #ui a{color:#ffd54a;text-decoration:none;font-weight:700}
+  .row{display:flex;gap:6px;margin-top:8px;align-items:center}
+  .row>span{font-size:12px;color:#8fa3c8;width:58px;flex:none}
+  .seg{display:flex;flex:1;background:#121c33;border:1px solid #2a3a5c;border-radius:10px;overflow:hidden}
+  .seg button{flex:1;background:none;border:0;color:#cfd9f2;padding:6px 4px;cursor:pointer;font:inherit;font-size:12.5px}
+  .seg button.on{background:#3fa0ff;color:#fff;font-weight:700}
+  .help{font-size:11.5px;color:#8fa3c8;margin-top:9px;line-height:1.5}
+  .help b{color:#cfd9f2}
+  #hide{position:absolute;right:8px;top:6px;background:none;border:0;color:#8fa3c8;cursor:pointer;font-size:16px}
+  #ui.min .body{display:none}
+  #map{right:12px;top:12px;padding:6px;line-height:0}
+  #map canvas{width:184px;height:196px;border-radius:9px}
+  #map.off{display:none}
+  #zone{position:fixed;left:50%;top:18px;transform:translateX(-50%);font-size:20px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px #000;opacity:0;transition:opacity .8s;pointer-events:none;text-align:center}
+  #zone small{display:block;font-size:12px;font-weight:600;color:#ffd54a;letter-spacing:1.5px;text-transform:uppercase}
+  #zone.on{opacity:1}
+  #fps{position:fixed;right:12px;bottom:12px;font-size:11px;color:#9fb3d8;background:#0a1222b0;border-radius:8px;padding:4px 8px}
+  #plate{position:fixed;left:0;top:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;transform-origin:50% 100%;will-change:transform}
+  #plate .n{font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;margin-top:-4px;white-space:nowrap}
+  #word{left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);padding:10px 16px;min-width:260px;max-width:min(560px,92vw);opacity:0;transition:opacity .35s,transform .35s;pointer-events:none;text-align:center}
+  #word.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
+  #word .en{font-size:24px;font-weight:800;letter-spacing:.3px}
+  #word .en button{background:#16233f;border:1px solid #2d3f6b;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;vertical-align:middle;margin-left:6px}
+  #word .hu{color:#ffd54a;font-weight:700;margin-top:2px}
+  #word .ex{font-size:13px;color:#cfd9f2;margin-top:6px;line-height:1.4}
+  #word .ex i{display:block;color:#8fa3c8;font-style:normal}
+  #word .tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#7fe0a0;margin-bottom:3px}
+  #lock{left:50%;top:70px;transform:translateX(-50%);padding:10px 14px;display:none;align-items:center;gap:10px;font-size:14px}
+  #lock.on{display:flex}
+  #lock b{color:#ffd54a}
+  #hint{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#0a1222cc;border:1px solid #2a3a5c;border-radius:10px;padding:5px 12px;font-size:13px;display:none}
+  #hint.on{display:block}
+  #toastk{position:fixed;left:50%;top:22%;transform:translateX(-50%) scale(.9);opacity:0;transition:all .4s;pointer-events:none;text-align:center;font-weight:800;font-size:22px;text-shadow:0 2px 10px #000;z-index:6}
+  #toastk.on{opacity:1;transform:translateX(-50%) scale(1)}
+  #toastk small{display:block;font-size:13px;color:#ffd54a;letter-spacing:1px}
+  #wlist{left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,94vw);max-height:80vh;overflow:auto;padding:14px 16px;display:none;z-index:7}
+  #wlist.on{display:block}
+  #wlist h2{margin:0 0 8px;font-size:18px}
+  #wlist .g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #wlist .w{background:#121c33;border:1px solid #2a3a5c;border-radius:9px;padding:6px 9px;font-size:13px}
+  #wlist .w b{color:#fff}#wlist .w span{color:#8fa3c8}
+  #wlist .w.no{opacity:.45}
+  #wlist .x{position:absolute;right:10px;top:8px;background:none;border:0;color:#8fa3c8;font-size:18px;cursor:pointer}
+  #joy{position:fixed;left:26px;bottom:26px;width:120px;height:120px;border-radius:50%;background:#0a122255;border:2px solid #ffffff33;display:none;touch-action:none;z-index:5}
+  #joy i{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#ffffff55}
+  .touch #joy{display:block}
+  select.sel{flex:1;background:#121c33;color:#eef3ff;border:1px solid #2a3a5c;border-radius:10px;padding:5px;font:inherit;font-size:12.5px}
+  .wcount{cursor:pointer;color:#7fe0a0;font-weight:700}
+  @media (max-width:640px){ #map canvas{width:118px;height:126px} #ui{width:min(230px,calc(100vw - 165px))} #ui h1{font-size:13px;padding-right:14px} #zone{top:150px;font-size:16px} #word{bottom:160px} #word .en{font-size:20px} }
+  .qopts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+  .qopts button,.row2 button,#mission button,#task button{background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:9px;padding:7px 8px;cursor:pointer;font:inherit;font-size:13.5px}
+  .qopts button:hover,.row2 button:hover{border-color:#3fa0ff}
+  .qopts button.ok{background:#0f2a1c;border-color:#2f9a5a}.qopts button.bad{background:#2c1118;border-color:#9a2f43}
+  .row2{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.row2 .pri{background:#2f78ff;border-color:#6d9bff;font-weight:700}
+  #mission{right:12px;top:226px;width:196px;padding:9px 11px;display:none;font-size:13px}
+  #mission.on{display:block}#mission b{color:#ffd54a}#mission .big{font-size:21px;font-weight:800;margin:3px 0}#mission small{display:block;color:#8fa3c8}#mission .tip{color:#7fe0a0;margin-top:4px}
+  #mission .mb{display:flex;gap:6px;margin-top:7px}#mission .mb button{flex:1;padding:4px}
+  #task{left:12px;bottom:46px;padding:9px 11px;display:none;font-size:13px;min-width:190px}
+  #task.on{display:block}#task b{color:#7fe0a0}#task div{margin:3px 0 6px;font-size:15px}
+  #tablet,#talk{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:84vh;overflow:auto;padding:14px 18px;display:none;z-index:7}
+  #talk{top:auto;bottom:24px;transform:translateX(-50%)}
+  #tablet.on,#talk.on{display:block}
+  #tablet h2{margin:2px 0 8px;font-size:20px;color:#ffd54a}#tablet .en,#talk .en{font-size:16px;line-height:1.55;margin:4px 0}#tablet .hu,#talk .hu{color:#8fa3c8;font-size:14px;line-height:1.5}
+  #tablet .q{margin-top:12px;border-top:1px solid #2a3a5c;padding-top:10px}#tablet .res{margin-top:8px;font-weight:700;color:#7fe0a0}
+  #tablet .tag,#talk .tag{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#7fe0a0}
+  #tablet .x,#talk .x{position:absolute;right:10px;top:8px;background:none;border:0;color:#8fa3c8;font-size:18px;cursor:pointer}
+  #load{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#16284a,#05080f);z-index:9;transition:opacity .6s}
+  #load.off{opacity:0;pointer-events:none}
+  #load h2{margin:0;font-size:26px;letter-spacing:.5px}
+  #load .bar{width:280px;height:8px;border-radius:6px;background:#1a2540;overflow:hidden}
+  #load .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fa0ff,#ffd54a);transition:width .3s}
+  #load .t{font-size:13px;color:#8fa3c8}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="plate"><div id="emb"></div><div class="n" id="rname"></div></div>
+<div id="zone"></div>
+<div id="ui" class="panel"><button id="hide" title="Panel összecsukása">▾</button>
+  <h1>Szemiramisz függőkertje</h1>
+  <div class="sub"><a href="../index.html">‹ Vissza a Szólétrába</a></div>
+  <div class="body">
+    <div class="row"><span>Grafika</span><div class="seg" id="qual"><button data-q="low">Gyenge gép</button><button data-q="high">Erős gép</button></div></div>
+    <div class="row"><span>Séta</span><div class="seg" id="auto"><button data-a="1">Magától</button><button data-a="0">Én irányítok</button></div></div>
+    <div class="row"><span>Napszak</span><select class="sel" id="tod"><option value="real">Valós idő</option><option value="day">Délután</option><option value="dusk">Naplemente</option><option value="night">Éjszaka</option></select></div>
+    <div class="row"><span>Hang</span><div class="seg" id="snd"><button data-s="1">Be</button><button data-s="0">Ki</button></div></div>
+    <div class="row"><span>Szavak</span><span class="wcount" id="wcount" style="width:auto">0 / 0 · lista</span></div>
+    <div class="help"><b>W A S D</b> / nyilak: séta · <b>Shift</b>: futás · <b>egér</b>: kamera · <b>görgő</b>: közel/távol · <b>M</b>: térkép<br><b>E</b>: beszélgetés, agyagtábla, szedés, leülés · Ha valamihez közel érsz, felbukkan az angol neve.<br>A felső teraszokat a Szólétra-rangod nyitja.</div>
+  </div>
+</div>
+<div id="map" class="panel"><canvas id="mapc" width="368" height="392"></canvas></div>
+<div id="fps"></div>
+<div id="word" class="panel"></div>
+<div id="lock" class="panel"></div>
+<div id="hint"></div>
+<div id="toastk"></div>
+<div id="wlist" class="panel"></div>
+<div id="joy"><i></i></div>
+<div id="mission" class="panel"></div>
+<div id="task" class="panel"></div>
+<div id="tablet" class="panel"></div>
+<div id="talk" class="panel"></div>
+<div id="load"><h2>Szemiramisz függőkertje</h2><div class="bar"><i id="lbar"></i></div><div class="t" id="ltxt">Betöltés...</div></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
