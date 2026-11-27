@@ -6,14 +6,18 @@ import { SZODOBOZ } from './data/szodoboz.js';
 import { initSync } from './sync.js';
 // a paduch.hu-n indulás előtt lehúzzuk a legfrissebb mentést (más eszközről)
 const SYNC = initSync(); if (SYNC.ready) await SYNC.ready;
-import { NEAR } from './data/arnyalat.js';
+import { NEAR as NEAR1 } from './data/arnyalat.js';
+import { NEAR2 } from './data/arnyalat2.js';
+import { DIALOGS } from './data/parbeszed.js';
+// Árnyalatok: a régi 193 szó kézi adata + a bővített lista adata (kisbetűs azonosítóval, mint a WORDS)
+const NEAR = { ...NEAR1 }; for (const [k, v] of Object.entries(NEAR2)) NEAR[k.toLowerCase()] = v;
 
 /* ================= beállítások, szabályok ================= */
 const KEY = 'szoletra-v1';
 const KERT_KEYS = ['kert-szavak', 'kert-ismetles', 'kert-kuldetes', 'kert-kertesz', 'kert-tablak'];
 const INTERVALS = [0, 1, 2, 4, 7, 14, 30, 60];      // doboz -> hány nap múlva jön újra
 const MASTERED = 5;                                  // ettől a doboztól "megszilárdult"
-const PTS = { newWord: 10, review: 3, mastered: 15, sentence: 5, shade: 5, daily: 20 };
+const PTS = { newWord: 10, review: 3, mastered: 15, sentence: 5, shade: 5, dialog: 5, weak: 2, daily: 20, weekly: 50 };
 // pontküszöbök: az első lépcső 150 pont, utána lépcsőnként 22-vel több kell
 const T = Array.from({ length: STEPS }, (_, n) => 150 * n + 11 * n * (n - 1));
 const LEVELS = [['a2', 'Könnyebb (A2)'], ['b1', 'Közép (B1)'], ['b2', 'Felső-közép (B2)'], ['c1', 'Haladó (C1)']];
@@ -36,7 +40,7 @@ function lev(a, b) {
 }
 
 /* ================= állapot ================= */
-const defaults = () => ({ v: 1, settings: { newPerDay: 8, levels: ['a2', 'b1', 'b2'], szodoboz: false, offTopics: [] }, words: {}, custom: [], points: 0, log: {}, streak: { days: 0, last: null } });
+const defaults = () => ({ v: 1, settings: { newPerDay: 8, levels: ['a2', 'b1', 'b2'], szodoboz: false, offTopics: [] }, words: {}, custom: [], points: 0, log: {}, streak: { days: 0, last: null }, topicStats: {}, weekly: null, badges: [], freezes: 0, dlgDone: {} });
 let S = load();
 function load() {
   try {
@@ -49,7 +53,8 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(S));
 // ha a kertben (másik fülön) új kertszót találsz, a pontok és a szavak itt is frissülnek
 addEventListener('storage', e => { if (e.key !== KEY) return; S = load(); buildWords(); if (view === 'session') renderTop(); else render(); });
 function dayLog(t = today()) { return S.log[t] || (S.log[t] = { points: 0, newWords: 0, reviews: 0, sentences: 0, shades: 0, done: false }); }
-const streakNow = () => (S.streak.last === today() || S.streak.last === addDays(-1)) ? S.streak.days : 0;
+// sorozat: ma vagy tegnap volt gyakorlás; egy kimaradt napot a sorozatvédő (🧊) áthidal
+const streakNow = () => (S.streak.last === today() || S.streak.last === addDays(-1) || (S.freezes > 0 && S.streak.last === addDays(-2))) ? S.streak.days : 0;
 
 /* ================= szavak ================= */
 let WORDS = new Map();
@@ -108,6 +113,36 @@ function distract(w, field, n) {
   return out;
 }
 
+/* ================= gyengeségtérkép ================= */
+function record(topic, ok) {
+  if (!topic) return;
+  const t = (S.topicStats ||= {})[topic] ||= { ok: 0, bad: 0 };
+  t.ok = t.ok * .98 + (ok ? 1 : 0); t.bad = t.bad * .98 + (ok ? 0 : 1);
+}
+const topicAcc = t => { const x = (S.topicStats || {})[t]; return x && x.ok + x.bad >= 6 ? x.ok / (x.ok + x.bad) : null; };
+function weakTopic() {
+  let best = null, bv = .8;
+  for (const t of Object.keys(S.topicStats || {})) { const a = topicAcc(t); if (a !== null && a < bv && learnedIds().some(id => W(id).topic === t)) { bv = a; best = t; } }
+  return best;
+}
+
+/* ================= heti kihívás ================= */
+function weekStart(off = 0) { const d = new Date(); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd + off * 7); return dstr(d); }
+function weekNew() { const w0 = weekStart(); let n = 0; for (const [d, l] of Object.entries(S.log)) if (d >= w0) n += l.newWords || 0; return n; }
+function ensureWeek() {
+  const w = weekStart();
+  if (S.weekly && S.weekly.week === w) return;
+  const prev = S.weekly, goal = prev ? Math.max(20, Math.min(70, prev.goal + (prev.done ? 5 : -5))) : 30;
+  S.weekly = { week: w, goal, done: false }; save();
+}
+function checkWeekly() {
+  ensureWeek();
+  if (S.weekly.done || weekNew() < S.weekly.goal) return;
+  S.weekly.done = true; (S.badges ||= []).push({ week: S.weekly.week, goal: S.weekly.goal });
+  addPoints(PTS.weekly); save();
+  setTimeout(() => toast(`🏅 Heti kihívás teljesítve: ${S.weekly.goal} új szó! +${PTS.weekly} pont`, 4200), 600);
+}
+
 /* ================= felolvasás ================= */
 let VOICE = null;
 function pickVoice() {
@@ -115,7 +150,21 @@ function pickVoice() {
   VOICE = vs.find(v => /en-GB/i.test(v.lang) && /natural|neural|online/i.test(v.name)) || vs.find(v => /en-US/i.test(v.lang) && /natural|neural|online/i.test(v.name))
     || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
 }
-if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+let VOICE2 = null;
+function pickVoice2() { const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && v !== VOICE); VOICE2 = vs.find(v => /natural|neural|online/i.test(v.name) && v.lang !== (VOICE && VOICE.lang)) || vs.find(v => /natural|neural|online/i.test(v.name)) || vs[0] || null; }
+if ('speechSynthesis' in window) { pickVoice(); pickVoice2(); speechSynthesis.onvoiceschanged = () => { pickVoice(); pickVoice2(); }; }
+// párbeszéd felolvasása: A és B más hanggal (ha csak egy angol hang van, B magasabb hangfekvéssel)
+function speakDialog(d) {
+  if (!('speechSynthesis' in window)) return; speechSynthesis.cancel(); let i = 0;
+  const step = () => {
+    if (i >= d.lines.length) return;
+    const [who, en] = d.lines[i], u = new SpeechSynthesisUtterance(en), v = who === 'A' ? VOICE : (VOICE2 || VOICE);
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
+    u.rate = .92; if (who === 'B' && (!VOICE2 || VOICE2 === VOICE)) u.pitch = 1.3;
+    u.onend = () => { i++; setTimeout(step, 280); }; speechSynthesis.speak(u);
+  };
+  step();
+}
 function speak(t, rate = .95) {
   if (!('speechSynthesis' in window) || !t) return;
   speechSynthesis.cancel();
@@ -132,7 +181,13 @@ function addPoints(n) {
   const before = stepOf(S.points);
   S.points += n; dayLog().points += n;
   const t = today();
-  if (S.streak.last !== t) { S.streak.days = S.streak.last === addDays(-1) ? S.streak.days + 1 : 1; S.streak.last = t; }
+  if (S.streak.last !== t) {
+    if (S.streak.last === addDays(-1)) S.streak.days++;
+    else if (S.freezes > 0 && S.streak.last === addDays(-2)) { S.freezes--; S.streak.days++; setTimeout(() => toast('🧊 Sorozatvédő felhasználva: a tegnapi kimaradás nem szakította meg a sorozatot.', 3800), 400); }
+    else S.streak.days = 1;
+    S.streak.last = t;
+    if (S.streak.days % 7 === 0 && (S.freezes || 0) < 2) { S.freezes = (S.freezes || 0) + 1; setTimeout(() => toast(`🧊 ${S.streak.days} napos sorozat! Kaptál egy sorozatvédőt (${S.freezes}/2).`, 3800), 900); }
+  }
   const after = stepOf(S.points);
   if (after > before) pendingUp = { from: before, to: after };
   floatPts(n); renderTop();
@@ -176,7 +231,7 @@ function render() {
 }
 function renderTop() {
   const r = rankInfo();
-  $('#top').innerHTML = `<div class="mini" data-act="go" data-v="ranks">${emblem(r.tr, r.d, 46)}<div class="mtxt"><b>${esc(r.tr.name)} ${r.d}</b><div class="mbar"><i style="width:${r.pct}%"></i></div><small>${fmt(S.points)} pont${r.hi ? ` · még ${fmt(r.hi - S.points)} a következőig` : ''}</small></div></div><div class="streak" title="Hány napja gyakorolsz egyfolytában">🔥 ${streakNow()}</div>`;
+  $('#top').innerHTML = `<div class="mini" data-act="go" data-v="ranks">${emblem(r.tr, r.d, 46)}<div class="mtxt"><b>${esc(r.tr.name)} ${r.d}</b><div class="mbar"><i style="width:${r.pct}%"></i></div><small>${fmt(S.points)} pont${r.hi ? ` · még ${fmt(r.hi - S.points)} a következőig` : ''}</small></div></div><div class="streak" title="Hány napja gyakorolsz egyfolytában. A 🧊 sorozatvédő egy kimaradt napot áthidal (7 naponta kapsz egyet, max. 2).">🔥 ${streakNow()}${S.freezes ? ` <span style="opacity:.85">🧊${S.freezes}</span>` : ''}</div>`;
 }
 function renderNav() {
   const items = [['home', '🏠', 'Ma'], ['words', '📚', 'Szavaim'], ['ranks', '🏆', 'Ranglétra'], ['progress', '📈', 'Haladás'], ['settings', '⚙️', 'Beállítások']];
@@ -187,13 +242,14 @@ function renderNav() {
 /* ---------- főoldal ---------- */
 function plan() {
   const L = dayLog(), newLeft = Math.max(0, S.settings.newPerDay - L.newWords);
-  return { nNew: Math.min(newLeft, newCandidates().length), nRev: Math.min(dueIds().length, 50), nSent: sentencePool().length ? 6 : 0, nShade: 3 };
+  return { nNew: Math.min(newLeft, newCandidates().length), nRev: Math.min(dueIds().length, 50), nSent: sentencePool().length ? 6 : 0, nShade: 3, nDlg: 1 };
 }
 function homeHtml() {
   const r = rankInfo(), L = dayLog(), p = plan(), due = dueIds().length, learned = learnedIds().length;
   const mastered = Object.values(S.words).filter(x => x.box >= MASTERED).length;
   const next = r.hi ? `${TIERS[Math.floor((r.n + 1) / 5)].name} ${(r.n + 1) % 5 + 1}` : '';
-  const total = p.nNew + p.nRev + p.nSent + p.nShade;
+  const total = p.nNew + p.nRev + p.nSent + p.nShade + p.nDlg; ensureWeek();
+  const wk = S.weekly, wn = weekNew(), daysLeft = 7 - ((new Date().getDay() + 6) % 7), weak = weakTopic();
   return `
   <div class="panel hero">${emblem(r.tr, r.d, 150)}
     <div style="flex:1;min-width:0"><div class="rn">${esc(r.tr.name)}</div><div class="rd">${r.d}. fokozat · ${r.n + 1}. lépcső a ${STEPS}-ből</div>
@@ -204,14 +260,18 @@ function homeHtml() {
   <div class="panel today">
     <h3>Mai kör</h3>
     ${L.done ? `<div class="done">✓ A mai kör megvan! Ma eddig ${fmt(L.points)} pont.</div>` : `<div class="chips">
-      <span class="chip">🆕 ${p.nNew} új szó</span><span class="chip">🔁 ${p.nRev} ismétlés</span><span class="chip">💬 ${p.nSent} mondat</span><span class="chip">🎯 ${p.nShade} árnyalat</span><span class="chip">⭐ ma: ${fmt(L.points)} pont</span></div>`}
+      <span class="chip">🆕 ${p.nNew} új szó</span><span class="chip">🔁 ${p.nRev} ismétlés</span><span class="chip">💬 ${p.nSent} mondat</span><span class="chip">🎧 ${p.nDlg} párbeszéd</span><span class="chip">🎯 ${p.nShade} árnyalat</span>${weak ? `<span class="chip" title="A leggyengébb témád, ebből jön 3 extra kérdés">⚠️ ${esc(weak)}</span>` : ''}<span class="chip">⭐ ma: ${fmt(L.points)} pont</span></div>`}
     <button class="big" data-act="start" data-k="daily" ${L.done || !total ? 'disabled' : ''}>${L.done ? 'Holnap jön az új kör' : '▶ Mai kör indítása'}</button>
   </div>
+  <div class="panel weekly"><div class="wh"><b>🏅 Heti kihívás</b><span class="mut small">${wk.done ? 'teljesítve!' : `még ${daysLeft} nap`}</span></div>
+    <div class="bar"><i style="width:${Math.min(100, wn / wk.goal * 100)}%"></i></div>
+    <div class="mut small">${wk.done ? `✓ ${wk.goal} új szó megvan, ezért járt +${PTS.weekly} pont. Jövő héten ${Math.min(70, wk.goal + 5)} lesz a cél.` : `${wn} / ${wk.goal} új szó ezen a héten. Teljesítve +${PTS.weekly} pont és egy heti jelvény.`}</div></div>
   <div class="tiles">
     <button class="tile" data-act="start" data-k="new" ${newCandidates().length ? '' : 'disabled'}><div class="ic">🆕</div><b>Új szavak</b><small>még 5 szó</small></button>
     <button class="tile" data-act="start" data-k="review" ${due ? '' : 'disabled'}><div class="ic">🔁</div><b>Ismétlés</b><small>${due} esedékes</small></button>
     <button class="tile" data-act="start" data-k="sent"><div class="ic">💬</div><b>Mondatok</b><small>10 mondat</small></button>
     <button class="tile" data-act="start" data-k="shade"><div class="ic">🎯</div><b>Árnyalatok</b><small>hasonló jelentések</small></button>
+    <button class="tile" data-act="start" data-k="dialog"><div class="ic">🎧</div><b>Párbeszédek</b><small>hallás utáni értés</small></button>
   </div>
   <div class="stats" style="margin-top:14px">
     <div class="stat"><b>${learned}</b><small>megtanult szó (${WORDS.size}-ből)</small></div>
@@ -222,8 +282,8 @@ function homeHtml() {
 }
 
 /* ---------- kör összeállítása ---------- */
-function newCards(n) {
-  const ids = newCandidates().slice(0, n).map(w => w.id), out = [];
+function newCards(n, topic) {
+  const ids = newCandidates().filter(w => !topic || w.topic === topic).slice(0, n).map(w => w.id), out = [];
   for (let g = 0; g < ids.length; g += 4) {
     const grp = ids.slice(g, g + 4);
     grp.forEach(id => { out.push({ t: 'intro', id, sec: 'new' }); sess.newState[id] = { en2hu: false, hu2en: false }; });
@@ -248,14 +308,34 @@ function sentCards(n) {
 }
 /* Árnyalatok: hasonló jelentések közül a pontos. Előbb a már tanult szavak jönnek, a többi kitölti. */
 function shadeCards(n) {
-  const has = id => NEAR[id] && WORDS.has(id) && S.settings.levels.includes(W(id).level);
+  const off = S.settings.offTopics || [];
+  const has = id => NEAR[id] && WORDS.has(id) && S.settings.levels.includes(W(id).level) && !off.includes(W(id).topic);
   const learned = shuffle(learnedIds().filter(has)), rest = shuffle(Object.keys(NEAR).filter(id => has(id) && !learned.includes(id)));
   return [...learned, ...rest].slice(0, n).map(id => ({ t: 'shade', dir: Math.random() < .7 ? 'en2hu' : 'hu2en', id, sec: 'shade' }));
 }
-function start(kind) {
+const DLG = id => DIALOGS.find(d => d.id === id);
+function dlgCards(n) {
+  const lv = S.settings.levels, done = S.dlgDone || {};
+  const pool = DIALOGS.filter(d => lv.includes(d.level)).sort((a, b) => (done[a.id] || '') < (done[b.id] || '') ? -1 : (done[a.id] || '') > (done[b.id] || '') ? 1 : Math.random() - .5);
+  return pool.slice(0, n).flatMap(d => d.q.map((_, qi) => ({ t: 'dlg', did: d.id, qi, sec: 'dlg' })));
+}
+// témagyakorlás: a téma tanult szavai (a leggyengébbek elöl), kiegészítve új szavakkal és árnyalatokkal
+function topicCards(topic, n = 10) {
+  const learned = learnedIds().filter(id => W(id).topic === topic).sort((a, b) => (P(a).box - P(b).box) || ((P(b).bad || 0) - (P(a).bad || 0)));
+  const out = learned.slice(0, 7).map(id => ({ ...modeFor(id), id, sec: 'weak', label: topic }));
+  if (out.length < 4) out.push(...newCards(4, topic));
+  const sh = learned.filter(id => NEAR[id]).slice(0, 3).map(id => ({ t: 'shade', dir: 'en2hu', id, sec: 'shade' }));
+  return [...out, ...sh].slice(0, n + 6);
+}
+function start(kind, arg) {
   sess = { kind, cards: [], i: 0, newState: {}, stats: { nw: 0, rv: 0, st: 0, sh: 0, ok: 0, bad: 0 }, p0: S.points };
   const p = plan();
-  if (kind === 'daily') sess.cards = [...newCards(p.nNew), ...reviewCards(50), ...sentCards(p.nSent), ...shadeCards(p.nShade)];
+  if (kind === 'daily') {
+    const wk = weakTopic(), weak = wk ? learnedIds().filter(id => W(id).topic === wk && !dueIds().includes(id)).sort((a, b) => P(a).box - P(b).box).slice(0, 3).map(id => ({ ...modeFor(id), id, sec: 'weak', label: wk })) : [];
+    sess.cards = [...newCards(p.nNew), ...reviewCards(50), ...weak, ...sentCards(p.nSent), ...dlgCards(p.nDlg), ...shadeCards(p.nShade)];
+  }
+  if (kind === 'dialog') sess.cards = dlgCards(3);
+  if (kind === 'topic') { sess.topic = arg; sess.cards = topicCards(arg); }
   if (kind === 'new') sess.cards = newCards(5);
   if (kind === 'review') sess.cards = reviewCards(50);
   if (kind === 'sent') sess.cards = sentCards(10);
@@ -266,9 +346,10 @@ function start(kind) {
 
 /* ---------- egy kártya ---------- */
 const cur = () => sess.cards[sess.i];
-const SECN = { new: 'Új szavak', rev: 'Ismétlés', sent: 'Mondatértés', retry: 'Még egyszer', shade: 'Árnyalatok' };
+const SECN = { new: 'Új szavak', rev: 'Ismétlés', sent: 'Mondatértés', retry: 'Még egyszer', shade: 'Árnyalatok', dlg: 'Párbeszéd', weak: 'Gyakorlás' };
 function prepare(c) {
   if (c.opts || c.t === 'intro' || c.t === 'type') return;
+  if (c.t === 'dlg') { const q = DLG(c.did).q[c.qi]; c.correct = q[1][q[2]]; c.opts = shuffle(q[1]); return; }
   const w = W(c.id);
   if (c.t === 'shade') {
     const near = shuffle(NEAR[c.id]).slice(0, 3).map(x => x.split('|'));
@@ -288,10 +369,17 @@ function sessionHtml() {
   if (!c) return summaryHtml();
   prepare(c);
   const w = W(c.id), tot = sess.cards.length;
-  const head = `<div class="shead"><span class="sec">${SECN[c.sec]}</span><div class="bar"><i style="width:${sess.i / tot * 100}%"></i></div><span class="cnt">${sess.i + 1}/${tot}</span>${combo >= 3 ? `<span class="combo">🔥 ${combo}</span>` : ''}<button class="xbtn" data-act="quit">✕</button></div>`;
+  const head = `<div class="shead"><span class="sec">${c.label ? (c.sec === 'weak' ? '🎯 ' : '') + esc(c.label) : SECN[c.sec]}</span><div class="bar"><i style="width:${sess.i / tot * 100}%"></i></div><span class="cnt">${sess.i + 1}/${tot}</span>${combo >= 3 ? `<span class="combo">🔥 ${combo}</span>` : ''}<button class="xbtn" data-act="quit">✕</button></div>`;
   const spk = (t, cls = '') => `<button class="spk ${cls}" data-act="say" data-t="${esc(t)}" title="Felolvasás">🔊</button>`;
   let body = '';
-  if (c.t === 'intro') {
+  if (c.t === 'dlg') {
+    const d = DLG(c.did), q = d.q[c.qi];
+    body = `<span class="tag" style="color:#9fd4ff;background:#0b2340;border-color:#1f5a92">🎧 Párbeszéd · ${esc(d.title)} · ${c.qi + 1}/${d.q.length}. kérdés</span>
+      <button class="spk huge" data-act="dplay" title="Meghallgatás">▶</button>
+      <div class="q">${c.res ? '' : 'Hallgasd meg a párbeszédet (akár többször is), aztán válaszolj.'}</div>
+      <div class="dlgq">${esc(q[0])}</div>
+      ${c.res || c.show ? `<div class="dlgtx">${d.lines.map(([who, en, hu]) => `<div class="ln ${who}"><b class="who">${who}</b><span>${esc(en)}${c.res ? `<i>${esc(hu)}</i>` : ''}</span></div>`).join('')}</div>` : `<button class="btn" data-act="dshow" style="margin-top:6px">Szöveg mutatása</button>`}`;
+  } else if (c.t === 'intro') {
     body = `<span class="tag">Új szó</span>
       <div class="word">${esc(w.en)} ${spk(w.en)}</div><div class="lvl">${w.level.toUpperCase()} · ${esc(w.topic)}</div>
       <div class="mean">${esc(w.hu)}</div>
@@ -323,6 +411,8 @@ function sessionHtml() {
 }
 function feedbackHtml(c, w) {
   const ok = c.res.ok;
+  if (c.t === 'dlg') return `<div class="fb ${ok ? 'ok' : 'bad'}">${c.gain ? `<span class="gain">+${c.gain}</span>` : ''}<b>${ok ? '✓ Helyes!' : '✗ Nem ez volt.'}</b><div class="exs">Helyes válasz: <b>${esc(c.correct)}</b></div></div>
+    <div class="btns"><button class="btn pri" data-act="next">Tovább ⏎</button></div>`;
   let msg = ok ? (c.res.near ? `Majdnem tökéletes! Helyesen: <b>${esc(w.en)}</b>` : 'Helyes!') : (c.t === 'type' ? `A helyes válasz: <b>${esc(w.en)}</b>` : 'Nem ez volt.');
   if (c.mastered) msg += ' Ez a szó most megszilárdult! 🏅';
   if (c.sec === 'new' && ok && P(c.id) && c.gain) msg += ' Új szó megtanulva! 🎉';
@@ -349,16 +439,26 @@ function answer(choice) {
   apply(c, c.res.ok);
   render();
   const big = showRankUp();
-  if (c.res.ok && !big && c.t !== 'shade') advT = setTimeout(next, c.t === 'sent' ? 1700 : 1100);
-  if (!c.res.ok && c.t !== 'sent') speak(W(c.id).en);
+  if (c.res.ok && !big && c.t !== 'shade' && c.t !== 'dlg') advT = setTimeout(next, c.t === 'sent' ? 1700 : 1100);
+  if (!c.res.ok && c.t !== 'sent' && c.t !== 'dlg') speak(W(c.id).en);
 }
 function apply(c, ok) {
   const p = P(c.id), L = dayLog(), st = sess.stats;
   if (ok) { combo++; st.ok++; } else { combo = 0; st.bad++; }
+  record(c.t === 'dlg' ? DLG(c.did).topic : (W(c.id) || {}).topic, ok);
+  if (c.sec === 'dlg') {
+    if (ok) { L.dialogs = (L.dialogs || 0) + 1; st.dl = (st.dl || 0) + 1; c.gain = PTS.dialog; addPoints(c.gain); }
+    (S.dlgDone ||= {})[c.did] = today(); save(); return;
+  }
+  if (c.sec === 'weak') {
+    if (ok) { c.gain = PTS.weak; addPoints(c.gain); p.ok = (p.ok || 0) + 1; }
+    else { p.bad = (p.bad || 0) + 1; if (p.due > addDays(1)) p.due = addDays(1); sess.cards.push({ t: 'mc', dir: 'en2hu', id: c.id, sec: 'retry' }); }
+    save(); return;
+  }
   if (c.sec === 'new') {
     if (ok) {
       const ns = sess.newState[c.id]; ns[c.dir] = true;
-      if (ns.en2hu && ns.hu2en && !p) { S.words[c.id] = { box: 1, due: addDays(1), learned: today(), ok: 0, bad: 0 }; L.newWords++; st.nw++; c.gain = PTS.newWord; addPoints(c.gain); }
+      if (ns.en2hu && ns.hu2en && !p) { S.words[c.id] = { box: 1, due: addDays(1), learned: today(), ok: 0, bad: 0 }; L.newWords++; st.nw++; c.gain = PTS.newWord; addPoints(c.gain); checkWeekly(); }
     } else sess.cards.push({ t: 'mc', dir: c.dir, id: c.id, sec: 'new' });
   } else if (c.sec === 'rev') {
     if (ok) {
@@ -461,10 +561,16 @@ function progressHtml() {
   const lab = ['', '1. doboz (holnap)', '2. doboz', '3. doboz', '4. doboz', '5. megszilárdult', '6. doboz', '7. végleges'];
   const bmx = Math.max(1, ...bx);
   const tot = Object.values(S.log).reduce((a, l) => ({ nw: a.nw + l.newWords, rv: a.rv + l.reviews, st: a.st + l.sentences }), { nw: 0, rv: 0, st: 0 });
-  return `<div class="panel"><h2>Az elmúlt 14 nap pontjai</h2><div class="chart">${chart}</div></div>
+  const tstats = Object.keys(S.topicStats || {}).map(t => ({ t, a: topicAcc(t), n: Math.round((S.topicStats[t].ok + S.topicStats[t].bad)) })).filter(x => x.a !== null).sort((a, b) => a.a - b.a);
+  const weakHtml = tstats.length ? tstats.map(x => { const pc = Math.round(x.a * 100), col = pc < 60 ? '#e2555f' : pc < 80 ? '#f0b43a' : '#3fbf6f';
+    return `<div class="wk"><span>${esc(x.t)}</span><i><b style="width:${pc}%;background:${col}"></b></i><em>${pc}%</em><button class="btn sm" data-act="start" data-k="topic" data-t="${esc(x.t)}">Gyakorlás</button></div>`; }).join('')
+    : '<p class="mut small">Még kevés a válasz. Pár kör után itt látod, melyik témában hibázol a legtöbbet.</p>';
+  return `<div class="panel"><h2>Gyengeségtérkép</h2><p class="mut small" style="margin-top:-4px">Témánként mennyire pontosak a válaszaid (a frissebbek többet számítanak). A legrosszabb téma a mai körben is kap 3 extra kérdést.</p>${weakHtml}</div>
+    <div class="panel"><h2>Az elmúlt 14 nap pontjai</h2><div class="chart">${chart}</div></div>
     <div class="panel"><h2>Összesen</h2><div class="stats">
       <div class="stat"><b>${learnedIds().length}</b><small>tanult szó</small></div><div class="stat"><b>${tot.rv}</b><small>ismétlés</small></div>
-      <div class="stat"><b>${tot.st}</b><small>értett mondat</small></div><div class="stat"><b>${S.streak.days}</b><small>leghosszabb most</small></div></div></div>
+      <div class="stat"><b>${tot.st}</b><small>értett mondat</small></div><div class="stat"><b>${S.streak.days}</b><small>leghosszabb most</small></div></div>
+      <p class="mut small" style="margin-top:10px">🏅 Heti jelvények: <b style="color:#fff">${(S.badges || []).length}</b> · 🧊 Sorozatvédő: <b style="color:#fff">${S.freezes || 0}</b> / 2</p></div>
     <div class="panel"><h2>Szavak dobozonként</h2><div class="boxes">${[1, 2, 3, 4, 5, 6, 7].map(i => `<div><span>${lab[i]}</span><i style="width:${bx[i] / bmx * 60}%"></i><b>${bx[i]}</b></div>`).join('')}</div>
       <p class="mut small">Minden helyes válasz egy dobozzal feljebb viszi a szót, és egyre ritkábban jön: 1, 2, 4, 7, 14, 30, majd 60 nap múlva. Rossz válasznál visszakerül az elsőbe.</p></div>`;
 }
@@ -488,7 +594,9 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
   if (a === 'go') go(b.dataset.v);
-  else if (a === 'start') start(b.dataset.k);
+  else if (a === 'start') start(b.dataset.k, b.dataset.t);
+  else if (a === 'dplay') { const c = cur(); if (c && c.t === 'dlg') speakDialog(DLG(c.did)); }
+  else if (a === 'dshow') { const c = cur(); if (c) { c.show = true; render(); } }
   else if (a === 'quit') { if (!sess || sess.i === 0 || confirm('Kilépsz a körből? Amit eddig megtanultál, az megmarad.')) go('home'); }
   else if (a === 'say') speak(b.dataset.t, b.dataset.t.includes(' ') ? .9 : .85);
   else if (a === 'next') next();
@@ -529,7 +637,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); if (typing && c && !c.res) answer(e.target.value); else next(); return; }
   if (typing) return;
   if (c && c.opts && !c.res && /^[1-4]$/.test(e.key) && +e.key <= c.opts.length) answer(+e.key - 1);
-  if (e.key === ' ' && c) { e.preventDefault(); const w = W(c.id); speak(c.t === 'sent' ? w.sen : w.en); }
+  if (e.key === ' ' && c) { e.preventDefault(); if (c.t === 'dlg') { speakDialog(DLG(c.did)); return; } const w = W(c.id); speak(c.t === 'sent' ? w.sen : w.en); }
 });
 /* felolvasás és fókusz, amikor egy kártya megjelenik */
 function afterRender() {
@@ -537,6 +645,7 @@ function afterRender() {
   const c = cur(); if (!c) return;
   const ti = $('#typed'); if (ti) ti.focus();
   if (c.spoken) return; c.spoken = true;
+  if (c.t === 'dlg') { if (c.qi === 0) setTimeout(() => speakDialog(DLG(c.did)), 350); return; }
   const w = W(c.id);
   if (c.t === 'intro' || (c.t === 'shade' && c.dir === 'en2hu') || (c.t === 'mc' && (c.dir === 'en2hu' || c.dir === 'listen'))) setTimeout(() => speak(w.en, .85), 250);
   if (c.t === 'sent' && c.mode === 'listen') setTimeout(() => speak(w.sen, .9), 300);

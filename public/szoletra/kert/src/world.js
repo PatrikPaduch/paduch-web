@@ -2,6 +2,9 @@
 // Világ-egység = méter. +z dél (a kapu), -z észak.
 
 export const PLAZA = { x0: -92, x1: 92, z0: -84, z1: 112 };
+// Babilon utcái az Istár-kapun túl (a kert déli fala mögött), délen a rakpart és a stég az Eufráteszen
+export const CITY = { x0: -80, x1: 80, z0: 113.5, z1: 230 };
+export const PIER = { x0: 18.4, x1: 21.6, z0: 229, z1: 244 };
 // öt terasz: magasság és fél-szélesség (a gyűrűk 9 m szélesek)
 export const LV = [{ h: 5, r: 46 }, { h: 10, r: 37 }, { h: 15, r: 28 }, { h: 20, r: 19 }, { h: 25, r: 10 }];
 export const WALL_H = 7;
@@ -52,7 +55,11 @@ const CELL = 8, grid = new Map(), RECTS = [];
 export function collider(x, z, r) { const k = Math.floor(x / CELL) + ',' + Math.floor(z / CELL); (grid.get(k) || grid.set(k, []).get(k)).push({ x, z, r }); }
 export function rectCollider(x0, z0, x1, z1) { RECTS.push([x0, z0, x1, z1]); }
 export function blocked(x, z, rad = .35) {
-  if (x < PLAZA.x0 + 1.2 || x > PLAZA.x1 - 1.2 || z < PLAZA.z0 + 1.2 || z > PLAZA.z1 - 1.2) return true;
+  const inGarden = x > PLAZA.x0 + 1.2 && x < PLAZA.x1 - 1.2 && z > PLAZA.z0 + 1.2 && z < PLAZA.z1 - 1.2;
+  const inGate = Math.abs(x) < 4.4 && z >= PLAZA.z1 - 1.3 && z <= CITY.z0 + 1.2;
+  const inCity = x > CITY.x0 + 1.4 && x < CITY.x1 - 1.4 && z > CITY.z0 + .9 && z < CITY.z1 - .8;
+  const onPier = x > PIER.x0 && x < PIER.x1 && z >= CITY.z1 - 1 && z < PIER.z1;
+  if (!inGarden && !inGate && !inCity && !onPier) return true;
   if (inLake(x, z) && !onIsland(x, z) && !onBridge(x, z)) return true;
   if (x > BASIN.x0 && x < BASIN.x1 && z > BASIN.z0 && z < BASIN.z1) return true;
   for (const [a, b, c, d] of CANALS) if (x > a - .3 && x < b + .3 && z > c - .3 && z < d + .3) return true;
@@ -196,6 +203,9 @@ export const TOUR = [
   [0, 10.3], [0, 19.3], [0, 28.3], [0, 37.4], [0, 46.3], [0, 54.5], [0, 58], [-20, 58], [-46, 57], [-51, 52], [-51, 6], [-70, 6], [-77, 30], [-77, -30], [-62, -44],
   [-50, -50], [-48, -66], [-5.5, -66], [-4, -60.8], [0, -60], [4, -60.8], [5.5, -66], [48, -66], [50, -50], [50, -12], [53, -4], [62, -4], [70, -4], [76, -2], [70, -4], [62, -4],
   [53, -4], [50, 10], [50, 44], [54, 56], [40, 58], [20, 58], [6, 62], [4, 104], [0, 104],
+  [0, 118], [0, 148], [-8, 156], [-16, 170], [-30, 171], [-43, 171], [-52, 171], [-57, 166], [-52, 171], [-43, 171], [-30, 171], [-16, 186], [0, 196],
+  [16, 186], [30, 177], [43, 177], [52, 177], [60, 183], [70, 177], [60, 170], [52, 177], [43, 177], [30, 177], [16, 160], [8, 200], [0, 214], [0, 225],
+  [-30, 225], [-60, 225], [-30, 225], [14, 225], [20, 228], [20, 240], [20, 228], [40, 225], [62, 225], [30, 222], [7, 210], [6, 150], [3, 118], [0, 108],
 ];
 
 /* ---------- rangzár: melyik terasz melyik rangtól nyílik (TIERS-index) ---------- */

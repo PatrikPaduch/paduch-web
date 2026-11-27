@@ -232,3 +232,46 @@ export function makeGardener() {
     },
   };
 }
+
+/* ---------- városlakók: köpenyes emberek (árusok, járókelők), egyszerű járás-animációval ---------- */
+const PEOPLE_LOOKS = [
+  { robe: '#7a3b2a', sash: '#d9a640', head: 'cap', hat: '#e8dcc4', beard: '#3a2a1a', skin: '#c98e62' },
+  { robe: '#2d5d96', sash: '#e8dcc4', head: 'turban', hat: '#f2ead8', beard: '#2a1d14', skin: '#b97f55' },
+  { robe: '#4f7a3a', sash: '#8a3a22', head: 'veil', hat: '#c8b48a', beard: null, skin: '#d9a07a' },
+  { robe: '#8a6a9a', sash: '#f0c040', head: 'veil', hat: '#6a2b4a', beard: null, skin: '#c98e62' },
+  { robe: '#b8643a', sash: '#2d5d96', head: 'cap', hat: '#2a2a2a', beard: '#5a3a1a', skin: '#a8714a' },
+  { robe: '#e8dcc4', sash: '#7a1f2a', head: 'turban', hat: '#7a1f2a', beard: '#d8d0c0', skin: '#c98e62' },
+  { robe: '#3a4f6a', sash: '#c8a040', head: 'bare', hat: '#2a1d14', beard: '#2a1d14', skin: '#b97f55' },
+];
+export function makePerson(i, scale = 1) {
+  const L = PEOPLE_LOOKS[i % PEOPLE_LOOKS.length], g = new THREE.Group(), P = {}, M = {};
+  const mat = c => M[c] ??= new THREE.MeshStandardMaterial({ color: c, roughness: .88 });
+  const mesh = (geo, c, x, y, z, parent) => { const o = new THREE.Mesh(geo, mat(c)); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  const pivot = (x, y, z, parent) => { const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p); return p; };
+  const body = pivot(0, 0, 0, g);
+  for (const s of [-1, 1]) { const hip = pivot(s * .12, .78, 0, body); mesh(new THREE.CylinderGeometry(.09, .08, .72, 8), L.robe, 0, -.36, 0, hip); mesh(new THREE.BoxGeometry(.16, .1, .28), '#4a3220', 0, -.74, .04, hip); P[s < 0 ? 'legL' : 'legR'] = hip; }
+  mesh(new THREE.CylinderGeometry(.24, .36, 1.05, 14), L.robe, 0, 1.05, 0, body);           // köpeny
+  mesh(new THREE.CylinderGeometry(.25, .25, .09, 14), L.sash, 0, 1.02, 0, body);
+  for (const s of [-1, 1]) { const sh = pivot(s * .3, 1.48, 0, body); mesh(new THREE.CylinderGeometry(.075, .065, .5, 8), L.robe, 0, -.25, 0, sh); mesh(new THREE.SphereGeometry(.075, 8, 6), L.skin, 0, -.52, 0, sh); P[s < 0 ? 'armL' : 'armR'] = sh; }
+  const head = pivot(0, 1.78, 0, body); P.head = head;
+  mesh(new THREE.SphereGeometry(.2, 16, 12), L.skin, 0, 0, 0, head);
+  mesh(new THREE.SphereGeometry(.06, 8, 6), L.skin, 0, -.02, .2, head);
+  if (L.beard) { const b = mesh(new THREE.SphereGeometry(.19, 12, 8), L.beard, 0, -.16, .08, head); b.scale.set(.95, 1.2, .7); }
+  if (L.head === 'cap') mesh(new THREE.CylinderGeometry(.19, .21, .16, 14), L.hat, 0, .14, 0, head);
+  if (L.head === 'turban') { const t = mesh(new THREE.TorusGeometry(.17, .08, 8, 18), L.hat, 0, .1, 0, head); t.rotation.x = Math.PI / 2; mesh(new THREE.SphereGeometry(.15, 12, 8), L.hat, 0, .16, 0, head); }
+  if (L.head === 'veil') { const v = mesh(new THREE.SphereGeometry(.235, 16, 12, 0, Math.PI * 2, 0, Math.PI * .62), L.hat, 0, .02, -.02, head); v.scale.set(1, 1.15, 1.05); const c = mesh(new THREE.CylinderGeometry(.2, .3, .5, 14, 1, true), L.hat, 0, -.32, -.04, head); c.material.side = THREE.DoubleSide; }
+  if (L.head === 'bare') mesh(new THREE.SphereGeometry(.205, 14, 10, 0, Math.PI * 2, 0, Math.PI * .45), L.hat, 0, .01, -.01, head);
+  g.scale.setScalar(scale);
+  let ph = Math.random() * 6, t = Math.random() * 9, talk = 0;
+  return {
+    object: g,
+    talk(sec) { talk = sec; },
+    update(dt, speed = 0) {
+      t += dt; talk = Math.max(0, talk - dt); const k = Math.min(1, speed / 1.2); ph += dt * (5 + speed * 2) * k; const s = Math.sin(ph);
+      P.legL.rotation.x = s * .55 * k; P.legR.rotation.x = -s * .55 * k;
+      P.armL.rotation.x = -s * .45 * k; P.armR.rotation.x = talk > 0 ? -.8 + Math.sin(t * 3) * .3 : s * .45 * k;
+      body.position.y = Math.abs(Math.cos(ph)) * .04 * k;
+      P.head.rotation.y = talk > 0 ? Math.sin(t * 1.3) * .15 : Math.sin(t * .5 + ph) * .25 * (1 - k);
+    },
+  };
+}

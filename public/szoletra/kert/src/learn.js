@@ -1,7 +1,10 @@
 // Tanulás a kertben: ismétlés "?" címkékkel, "Keresd meg!" küldetések, agyagtáblák, a kertész feladatai.
 import * as THREE from 'three';
 import { GARDEN_WORDS, WORD_IDS } from './words.js';
-import { TABLETS, TASKS } from './tablets.js';
+import { TABLETS as TABLETS0, TASKS } from './tablets.js';
+import { CONVOS, CITY_TABLETS } from './citydata.js';
+import { CITY_NPC } from './city.js';
+const TABLETS = [...TABLETS0, ...CITY_TABLETS];   // a kert és a könyvtár táblái
 import { makeGardener } from './hero.js';
 import { collider } from './world.js';
 
@@ -115,15 +118,20 @@ export function createLearn(ctx) {
   const saveKS = () => sv('kert-kertesz', KS);
   const talkEl = $('talk'), taskEl = $('task');
   const taskOf = () => TASKS.find(t => t.id === KS.task);
+  let who = { name: 'Nabu, a kertész', person: null, x: GP.x, z: GP.z };
   function talk(en, hu, buttons) {
-    talkEl.innerHTML = `<button class="x">✕</button><span class="tag">Nabu, a kertész</span><p class="en">“${esc(en)}”</p><p class="hu" hidden>${esc(hu)}</p><div class="row2"><button data-k="say">🔊 Még egyszer</button><button data-k="hu">Fordítás</button>${buttons || ''}</div>`;
-    talkEl.classList.add('on'); ctx.say(en, .9); gard.talk(Math.min(6, en.length / 14));
+    talkEl.innerHTML = `<button class="x">✕</button><span class="tag">${esc(who.name)}</span><p class="en">“${esc(en)}”</p><p class="hu" hidden>${esc(hu)}</p><div class="row2"><button data-k="say">🔊 Még egyszer</button><button data-k="hu">Fordítás</button>${buttons || ''}</div>`;
+    talkEl.classList.add('on'); ctx.say(en, .9); (who.person || gard).talk(Math.min(6, en.length / 14));
     talkEl.querySelector('.x').onclick = () => talkEl.classList.remove('on');
     talkEl.dataset.en = en;
   }
   talkEl.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.k === 'say') { ctx.say(talkEl.dataset.en, .85); gard.talk(4); }
+    if (b.dataset.k === 'say') { ctx.say(talkEl.dataset.en, .85); (who.person || gard).talk(4); }
+    if (b.dataset.k === 'task') { talkToGardener(true); return; }
+    if (b.dataset.k === 'chat') { startConv('nabu'); return; }
+    if (b.dataset.k === 'cnext') { conv.si++; if (conv.si < conv.c.steps.length) showStep(); else endConv(); return; }
+    if (b.dataset.rep !== undefined && conv) { replyConv(b); return; }
     if (b.dataset.k === 'hu') talkEl.querySelector('.hu').hidden = !talkEl.querySelector('.hu').hidden;
     if (b.dataset.k === 'ok') { const t = TASKS[KS.next % TASKS.length]; KS = { task: t.id, got: 0, picked: [], visited: false, next: KS.next + 1, done: KS.done }; saveKS(); talkEl.classList.remove('on'); renderTask(); ctx.toast('Új feladat a kertésztől', 'figyeld, mit kért!'); }
     if (b.dataset.k === 'other') { KS.next++; saveKS(); offer(); }
@@ -136,8 +144,15 @@ export function createLearn(ctx) {
   });
   function offer() { const t = TASKS[KS.next % TASKS.length]; talk(t.en, t.hu, `<button data-k="ok" class="pri">Elvállalom</button><button data-k="other">Másikat</button>`); }
   function finishTask(en, hu) { KS.done++; KS.task = null; saveKS(); renderTask(); talk(en, hu); ctx.addPts(15, 'Feladat teljesítve', '+15 pont · a kertész megköszönte'); }
-  function talkToGardener() {
+  function nabuMenu() {
+    who = { name: 'Nabu, a kertész', person: null, x: GP.x, z: GP.z };
+    talk('Hello, my friend! Do you want to help me, or shall we have a little chat?', 'Szervusz, barátom! Segítesz nekem, vagy beszélgessünk egy kicsit?',
+      `<button data-k="task" class="pri">🧑‍🌾 Feladat</button><button data-k="chat" class="pri">💬 Beszélgessünk</button>`);
+  }
+  function talkToGardener(fromMenu) {
+    who = { name: 'Nabu, a kertész', person: null, x: GP.x, z: GP.z };
     const t = taskOf();
+    if (!fromMenu && (!t || !(t.ask ? KS.visited : KS.got >= t.n))) { nabuMenu(); return; }
     if (!t) { offer(); return; }
     if (t.ask) {
       if (!KS.visited) { talk(t.en, t.hu); return; }
@@ -161,9 +176,47 @@ export function createLearn(ctx) {
     return best;
   }
 
+  /* ---------- beszélgetések: az NPC angolul mond valamit, te választod ki a jó angol választ ---------- */
+  const CD = ld('kert-beszelgetes', {});        // beszélgetés-kulcs -> utolsó teljesítés napja
+  let conv = null;
+  function startConv(id, n) {
+    const list = CONVOS[id]; if (!list) return;
+    if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z };
+    let ci = list.findIndex((c, i) => CD[id + i] !== dstr(0)); if (ci < 0) ci = Math.floor(Math.random() * list.length);
+    conv = { id, ci, c: list[ci], si: 0, first: 0, wrong: false };
+    showStep();
+  }
+  function showStep() {
+    const st = conv.c.steps[conv.si]; conv.wrong = false;
+    const reps = shuffle(st.replies.map((r, i) => i));
+    talk(st.say, st.hu, `</div><div class="cnv"><small>💬 ${esc(conv.c.title)} · ${conv.si + 1}/${conv.c.steps.length} · Válaszolj angolul:</small>${reps.map(i => `<button data-rep="${i}">${esc(st.replies[i][0])}</button>`).join('')}<div class="react"></div>`);
+  }
+  function replyConv(b) {
+    const st = conv.c.steps[conv.si], r = st.replies[+b.dataset.rep], ok = r[1] === 1, re = talkEl.querySelector('.react');
+    ctx.say(r[2], .9); (who.person || gard).talk(3);
+    if (ok) {
+      if (!conv.wrong) conv.first++;
+      talkEl.querySelectorAll('[data-rep]').forEach(x => { x.disabled = true; if (x === b) x.classList.add('ok'); });
+      re.innerHTML = `<p class="en">“${esc(r[2])}”</p><div class="row2"><button data-k="cnext" class="pri">${conv.si + 1 < conv.c.steps.length ? 'Tovább ⏎' : 'Befejezés'}</button></div>`;
+    } else {
+      conv.wrong = true; b.disabled = true; b.classList.add('bad');
+      re.innerHTML = `<p class="en">“${esc(r[2])}”</p><p class="why">✗ ${esc(r[3] || 'Ez nem illik ide.')} Próbáld újra!</p>`;
+    }
+  }
+  function endConv() {
+    const key = conv.id + conv.ci, n = conv.c.steps.length, fresh = CD[key] !== dstr(0);
+    CD[key] = dstr(0); sv('kert-beszelgetes', CD);
+    const pts = fresh ? 5 + 3 * conv.first : 0;
+    talk(conv.first === n ? 'Lovely talking to you!' : 'It was nice to talk to you. See you soon!', conv.first === n ? 'Öröm volt veled beszélgetni!' : 'Jó volt beszélgetni. Hamarosan találkozunk!');
+    if (pts) ctx.addPts(pts, 'Beszélgetés: ' + conv.c.title, `+${pts} pont · ${conv.first}/${n} elsőre jó válasz`);
+    conv = null;
+  }
+
   /* ---------- interakció (E gomb) ---------- */
   function target() {
     if (Math.hypot(GP.x - me.x, GP.z - me.z) < 2.8 && me.y < 1) return { kind: 'gard', text: 'E: beszélgetés Nabuval, a kertésszel' };
+    const np = CITY_NPC.find(n => n.id && CONVOS[n.id] && Math.hypot(n.talkX - me.x, n.talkZ - me.z) < 2.4);
+    if (np) return { kind: 'npc', n: np, text: `E: beszélgetés · ${np.name}` };
     const tb = tabs.find(t => Math.hypot(t.x - me.x, t.z - me.z) < 2.4 && Math.abs(t.y - me.y) < 1.5);
     if (tb) return { kind: 'tab', t: tb, text: 'E: az agyagtábla elolvasása' };
     const pk = pickable(); if (pk !== null) { const t = taskOf(); return { kind: 'pick', k: pk, text: `E: ${t.item === 'water' ? 'megtöltöd a kannát' : 'leszedsz egyet'} (${t.icon})` }; }
@@ -178,6 +231,7 @@ export function createLearn(ctx) {
     interact() {
       const tg = target(); if (!tg) return false;
       if (tg.kind === 'gard') talkToGardener();
+      if (tg.kind === 'npc') startConv(tg.n.id, tg.n);
       if (tg.kind === 'tab') openTablet(tg.t);
       if (tg.kind === 'pick') { const t = taskOf(); KS.got++; KS.picked.push(tg.k); saveKS(); renderTask(); ctx.toast(`+1 ${t.icon}`, `${KS.got} / ${t.n}${KS.got >= t.n ? ' · vidd vissza Nabunak!' : ''}`); }
       return true;
@@ -200,12 +254,12 @@ export function createLearn(ctx) {
       else if (!MS) renderMission();
       const t = taskOf();
       if (t && t.visit && !KS.visited && TRIG.some(tr => tr.w === t.visit && near(tr))) { KS.visited = true; saveKS(); renderTask(); ctx.toast('Megnézted!', 'menj vissza Nabuhoz, és válaszolj'); }
-      if (talkEl.classList.contains('on') && Math.hypot(GP.x - me.x, GP.z - me.z) > 6) talkEl.classList.remove('on');
+      if (talkEl.classList.contains('on') && Math.hypot(who.x - me.x, who.z - me.z) > 6) { talkEl.classList.remove('on'); conv = null; }
       if (tabEl.classList.contains('on')) { const t = tabs[+tabEl.dataset.i]; if (Math.hypot(t.x - me.x, t.z - me.z) > 5) tabEl.classList.remove('on'); }
     },
     update(dt, t) {
       gard.update(dt);
-      if (talkEl.classList.contains('on')) { const a = Math.atan2(me.x - GP.x, me.z - GP.z); gard.object.rotation.y += (a - gard.object.rotation.y) * Math.min(1, dt * 4); }
+      if (talkEl.classList.contains('on') && !who.person) { const a = Math.atan2(me.x - GP.x, me.z - GP.z); gard.object.rotation.y += (a - gard.object.rotation.y) * Math.min(1, dt * 4); }
       for (const tb of tabs) if (tb.glow.visible) tb.glow.material.opacity = .6 + .4 * Math.sin(t * 2.5 + tb.i);
     },
     closeAll() { talkEl.classList.remove('on'); tabEl.classList.remove('on'); },

@@ -1,7 +1,7 @@
 // Építészet: zikkurat-teraszok, lépcsők, vízesés, templom, falak, Istár-kapu, csatornák, szökőkutak, pavilonok, lugas, híd, sziget, háttér.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLAZA, LV, WALL_H, STAIRS, LAKE, ISLAND, BRIDGE, BASIN, CANALS, FOUNTAINS, WELL, bridgeH, collider, rectCollider, R, srand } from './world.js';
+import { PLAZA, CITY, LV, WALL_H, STAIRS, LAKE, ISLAND, BRIDGE, BASIN, CANALS, FOUNTAINS, WELL, bridgeH, collider, rectCollider, R, srand } from './world.js';
 
 export function worldUV(g, s) {
   const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv;
@@ -44,7 +44,8 @@ export function buildWorld(M, q) {
 
   /* ---------- talaj ---------- */
   { const g = new THREE.PlaneGeometry(PLAZA.x1 - PLAZA.x0, PLAZA.z1 - PLAZA.z0); g.rotateX(-Math.PI / 2); g.translate((PLAZA.x0 + PLAZA.x1) / 2, 0, (PLAZA.z0 + PLAZA.z1) / 2); add('grass', g); }
-  { const g = new THREE.PlaneGeometry(2400, 2400); g.rotateX(-Math.PI / 2); g.translate(0, -.06, 0); worldUV(g, 14); const m = new THREE.Mesh(g, M.sand); m.receiveShadow = true; root.add(m); }
+  // homok: az Eufrátesz medre (CITY.z1 .. CITY.z1 + 90) kimarad, hogy a víz látsszon
+  for (const [z0, z1] of [[-1200, CITY.z1], [CITY.z1 + 90, 1200]]) { const g = new THREE.PlaneGeometry(2400, z1 - z0); g.rotateX(-Math.PI / 2); g.translate(0, -.06, (z0 + z1) / 2); worldUV(g, 14); const m = new THREE.Mesh(g, M.sand); m.receiveShadow = true; root.add(m); }
   // sétányok
   const pave = (x0, z0, x1, z1, y = 0) => box('pave', x0, y, z0, x1, y + .05, z1);
   pave(-54, 46, 54, 54); pave(-54, -54, 54, -46); pave(-54, -46, -46, 46); pave(46, -46, 54, -3.6); pave(46, 3.6, 54, 46);
@@ -159,7 +160,6 @@ export function buildWorld(M, q) {
     for (const z of [PLAZA.z1 - 1.6, PLAZA.z1 + 3.6]) { const g = new THREE.ShapeGeometry(ga, 16); if (z > PLAZA.z1) g.rotateY(Math.PI); g.translate(0, 0, z); add('glaze', g); } }
   for (let x = -gateHalf + .6; x < gateHalf; x += 1.4) inst.merlon.push({ x, y: 15, z: PLAZA.z1 + 1, s: 1.1 });
   for (let x = -4; x <= 4; x += 1.1) inst.rosette.push({ x, y: 12.5, z: PLAZA.z1 - 1.72, ry: Math.PI });
-  box('dark', -gateHalf, 0, PLAZA.z1 + 1.3, gateHalf, 9.5, PLAZA.z1 + 1.5); // zárt kapuszárny a kapuban
 
   /* ---------- csatornák, szökőkutak, kút ---------- */
   for (const [x0, x1, z0, z1] of CANALS) {
@@ -252,14 +252,13 @@ export function buildWorld(M, q) {
 
   /* ---------- háttér: sivatag, Eufrátesz, Babilon városa, Etemenanki ---------- */
   srand(33);
-  { const dg = []; for (let k = 0; k < 26; k++) { const a = R(0, 6.28), d = R(260, 700), g = new THREE.SphereGeometry(1, 20, 8); g.scale(R(60, 140), R(10, 30), R(60, 140)); g.translate(Math.cos(a) * d, -4, Math.sin(a) * d); dg.push(g.toNonIndexed()); }
+  { const dg = []; for (let k = 0; k < 26; k++) { const a = R(0, 6.28), d = R(260, 700), g = new THREE.SphereGeometry(1, 20, 8); g.scale(R(60, 140), R(10, 30), R(60, 140)); if (Math.sin(a) * d > 120) continue; g.translate(Math.cos(a) * d, -4, Math.sin(a) * d); dg.push(g.toNonIndexed()); }
     const m = new THREE.Mesh(mergeGeometries(dg), M.sand); root.add(m); }
-  { const g = new THREE.PlaneGeometry(70, 2400); g.rotateX(-Math.PI / 2); g.translate(-250, .02, 0); const m = new THREE.Mesh(g, M.water); root.add(m); }
-  { const hs = []; for (let k = 0; k < 420; k++) { const a = R(.2, 3.6), d = R(150, 330); const x = Math.cos(a) * d, z = Math.sin(a) * d + 40; if (x < -205) continue; const w = R(6, 16), hh = R(4, 10), dd = R(6, 16); hs.push({ x, z, sx: w, sy: hh, sz: dd, ry: R(-.1, .1) }); }
+  { const hs = []; for (let k = 0; k < 420; k++) { const a = R(.2, 3.6), d = R(150, 330); const x = Math.cos(a) * d, z = Math.sin(a) * d + 40; if (z > 100 || x < -205) continue; const w = R(6, 16), hh = R(4, 10), dd = R(6, 16); hs.push({ x, z, sx: w, sy: hh, sz: dd, ry: R(-.1, .1) }); }
     root.add(instanced(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), M.brick2, hs, { cast: false }));
-    const eg = []; for (let k = 0; k < 7; k++) { const s = 46 - k * 6, g = new THREE.BoxGeometry(s * 2, 9, s * 2); g.translate(-150, 4.5 + k * 9, 260); eg.push(g.toNonIndexed()); }
+    const eg = []; for (let k = 0; k < 7; k++) { const s = 46 - k * 6, g = new THREE.BoxGeometry(s * 2, 9, s * 2); g.translate(-230, 4.5 + k * 9, 20); eg.push(g.toNonIndexed()); }
     const em = new THREE.Mesh(mergeGeometries(eg), M.brick); root.add(em);
-    const tg = new THREE.BoxGeometry(10, 8, 10); tg.translate(-150, 67, 260); root.add(new THREE.Mesh(tg, M.glaze)); }
+    const tg = new THREE.BoxGeometry(10, 8, 10); tg.translate(-230, 67, 20); root.add(new THREE.Mesh(tg, M.glaze)); }
   return root;
 }
 

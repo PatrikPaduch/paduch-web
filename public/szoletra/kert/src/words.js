@@ -1,3 +1,4 @@
+import { CITY_WORDS } from './citydata.js';
 // Kertszavak: ha a törpe a közelébe ér, felbukkan az angol neve. Az első felfedezés +5 pont, és a szó
 // bekerül a Szólétra szavai közé (saját szó, "kert" témával). [angol, magyar, példamondat, fordítás, szint]
 export const GARDEN_WORDS = {
@@ -38,4 +39,7 @@ export const GARDEN_WORDS = {
   flowerpot: ['flowerpot', 'virágcserép', 'There was a small shrub in every flowerpot.', 'Minden virágcserépben volt egy kis cserje.', 'a2'],
   shrub: ['shrub', 'cserje', 'Low shrubs grew at the foot of the walls.', 'Alacsony cserjék nőttek a falak tövében.', 'b2'],
 };
+// a városrész (az Istár-kapun túl) szavai ugyanabba a szótárba kerülnek, "város" témával
+for (const [k, v] of Object.entries(CITY_WORDS)) GARDEN_WORDS[k] = [...v, 'város'];
+export const CITY_IDS = Object.keys(CITY_WORDS);
 export const WORD_IDS = Object.keys(GARDEN_WORDS);

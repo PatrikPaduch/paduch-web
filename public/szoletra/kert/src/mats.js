@@ -149,6 +149,7 @@ export function wind(mat, amp = .06, hang = false) {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     prev && prev.call(mat, sh, r);
+    if (sh.vertexShader.includes("uniform float uTime;")) return;   // már rajta van (közös GLTF-anyag), ne fűzzük rá még egyszer
     sh.uniforms.uTime = U.uTime;
     sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vec4 wpo = vec4(0., 0., 0., 1.);
