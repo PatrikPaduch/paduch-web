@@ -76,7 +76,7 @@ async function init() {
   updateSky(true); onResize(); renderer.compile(scene, camera);
   drawMapBase(); refreshUI(); updWordCount();
   ready = true; document.getElementById('load').classList.add('off');
-  zoneShow('Szemiramisz függőkertje', 'Üdv a kertben');
+  if (resumed) { zoneShow('Folytatod, ahol abbahagytad', resumed.zone || ''); zoneNow = zoneOf()[0]; } else zoneShow('Szemiramisz függőkertje', 'Üdv a kertben');
   loop();
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
@@ -117,10 +117,48 @@ addEventListener('keydown', e => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (k === 'm') document.getElementById('map').classList.toggle('off');
   if (k === 'e' && learn && !learn.interact()) toggleSit();
-  if (k === 'escape') { document.getElementById('wlist').classList.remove('on'); learn && learn.closeAll(); }
+  if (k === 'escape') {   // előbb a nyitott ablakokat zárja, ha nincs ilyen: szünet-menü
+    const open = ['wlist', 'talk', 'tablet'].some(id => document.getElementById(id).classList.contains('on'));
+    if (open && !paused) { document.getElementById('wlist').classList.remove('on'); learn && learn.closeAll(); } else togglePause();
+  }
+  if (paused) return;
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k) && autoWalk) setAuto(false);
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+/* ---------- mentés: hol állsz, merre nézel (Esc-menü, és magától is: félpercenként és bezáráskor) ---------- */
+let paused = false, lastSaveKey = '';
+function saveGame(manual) {
+  if (!ready) return;
+  const z = zoneOf(), d = { x: +me.x.toFixed(2), z: +me.z.toFixed(2), y: +me.y.toFixed(2), ang: +me.ang.toFixed(3), yaw: +cam.yaw.toFixed(3), pitch: +cam.pitch.toFixed(3), dist: +cam.dist.toFixed(2), zone: z[0], t: Date.now() };
+  const key = [d.x, d.z, d.ang].map(v => v.toFixed(1)).join('|');
+  if (!manual && key === lastSaveKey) return;          // ha nem mozdultál, nem írjuk újra (szinkron-forgalom)
+  lastSaveKey = key; localStorage.setItem('kert-mentes', JSON.stringify(d));
+  if (manual) document.getElementById('psave').textContent = 'Elmentve: ' + z[0] + ' · ' + new Date(d.t).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+}
+function pauseInfo() {
+  let m = null; try { m = JSON.parse(localStorage.getItem('kert-mentes')); } catch (e) { }
+  document.getElementById('pwhere').textContent = zoneOf()[0];
+  document.getElementById('psave').textContent = m ? 'Utolsó mentés: ' + m.zone + ' · ' + new Date(m.t).toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Még nincs mentés.';
+}
+function togglePause(on = !paused) {
+  if (!ready) return;
+  paused = on; const el = document.getElementById('pause'); el.classList.toggle('on', on);
+  for (const k in keys) keys[k] = false;
+  if (on) { pauseInfo(); audio.pause(true); learn && learn.closeAll(); } else { audio.pause(document.hidden); clock.getDelta(); }
+}
+document.getElementById('pause').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  const a = b.dataset.p;
+  if (a === 'go') togglePause(false);
+  if (a === 'save') saveGame(true);
+  if (a === 'quit') { saveGame(true); SYNC.flush ? SYNC.flush(true).finally(() => { location.href = '../index.html'; }) : setTimeout(() => { location.href = '../index.html'; }, 400); }
+  if (a === 'home') { Object.assign(me, { x: 0, z: 104, y: 0, ang: Math.PI }); cam.yaw = 0; sitting = null; pose = null; if (autoWalk) nearestWp(); togglePause(false); zoneShow('Az Istár-kapu előtt', 'a kert bejárata'); }
+});
+document.getElementById('menu').addEventListener('click', () => togglePause());
+setInterval(() => { if (ready && !paused) saveGame(false); }, 30000);
+addEventListener('pagehide', () => { saveGame(false); SYNC.flush && SYNC.flush(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(false); SYNC.flush && SYNC.flush(true); } });
 let drag = null;
 canvas.addEventListener('pointerdown', e => { audio.start(); drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove', e => { if (!drag) return; cam.yaw -= (e.clientX - drag.x) * .006; cam.pitch = Math.min(1.3, Math.max(-.15, cam.pitch + (e.clientY - drag.y) * .004)); drag = { x: e.clientX, y: e.clientY }; });
@@ -245,7 +283,7 @@ function discover(id) {
   if (!sitting && pose !== 'dance') { pose = 'interact'; poseT = 1.3; }
 }
 /* ---------- lebegő szócímkék: a szó ott marad a tárgy fölött, amíg a közelben vagy ---------- */
-const LABEL_H = { stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
+const LABEL_H = { donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
 const labelTex = {};
 function getLabelTex(id, quiz) {
   const key = id + (quiz ? '?' : ''); if (labelTex[key]) return labelTex[key];
@@ -420,7 +458,7 @@ function audioState() {
 
 /* ---------- fő ciklus ---------- */
 const clock = new THREE.Clock(); let fN = 0, fT = 0, slow = 0, slowT = 0, prT = 0, curPr = q.pr, shX = 1e9, shZ = 1e9;
-function loop() { requestAnimationFrame(loop); frame(); }
+function loop() { requestAnimationFrame(loop); if (paused) { clock.getDelta(); return; } frame(); }
 function frame(fixedDt) {
   const dt = fixedDt ?? Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
   U.uTime.value = t;
@@ -477,7 +515,12 @@ document.getElementById('auto').addEventListener('click', e => { const b = e.tar
 document.getElementById('snd').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; audio.start(); audio.setMuted(b.dataset.s === '0'); refreshUI(); });
 document.getElementById('tod').addEventListener('change', e => { tod = e.target.value; localStorage.setItem('kert-tod', tod); updateSky(true); });
 document.getElementById('hide').addEventListener('click', () => { const u = document.getElementById('ui'); u.classList.toggle('min'); document.getElementById('hide').textContent = u.classList.contains('min') ? '▸' : '▾'; });
-try { const p = JSON.parse(localStorage.getItem('kert-pos')); if (p) { Object.assign(me, p); localStorage.removeItem('kert-pos'); } } catch (e) { }
+let resumed = null;
+try {
+  const p = JSON.parse(localStorage.getItem('kert-pos'));
+  if (p) { Object.assign(me, p); localStorage.removeItem('kert-pos'); }
+  else { const m = JSON.parse(localStorage.getItem('kert-mentes')); if (m && isFinite(m.x) && isFinite(m.z) && !blocked(m.x, m.z)) { Object.assign(me, { x: m.x, z: m.z, y: m.y || 0, ang: m.ang || 0 }); cam.yaw = m.yaw ?? cam.yaw; cam.pitch = m.pitch ?? cam.pitch; cam.dist = m.dist ?? cam.dist; resumed = m; } }
+} catch (e) { }
 if (autoWalk) nearestWp();
 window.__kert = { me, cam, get auto() { return autoWalk; }, set auto(v) { autoWalk = v; }, renderer, scene, get sc() { return sc; }, CULL, setTod: v => { tod = v; updateSky(true); }, frames: (n, d = 1 / 60) => { for (let i = 0; i < n; i++) { clock.elapsedTime += d; frame(d); } }, get dayF() { return dayF; } };
 init().catch(e => { document.getElementById('ltxt').textContent = 'Hiba: ' + e.message; console.error(e); });

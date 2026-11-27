@@ -82,6 +82,19 @@
   .cnv button{background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:9px;padding:8px 10px;cursor:pointer;font:inherit;font-size:14px;text-align:left}
   .cnv button:hover:not(:disabled){border-color:#3fa0ff}.cnv button.ok{background:#0f2a1c;border-color:#2f9a5a}.cnv button.bad{background:#2c1118;border-color:#9a2f43;opacity:.75}
   .cnv .why{color:#ff9aa6;font-size:13.5px;margin:2px 0}.cnv .react .en{color:#ffd54a}
+  #pause{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:#050a16b0;backdrop-filter:blur(3px)}
+  #pause.on{display:flex}
+  #pause .pbox{background:#0a1222f2;border:1px solid #2a3a5c;border-radius:16px;padding:22px 24px;width:min(380px,92vw);box-shadow:0 12px 40px #000a;text-align:center}
+  #pause h2{margin:0 0 6px;font-size:24px;color:#ffd54a;letter-spacing:.5px}
+  #pause .pw{margin:0 0 14px;color:#c8d4ee}
+  #pause .pbtns{display:grid;gap:8px}
+  #pause .pbtns button{background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:10px;padding:11px 12px;cursor:pointer;font:inherit;font-size:15px;display:flex;justify-content:center;gap:8px;align-items:center}
+  #pause .pbtns button:hover{border-color:#3fa0ff}
+  #pause .pbtns .pri{background:#2f78ff;border-color:#6d9bff;font-weight:700}
+  #pause small{opacity:.7;font-size:11px;border:1px solid #fff5;border-radius:5px;padding:1px 5px}
+  #pause .ps{color:#7fe0a0;font-size:13px;margin:12px 0 4px;min-height:1em}
+  #pause .pn{color:#8fa3c8;font-size:12px;margin:0}
+  .linkb{background:none;border:0;color:#ffd54a;cursor:pointer;font:inherit;font-size:inherit;padding:0}
   #load{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#16284a,#05080f);z-index:9;transition:opacity .6s}
   #load.off{opacity:0;pointer-events:none}
   #load h2{margin:0;font-size:26px;letter-spacing:.5px}
@@ -100,9 +113,21 @@
 <canvas id="c"></canvas>
 <div id="plate"><div id="emb"></div><div class="n" id="rname"></div></div>
 <div id="zone"></div>
+<div id="pause"><div class="pbox">
+  <h2>Szünet</h2>
+  <p class="pw">Most itt vagy: <b id="pwhere"></b></p>
+  <div class="pbtns">
+    <button data-p="go" class="pri">▶ Folytatás <small>Esc</small></button>
+    <button data-p="save">💾 Mentés</button>
+    <button data-p="quit">💾 Mentés és kilépés a Szólétrába</button>
+    <button data-p="home">⛩ Vissza a kert bejáratához</button>
+  </div>
+  <p class="ps" id="psave"></p>
+  <p class="pn">A helyed magától is mentődik félpercenként és bezáráskor, és a paduch.hu-n a másik gépeden is innen folytatod.</p>
+</div></div>
 <div id="ui" class="panel"><button id="hide" title="Panel összecsukása">▾</button>
   <h1>Szemiramisz függőkertje</h1>
-  <div class="sub"><a href="../index.html">‹ Vissza a Szólétrába</a></div>
+  <div class="sub"><a href="../index.html">‹ Vissza a Szólétrába</a> · <button id="menu" class="linkb" title="Szünet és mentés (Esc)">⏸ Menü (Esc)</button></div>
   <div class="body">
     <div class="row"><span>Grafika</span><div class="seg" id="qual"><button data-q="low">Gyenge gép</button><button data-q="high">Erős gép</button></div></div>
     <div class="row"><span>Séta</span><div class="seg" id="auto"><button data-a="1">Magától</button><button data-a="0">Én irányítok</button></div></div>

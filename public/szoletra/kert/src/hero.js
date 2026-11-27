@@ -2,6 +2,7 @@
 // törpe-jelmezben. Gyenge gépen: primitívekből épített törpe. A kinézet (sapka, korona, köpeny, aura) a rangtól függ.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const V3 = THREE.Vector3;
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -243,10 +244,12 @@ const PEOPLE_LOOKS = [
   { robe: '#e8dcc4', sash: '#7a1f2a', head: 'turban', hat: '#7a1f2a', beard: '#d8d0c0', skin: '#c98e62' },
   { robe: '#3a4f6a', sash: '#c8a040', head: 'bare', hat: '#2a1d14', beard: '#2a1d14', skin: '#b97f55' },
 ];
+const PERSON_MAT = {};
 export function makePerson(i, scale = 1) {
-  const L = PEOPLE_LOOKS[i % PEOPLE_LOOKS.length], g = new THREE.Group(), P = {}, M = {};
-  const mat = c => M[c] ??= new THREE.MeshStandardMaterial({ color: c, roughness: .88 });
-  const mesh = (geo, c, x, y, z, parent) => { const o = new THREE.Mesh(geo, mat(c)); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  const L = PEOPLE_LOOKS[i % PEOPLE_LOOKS.length], g = new THREE.Group(), P = {};
+  // a darabokat csuklónként (test, fej, 2 kar, 2 láb) EGY hálóba vonjuk össze csúcsszínekkel: 16 helyett 6 rajzolás/fő
+  const parts = [];
+  const mesh = (geo, c, x, y, z, parent) => { const o = new THREE.Object3D(); o.position.set(x, y, z); o.material = { side: THREE.FrontSide }; parts.push({ o, geo, c, parent }); return o; };
   const pivot = (x, y, z, parent) => { const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p); return p; };
   const body = pivot(0, 0, 0, g);
   for (const s of [-1, 1]) { const hip = pivot(s * .12, .78, 0, body); mesh(new THREE.CylinderGeometry(.09, .08, .72, 8), L.robe, 0, -.36, 0, hip); mesh(new THREE.BoxGeometry(.16, .1, .28), '#4a3220', 0, -.74, .04, hip); P[s < 0 ? 'legL' : 'legR'] = hip; }
@@ -261,6 +264,16 @@ export function makePerson(i, scale = 1) {
   if (L.head === 'turban') { const t = mesh(new THREE.TorusGeometry(.17, .08, 8, 18), L.hat, 0, .1, 0, head); t.rotation.x = Math.PI / 2; mesh(new THREE.SphereGeometry(.15, 12, 8), L.hat, 0, .16, 0, head); }
   if (L.head === 'veil') { const v = mesh(new THREE.SphereGeometry(.235, 16, 12, 0, Math.PI * 2, 0, Math.PI * .62), L.hat, 0, .02, -.02, head); v.scale.set(1, 1.15, 1.05); const c = mesh(new THREE.CylinderGeometry(.2, .3, .5, 14, 1, true), L.hat, 0, -.32, -.04, head); c.material.side = THREE.DoubleSide; }
   if (L.head === 'bare') mesh(new THREE.SphereGeometry(.205, 14, 10, 0, Math.PI * 2, 0, Math.PI * .45), L.hat, 0, .01, -.01, head);
+  { const by = new Map(), C = new THREE.Color();
+    for (const p of parts) {
+      p.o.updateMatrix(); const gg = p.geo.index ? p.geo.toNonIndexed() : p.geo.clone(); gg.applyMatrix4(p.o.matrix);
+      for (const k of Object.keys(gg.attributes)) if (k !== 'position' && k !== 'normal') gg.deleteAttribute(k);
+      C.set(p.c); const n = gg.attributes.position.count, ca = new Float32Array(n * 3); for (let k = 0; k < n; k++) ca.set([C.r, C.g, C.b], k * 3);
+      gg.setAttribute('color', new THREE.BufferAttribute(ca, 3));
+      const key = p.parent.uuid + p.o.material.side; if (!by.has(key)) by.set(key, { parent: p.parent, side: p.o.material.side, gs: [] }); by.get(key).gs.push(gg);
+    }
+    for (const { parent, side, gs } of by.values()) parent.add(new THREE.Mesh(mergeGeometries(gs), PERSON_MAT[side] ??= new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, side })));
+  }
   g.scale.setScalar(scale);
   let ph = Math.random() * 6, t = Math.random() * 9, talk = 0;
   return {

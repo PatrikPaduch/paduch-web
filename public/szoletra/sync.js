@@ -1,7 +1,7 @@
 // Szólétra + kert szinkron: a haladás a paduch.hu-n (Cloudflare Access mögött) a bejelentkezett e-mail-címhez kötve
 // a szoletra-api Workerbe (D1) mentődik, így minden eszközön ugyanaz. Helyben (localhost) ki van kapcsolva,
 // kivéve, ha a localStorage 'szoletra-sync-api' kulcsában meg van adva egy fejlesztői API-cím.
-const KEYS = ['szoletra-v1', 'kert-szavak', 'kert-ismetles', 'kert-kuldetes', 'kert-kertesz', 'kert-tablak'];
+const KEYS = ['szoletra-v1', 'kert-szavak', 'kert-ismetles', 'kert-kuldetes', 'kert-kertesz', 'kert-tablak', 'kert-mentes', 'kert-beszelgetes'];
 const TKEY = 'szoletra-sync-t';
 const origSet = Storage.prototype.setItem;
 const st = { state: 'off', last: 0 };
@@ -44,6 +44,8 @@ export function initSync({ onRemote } = {}) {
       else if (j.t < localT()) push();
     } catch (e) { st.state = 'offline'; }
   })();
+  // azonnali feltöltés (pl. Mentés és kilépés, vagy bezáráskor a frissen mentett hely)
+  st.flush = (keep) => { if (!timer) return Promise.resolve(); clearTimeout(timer); timer = null; return push(keep); };
   addEventListener('visibilitychange', () => { if (document.hidden && timer) { clearTimeout(timer); timer = null; push(true); } });
   addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); push(true); } });
   return st;

@@ -15,6 +15,7 @@ const tex = (w, h, draw, rep = true) => { const c = document.createElement('canv
 
 export function buildCity(M, q) {
   srand(77);
+  let FLAGS = null, DONKEY = null;
   const root = new THREE.Group(), geos = {}, trig = (w, x, z, r, y = 0) => CITY_TRIG.push({ w, x, z, r, y });
   const add = (k, g) => (geos[k] ??= []).push(g);
   const box = (k, x0, y0, z0, x1, y1, z1) => { const g = new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)); g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); add(k, g); return g; };
@@ -43,7 +44,8 @@ export function buildCity(M, q) {
 
   /* ---------- burkolatok ---------- */
   const pave = (k, x0, z0, x1, z1) => box(k, x0, 0, z0, x1, .05, z1);
-  pave('pave', -6, CITY.z0, 6, 222);                                     // processziós út
+  // a rétegek csak érintkeznek, nem fedik egymást (az azonos magasságú átfedés villogott)
+  pave('pave', -6, CITY.z0, 6, 147); pave('pave', -6, 203, 6, 222);      // processziós út a piac előtt és után
   pave('cobble', -36, 152, 36, 198);                                     // piactér
   pave('cobble', CITY.x0 + 1, 147, CITY.x1 - 1, 152); pave('cobble', CITY.x0 + 1, 198, CITY.x1 - 1, 203);   // keresztutcák
   pave('cobble', -44, 168, -36, 174); pave('cobble', 36, 174, 44, 180);   // bejáratok
@@ -94,8 +96,28 @@ export function buildCity(M, q) {
 
   /* ---------- a Nagy Piac ---------- */
   // szökőkút a közepén
-  { const g = new THREE.TorusGeometry(3, .3, 8, 36); g.rotateX(Math.PI / 2); g.scale(1, 1.4, 1); g.translate(0, .45, 175); add('marble', g); cyl('marble', 0, 0, 175, 3, 3, .3, 36);
-    cyl('marble', 0, .3, 175, .45, .3, 1.5, 14); cyl('marble', 0, 1.8, 175, .2, 1.1, .3, 20); collider(0, 175, 3.6); trig('fountain', 0, 175, 6); }
+  { const FX = 0, FZ = 175, lathe = (pts, seg = 40) => new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg);
+    { const g = lathe([[2.85, .05], [2.85, .62], [3.05, .7], [3.4, .66], [3.42, .05]]); g.translate(FX, 0, FZ); add('column', g); }   // medence pereme
+    { const g = new THREE.CylinderGeometry(3.425, 3.425, .18, 48, 1, true); g.translate(FX, .36, FZ); add('glaze', g); }              // mázas sáv
+    { const g = new THREE.CircleGeometry(2.86, 48); g.rotateX(-Math.PI / 2); g.translate(FX, .5, FZ); const w = new THREE.Mesh(g, M.water); w.receiveShadow = true; root.add(w); }
+    { const g = lathe([[.55, 0], [.42, .3], [.36, 1.2], [.5, 1.35]], 20); g.translate(FX, .05, FZ); add('column', g); }              // oszlop
+    { const g = lathe([[0, 0], [.5, 0], [1.05, .22], [1.18, .36], [1.12, .4], [.9, .3]], 32); g.translate(FX, 1.38, FZ); add('column', g); }  // felső tál
+    { const g = new THREE.CircleGeometry(1.08, 32); g.rotateX(-Math.PI / 2); g.translate(FX, 1.74, FZ); root.add(new THREE.Mesh(g, M.water)); }
+    { const g = new THREE.SphereGeometry(.22, 16, 10); g.translate(FX, 1.95, FZ); add('glaze', g); const s2 = new THREE.ConeGeometry(.08, .35, 10); s2.translate(FX, 2.3, FZ); add('gold', s2); }
+    { const g = new THREE.CylinderGeometry(1.16, 1.5, 1.25, 32, 1, true); g.translate(FX, 1.12, FZ); const f = new THREE.Mesh(g, M.fall); f.renderOrder = 2; root.add(f); }   // lehulló víz
+    // mozaik a kút körül: kék máz, arany csillagsugarak
+    { const T = tex(512, 512, (c, w, h) => { const cx = w / 2, R2 = w / 2;
+        c.fillStyle = '#e9dcc0'; c.fillRect(0, 0, w, h);
+        const ring = (r0, r1, col) => { c.beginPath(); c.arc(cx, cx, r1 * R2, 0, 6.3); c.arc(cx, cx, r0 * R2, 0, 6.3, true); c.fillStyle = col; c.fill(); };
+        ring(.9, 1, '#2a5aa8'); ring(.86, .9, '#e8c070'); ring(.52, .56, '#e8c070'); ring(.56, .6, '#2a5aa8');
+        for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, a2 = a + Math.PI / 16; c.beginPath(); c.moveTo(cx + Math.cos(a) * .6 * R2, cx + Math.sin(a) * .6 * R2); c.lineTo(cx + Math.cos(a2) * .86 * R2, cx + Math.sin(a2) * .86 * R2); c.lineTo(cx + Math.cos(a + Math.PI / 8) * .6 * R2, cx + Math.sin(a + Math.PI / 8) * .6 * R2); c.closePath(); c.fillStyle = k % 2 ? '#c8a050' : '#3a6ab8'; c.fill(); }
+        for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; c.beginPath(); c.arc(cx + Math.cos(a) * .95 * R2, cx + Math.sin(a) * .95 * R2, 5, 0, 6.3); c.fillStyle = '#f2e6c8'; c.fill(); }
+        c.globalAlpha = .1; for (let k = 0; k < 3000; k++) { c.fillStyle = Math.random() < .5 ? '#000' : '#fff'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); } });
+      const g = new THREE.RingGeometry(3.4, 7.2, 72, 1); g.rotateX(-Math.PI / 2); { const uv = g.attributes.uv, ps = g.attributes.position; for (let k = 0; k < uv.count; k++) uv.setXY(k, .5 + ps.getX(k) / 14.4, .5 - ps.getZ(k) / 14.4); }
+      g.translate(FX, .062, FZ); const mm = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: T, roughness: .45, metalness: .05 })); mm.receiveShadow = true; root.add(mm); }
+    // padok a mozaik szélén
+    for (const [bx, bz] of [[-10, 153.8], [10, 153.8], [-10, 196.2], [10, 196.2]]) { const g = new THREE.BoxGeometry(2.4, .12, .6); g.translate(0, .48, 0); const l1 = new THREE.BoxGeometry(.2, .44, .5), l2 = l1.clone(); l1.translate(-.95, .22, 0); l2.translate(.95, .22, 0); const b = mergeGeometries([g, l1, l2]); b.translate(bx, 0, bz); add('column', b); rectCollider(bx - 1.3, bz - .4, bx + 1.3, bz + .4); }
+    collider(FX, FZ, 3.6); trig('fountain', FX, FZ, 6); }
   for (const [x, z] of [[-32, 156], [32, 156], [-32, 194], [32, 194]]) { I.palmT.push({ x, z }); collider(x, z, .4); }
   const STALLS = [
     ['fruit', -22, 158, 1], ['baker', -22, 166.5, 1], ['spice', -22, 175, 1], ['potter', -22, 183.5, 1], ['weaver', -22, 192, 1],
@@ -200,6 +222,54 @@ export function buildCity(M, q) {
     CITY_NPC.push({ id: 'farmer', x: 58, z: 174.3, ry: -Math.PI / 2, name: 'Urnamma, a földműves', look: 2, talkX: 55.6, talkZ: 174.3 });
   }
 
+  /* ---------- a piac élete: kellékek ---------- */
+  I.sack = [];
+  // szamaras kocsi a nyugati sor mögött
+  { const cx = -30, cz = 168;
+    box('wood', cx - .8, .7, cz - 1.4, cx + .8, .82, cz + 1.4); box('wood', cx - .85, .82, cz - 1.4, cx - .75, 1.25, cz + 1.4); box('wood', cx + .75, .82, cz - 1.4, cx + .85, 1.25, cz + 1.4); box('wood', cx - .8, .82, cz + 1.3, cx + .8, 1.25, cz + 1.4);
+    for (const s of [-1, 1]) { const w = new THREE.CylinderGeometry(.55, .55, .1, 18); w.rotateZ(Math.PI / 2); w.translate(cx + s * .92, .55, cz + .3); add('wood', w); const h = new THREE.CylinderGeometry(.04, .04, 2.2, 6); h.rotateX(Math.PI / 2); h.translate(cx + s * .45, .75, cz - 2.4); add('wood', h); }
+    for (let k = 0; k < 6; k++) I.sack.push({ x: cx + R(-.5, .5), y: .82 + (k > 3 ? .3 : 0), z: cz - .9 + (k % 4) * .6, ry: R(0, 3), s: R(.9, 1.1) });
+    rectCollider(cx - 1, cz - 1.6, cx + 1, cz + 1.6); collider(cx, cz - 3.4, .7);
+    { const D = new THREE.Group(), dm = col('#7d6e60'), lm = col('#cfc2b0'), dk = col('#3a302a'), m = (g, mt, x, y, z, par = D) => { const o = new THREE.Mesh(g, mt); o.position.set(x, y, z); o.castShadow = true; par.add(o); return o; };
+      m(new THREE.SphereGeometry(1, 16, 10), dm, 0, 1.05, 0).scale.set(.4, .42, .85);
+      for (const [x, z] of [[.2, .5], [-.2, .5], [.2, -.5], [-.2, -.5]]) { m(new THREE.CylinderGeometry(.075, .06, .9, 8), dm, x, .45, z); m(new THREE.CylinderGeometry(.07, .07, .1, 8), dk, x, .05, z); }
+      const neck = m(new THREE.CylinderGeometry(.13, .19, .7, 10), dm, 0, 1.38, .72); neck.rotation.x = .7;
+      const head = new THREE.Group(); head.position.set(0, 1.62, .95); D.add(head);
+      m(new THREE.SphereGeometry(1, 12, 8), dm, 0, -.05, .18, head).scale.set(.15, .16, .3); m(new THREE.SphereGeometry(1, 10, 8), lm, 0, -.12, .42, head).scale.set(.12, .1, .1);
+      for (const s of [-1, 1]) { const e = m(new THREE.ConeGeometry(.05, .32, 6), dm, s * .08, .2, .02, head); e.rotation.z = -s * .25; }
+      const tail = new THREE.Group(); tail.position.set(0, 1.25, -.82); D.add(tail); m(new THREE.CylinderGeometry(.025, .02, .55, 5), dk, 0, -.27, -.02, tail);
+      D.position.set(cx, .05, cz - 3.5); D.rotation.y = Math.PI; root.add(D); DONKEY = { head, tail }; }
+    trig('donkey', cx + 1.2, cz - 3.5, 2.6); trig('cart', cx + 1.3, cz, 2.6); trig('sack', cx + 1.3, cz + 1.2, 2.2);
+  }
+  // zsákok, ládák, korsók a standok mögött
+  for (const [sx, sz, dir] of [[-22, 158, 1], [-22, 183.5, 1], [22, 166.5, -1], [22, 183.5, -1], [22, 192, -1], [-22, 192, 1]]) {
+    const bx = sx - dir * 2.3;
+    for (let k = 0; k < 3; k++) I.sack.push({ x: bx + R(-.3, .3), y: .05, z: sz - 1.2 + k * .55, ry: R(0, 3), s: R(.9, 1.15) });
+    I.crate.push({ x: bx - dir * .4, y: .05, z: sz + 1.3, ry: R(-.2, .2), s: 1 }); I.crate.push({ x: bx - dir * .4, y: .55, z: sz + 1.3, ry: R(-.3, .3), s: .9 });
+    I.jar.push({ x: bx, y: .05, z: sz + .5, s: R(.7, .9) }); rectCollider(bx - .7, sz - 1.6, bx + .7, sz + 1.8); if (sz === 166.5) trig('crate', bx - dir * 1.6, sz + 1.3, 2.4); }
+  // kerekes kút a keleti sor mögött
+  { const wx = 30, wz = 176; cyl('column', wx, 0, wz, 1, 1, .85, 24); cyl('glaze', wx, .55, wz, 1.02, 1.02, .14, 24);
+    for (const s of [-1, 1]) box('wood', wx + s * .85 - .07, .85, wz - .07, wx + s * .85 + .07, 2.4, wz + .07);
+    box('wood', wx - .95, 2.3, wz - .06, wx + .95, 2.42, wz + .06); { const r = new THREE.CylinderGeometry(.04, .04, 1.5, 6); r.translate(wx, 1.6, wz); add('wood', r); } I.jar.push({ x: wx + 1.3, y: .05, z: wz + .4, s: .8 });
+    collider(wx, wz, 1.2); trig('well', wx - 1.8, wz, 2.8); trig('hen', 30.5, 186.5, 4.2); }
+  // dézsás pálmák és virágok a piac szélén
+  for (const x of [-14, -6, 6, 14]) for (const z of [153, 197]) { if (Math.abs(x) < 7 && z === 197) continue; I.pot.push({ x, y: .05, z, s: 1.7, noPlant: true }); I.palmT.push({ x, z, small: true }); collider(x, z, .7); }
+  // ünnepi zászlófüzérek a piac fölött (keletről nyugatra, belógó ívvel)
+  { const lines = [], flags = [], FC = ['#c23a2a', '#2a5aa8', '#e8c070', '#2f7a46', '#f2e6c8', '#8a3a8a'];
+    for (const z of [158, 166.5, 183.5, 192]) {
+      for (const s of [-1, 1]) cyl('wood', s * 25.2, 0, z, .08, .06, 5.2, 8);
+      const pts = []; for (let k = 0; k <= 24; k++) { const u = k / 24, x = -25.2 + 50.4 * u; pts.push(new THREE.Vector3(x, 5 - 1.1 * 4 * u * (1 - u), z)); }
+      lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, .012, 4, false));
+      for (let x = -24.5; x <= 24.5; x += .75) { const u = (x + 25.2) / 50.4; flags.push({ x, y: 5 - 1.1 * 4 * u * (1 - u) - .02, z, c: FC[flags.length % FC.length] }); }
+    }
+    root.add(new THREE.Mesh(mergeGeometries(lines), col('#5a4630')));
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute([-.18, 0, 0, .18, 0, 0, 0, -.42, 0], 3)); fg.computeVertexNormals();
+    const fm = new THREE.InstancedMesh(fg, new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: .85 }), flags.length), d = new THREE.Object3D(), cc = new THREE.Color();
+    flags.forEach((f, k) => { d.position.set(f.x, f.y, f.z); d.rotation.set(0, 0, 0); d.updateMatrix(); fm.setMatrixAt(k, d.matrix); fm.setColorAt(k, cc.set(f.c)); });
+    fm.userData.flags = flags; root.add(fm); FLAGS = fm; }
+  // szőnyegek kiterítve a szőnyegárus előtt
+  for (const [x, z, r] of [[18.6, 190.6, .1], [18.4, 193.2, -.08]]) { const g = new THREE.PlaneGeometry(1.4, 2.2); g.rotateX(-Math.PI / 2); g.rotateY(r + Math.PI / 2); g.translate(x, .065, z); const cm = new THREE.Mesh(g, carpetM); cm.receiveShadow = true; root.add(cm); }
+
   /* ---------- rakpart, stég, hajók, Eufrátesz ---------- */
   { box('quay', CITY.x0, -1.2, CITY.z1 - .5, CITY.x1, .08, CITY.z1); box('mud', CITY.x0, .08, CITY.z1 - .5, PIER.x0, .55, CITY.z1); box('mud', PIER.x1, .08, CITY.z1 - .5, CITY.x1, .55, CITY.z1);
     const rg = new THREE.PlaneGeometry(2400, 92); rg.rotateX(-Math.PI / 2); rg.translate(0, -.45, CITY.z1 + 45); worldUV(rg, 6); const rm = new THREE.Mesh(rg, MM.river); rm.receiveShadow = true; root.add(rm);
@@ -258,20 +328,22 @@ export function buildCity(M, q) {
   { const sg = new THREE.CylinderGeometry(.06, .06, .3, 8); sg.rotateZ(Math.PI / 2); root.add(instanced(sg, col('#e8dcb8'), I.scroll, { cast: false })); }
   { const pg = new THREE.CylinderGeometry(.06, .07, 1, 6); pg.translate(0, .5, 0); root.add(instanced(pg, M.wood, I.post)); }
   { const bg = new THREE.BoxGeometry(.14, .14, .8); root.add(instanced(bg, M.wood, I.beam)); }
-  { const pg = new THREE.LatheGeometry([[0, 0], [.22, 0], [.3, .35], [.34, .42]].map(([x, y]) => new THREE.Vector2(x, y)), 12); root.add(instanced(pg, M.terracotta, I.pot)); const plants = I.pot.map(p => ({ x: p.x, y: p.y + .45 * p.s, z: p.z, s: p.s * .7, ry: R(0, 6) })); root.add(instanced(new THREE.IcosahedronGeometry(.6, 1), col('#4f8a3a'), plants)); }
+  { const pg = new THREE.LatheGeometry([[0, 0], [.22, 0], [.3, .35], [.34, .42]].map(([x, y]) => new THREE.Vector2(x, y)), 12); root.add(instanced(pg, M.terracotta, I.pot)); const plants = I.pot.filter(p => !p.noPlant).map(p => ({ x: p.x, y: p.y + .45 * p.s, z: p.z, s: p.s * .7, ry: R(0, 6) })); root.add(instanced(new THREE.IcosahedronGeometry(.6, 1), col('#4f8a3a'), plants)); }
   { const bg = new THREE.CylinderGeometry(.2, .26, .7, 10); bg.translate(0, .35, 0); root.add(instanced(bg, M.quay, I.bollard)); }
   { const cg = new THREE.BoxGeometry(.8, .5, .6); cg.translate(0, .25, 0); root.add(instanced(cg, M.wood, I.crate)); }
   { const hg = new THREE.CylinderGeometry(.45, .55, 1.1, 12); hg.translate(0, .55, 0); root.add(instanced(hg, col('#d8b878'), I.hive)); }
+  { const sg = new THREE.SphereGeometry(1, 12, 8); sg.scale(.3, .26, .22); sg.translate(0, .24, 0); { const p = sg.attributes.position; for (let k = 0; k < p.count; k++) if (p.getY(k) > .4) p.setX(k, p.getX(k) * .6); } sg.computeVertexNormals(); root.add(instanced(sg, col('#cdb78a'), I.sack)); }
   // pálmák (a kert receptje alapján, egyszerűsítve: törzs + korona)
   { const trunk = new THREE.CylinderGeometry(.17, .27, 1, 8, 6); trunk.translate(0, .5, 0); { const p = trunk.attributes.position; for (let k = 0; k < p.count; k++) { const y = p.getY(k); p.setX(k, p.getX(k) + .3 * y * y); } trunk.computeVertexNormals(); }
     const fr = []; for (let k = 0; k < 10; k++) { const g = new THREE.PlaneGeometry(3, .9, 10, 1); g.rotateX(-Math.PI / 2); g.translate(1.5, 0, 0); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, .6 * x - .3 * x * x + Math.abs(z) * .3); } g.rotateY(k * Math.PI * 2 / 10); fr.push(g); } const crown = mergeGeometries(fr); crown.computeVertexNormals();
-    const tl = [], cl = []; for (const p of I.palmT) { const H = p.far ? R(6, 9) : R(6, 7.5), ry = R(0, 6.28); tl.push({ x: p.x, y: p.far ? -.4 : 0, z: p.z, ry, sx: 1, sy: H, sz: 1 }); cl.push({ x: p.x + Math.cos(ry) * .3, y: (p.far ? -.4 : 0) + H, z: p.z - Math.sin(ry) * .3, ry: R(0, 6), s: 1.1 }); }
+    const tl = [], cl = []; for (const p of I.palmT) { const H = p.far ? R(6, 9) : p.small ? R(1.6, 2.2) : R(6, 7.5), ry = R(0, 6.28), y0 = p.far ? -.4 : p.small ? .55 : 0, k = p.small ? .3 : .3; tl.push({ x: p.x, y: y0, z: p.z, ry, sx: p.small ? .55 : 1, sy: H, sz: p.small ? .55 : 1 }); cl.push({ x: p.x + Math.cos(ry) * k * (p.small ? .4 : 1), y: y0 + H, z: p.z - Math.sin(ry) * k * (p.small ? .4 : 1), ry: R(0, 6), s: p.small ? .55 : 1.1 }); }
     root.add(instanced(trunk, M.palmBark, tl)); root.add(instanced(crown, M.frond, cl, { cast: q.maps })); }
   // túlparti házak
   { const hs = []; for (let n = 0; n < 60; n++) hs.push({ x: R(-320, 320), y: -.4, z: R(345, 420), sx: R(6, 14), sy: R(4, 9), sz: R(6, 12) }); root.add(instanced(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), MM.mud, hs, { cast: false })); }
 
   /* ---------- emberek: árusok és járókelők ---------- */
   const people = [];
+  const LQ = !q.maps;   // gyenge gép: kevesebb vásárló és madár
   for (const n of CITY_NPC) { const p = makePerson(n.look); p.object.position.set(n.x, 0, n.z); p.object.rotation.y = n.ry; root.add(p.object); n.person = p; people.push({ p, still: true, x: n.x, z: n.z }); collider(n.x, n.z, .45); }
   const ROUTES = [
     [[-3, 118], [-3, 146], [-14, 154], [-14, 196], [5.5, 200], [5.5, 150], [3, 118]],
@@ -282,20 +354,107 @@ export function buildCity(M, q) {
     [[-40, 200.5], [40, 200.5], [40, 224], [-40, 224]],
   ];
   ROUTES.forEach((rt, i) => { const p = makePerson(i + 2); root.add(p.object); people.push({ p, rt, i: 0, x: rt[0][0], z: rt[0][1], sp: R(.9, 1.3) }); });
+  // vásárlók: standról standra mennek, megállnak, nézelődnek, alkudoznak
+  const SPOTS = STALLS.flatMap(([, sx, sz, dir]) => [-1.2, 1.2].map(o => ({ x: sx + dir * 2.2, z: sz + o, ry: dir > 0 ? -Math.PI / 2 : Math.PI / 2, busy: false })));
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + .2; SPOTS.push({ x: Math.cos(a) * 4.3, z: 175 + Math.sin(a) * 4.3, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), busy: false }); }
+  const viaFountain = (ax, az, bx, bz) => {           // ha a szakasz a kúton menne át, megkerüli
+    const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((0 - ax) * dx + (175 - az) * dz) / L2)), px = ax + dx * u, pz = az + dz * u, d = Math.hypot(px, pz - 175);
+    if (d > 4.8) return [[bx, bz]];
+    let nx = px, nz = pz - 175; if (d < .01) { nx = -dz; nz = dx; } const l = Math.hypot(nx, nz); return [[nx / l * 5.6, 175 + nz / l * 5.6], [bx, bz]];
+  };
+  const shoppers = [];
+  for (let k = 0; k < (LQ ? 6 : 12); k++) {
+    const sp = SPOTS.filter(s => !s.busy)[Math.floor(Math.random() * 10)]; sp.busy = true;
+    const p = makePerson(k + 3, R(.92, 1.04)); root.add(p.object);
+    const w = { p, shop: true, x: sp.x, z: sp.z, spot: sp, path: [], m: 'stay', t: R(1, 8), sp: R(.8, 1.15), face: sp.ry };
+    p.object.position.set(w.x, .05, w.z); p.object.rotation.y = sp.ry; people.push(w); shoppers.push(w);
+  }
+  // gyerekek kergetőznek a kút körül
+  for (let k = 0; k < 2; k++) { const p = makePerson(k + 1, .62); root.add(p.object); people.push({ p, kid: true, a: k * Math.PI + .5, r: 9.6, x: 0, z: 175, sp: 2.6 }); }
+  // talpfoltok (egy példányos háló mindenkinek)
+  const blobT = tex(64, 64, (c, w) => { const g = c.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,.42)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); });
+  const blobs = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.15, 1.15).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: blobT, transparent: true, depthWrite: false }), people.length);
+  blobs.renderOrder = 3; blobs.frustumCulled = false; root.add(blobs);
+  for (const w of people) w.p.object.traverse(o => { if (o.isMesh) o.castShadow = false; });
+
+  /* ---------- madarak: galambok a kútnál (felröppennek, ha közel mész), tyúkok a kút mögött ---------- */
+  const birds = [];
+  const birdGeo = (kind) => {
+    const S = (r, sx, sy, sz, x, y, z) => { const g = new THREE.SphereGeometry(r, 10, 7); g.scale(sx, sy, sz); g.translate(x, y, z); return g; };
+    return kind === 'p' ? mergeGeometries([S(1, .09, .08, .15, 0, .12, 0), S(.05, 1, 1, 1, 0, .21, .12), S(1, .03, .012, .1, 0, .12, -.17), S(1, .13, .012, .08, .08, .15, -.01), S(1, .13, .012, .08, -.08, .15, -.01)])
+      : mergeGeometries([S(1, .15, .15, .2, 0, .27, 0), S(.075, 1, 1, 1, 0, .45, .15), S(1, .04, .1, .08, 0, .35, -.2), new THREE.CylinderGeometry(.015, .015, .16, 5).translate(.05, .08, 0), new THREE.CylinderGeometry(.015, .015, .16, 5).translate(-.05, .08, 0)]);
+  };
+  const pickSpot = b => { for (let k = 0; k < 8; k++) { const a = R(0, 6.28), d = R(b.r0, b.r1), x = b.cx + Math.cos(a) * d, z = b.cz + Math.sin(a) * d; if (!B.me || Math.hypot(x - B.me.x, z - B.me.z) > 5) return [x, z]; } return [b.cx + b.r1, b.cz]; };
+  const B = { me: null };
+  const flock = (kind, n, cx, cz, r0, r1, colors) => {
+    const im = new THREE.InstancedMesh(birdGeo(kind), new THREE.MeshStandardMaterial({ roughness: .8 }), n), cc = new THREE.Color(); im.frustumCulled = false; root.add(im);
+    for (let k = 0; k < n; k++) { const b = { kind, im, k, cx, cz, r0, r1, y: 0, ry: R(0, 6.28), m: 'idle', t: R(0, 4), ph: R(0, 6), vx: 0, vy: 0, vz: 0, tx: 0, tz: 0, land: false }; [b.x, b.z] = pickSpot(b); birds.push(b); im.setColorAt(k, cc.set(pick(colors))); }
+  };
+  trig('pigeon', 0, 165, 4.5); trig('pigeon', 0, 185, 4.5);
+  flock('p', LQ ? 8 : 16, 0, 175, 4, 11, ['#8a929e', '#7a8290', '#a8aeb8', '#6a7080', '#c8c8c8']);
+  flock('c', LQ ? 3 : 6, 30.5, 186.5, .6, 3.8, ['#f2ece0', '#b8743a', '#8a4a22', '#e8dcc8']);
+  const bd = new THREE.Object3D();
 
   let wt = 0;
   return {
     root,
     update(t, dt, me) {
       wt += dt;
+      let bi = 0;
       for (const w of people) {
-        const far = Math.hypot(w.x - me.x, w.z - me.z) > 70; w.p.object.visible = !far; if (far) continue;
+        const far = Math.hypot(w.x - me.x, w.z - me.z) > 70; w.p.object.visible = !far;
+        if (!far) { bd.position.set(w.x, .07, w.z); bd.rotation.set(0, 0, 0); bd.scale.setScalar(w.kid ? .7 : 1); } else { bd.position.set(0, -50, 0); bd.scale.setScalar(0); }
+        bd.updateMatrix(); blobs.setMatrixAt(bi++, bd.matrix);
+        if (far) continue;
         if (w.still) { w.p.update(dt, 0); continue; }
+        if (w.kid) { w.a += w.sp / w.r * dt; w.x = Math.cos(w.a) * w.r; w.z = 175 + Math.sin(w.a) * w.r * .9; w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(-Math.sin(w.a), Math.cos(w.a) * .9); w.p.update(dt, w.sp); continue; }
+        if (w.shop) {
+          if (w.m === 'stay') {
+            w.t -= dt; w.p.object.rotation.y += (w.face - w.p.object.rotation.y) * Math.min(1, dt * 4);
+            if (Math.random() < dt * .25) w.p.talk(R(1, 2.5));
+            w.p.update(dt, 0);
+            if (w.t <= 0) { const free = SPOTS.filter(s => !s.busy && s !== w.spot); const n = free[Math.floor(Math.random() * free.length)]; w.spot.busy = false; n.busy = true; w.spot = n; w.path = viaFountain(w.x, w.z, n.x, n.z); w.m = 'walk'; }
+            continue;
+          }
+          const [tx, tz] = w.path[0], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz);
+          if (d < .25) { w.path.shift(); if (!w.path.length) { w.m = 'stay'; w.t = R(4, 12); w.face = w.spot.ry; } continue; }
+          w.x += dx / d * w.sp * dt; w.z += dz / d * w.sp * dt;
+          w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(dx, dz); w.p.update(dt, w.sp); continue;
+        }
         const [tx, tz] = w.rt[w.i], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz);
         if (d < .4) { w.i = (w.i + 1) % w.rt.length; continue; }
         w.x += dx / d * w.sp * dt; w.z += dz / d * w.sp * dt;
         w.p.object.position.set(w.x, 0, w.z); w.p.object.rotation.y = Math.atan2(dx, dz); w.p.update(dt, w.sp);
       }
+      blobs.instanceMatrix.needsUpdate = true;
+      // madarak (csak ha a piac közelében vagy)
+      if (Math.hypot(me.x, me.z - 175) < 80) { B.me = me;
+        for (const b of birds) {
+          const dm = Math.hypot(b.x - me.x, b.z - me.z), P = b.kind === 'p';
+          if (b.m !== 'fly' && dm < (P ? 3.4 : 2.2)) { const a = Math.atan2(b.x - me.x, b.z - me.z) + R(-.7, .7), sp = P ? R(3, 4.5) : R(2.4, 3.2); b.m = 'fly'; b.t = P ? R(2.6, 4) : R(.7, 1.1); b.vx = Math.sin(a) * sp; b.vz = Math.cos(a) * sp; b.vy = P ? R(2.6, 3.6) : 1.8; b.ry = a; b.land = false; }
+          let tilt = 0, flap = 1;
+          if (b.m === 'fly') {
+            b.t -= dt;
+            if (P && b.t < 1.3) { if (!b.land) { [b.tx, b.tz] = pickSpot(b); b.land = true; } const dx = b.tx - b.x, dz = b.tz - b.z, d = Math.hypot(dx, dz) || 1, hs = Math.min(4, d / Math.max(.2, b.t)); b.vx = dx / d * hs; b.vz = dz / d * hs; b.vy = -b.y / Math.max(.25, b.t); b.ry = Math.atan2(dx, dz); }
+            if (!P) b.vy -= 7 * dt;
+            b.x += b.vx * dt; b.z += b.vz * dt; b.y = Math.max(0, b.y + b.vy * dt);
+            flap = 1 + (P ? .9 : .6) * Math.abs(Math.sin(t * (P ? 26 : 32) + b.ph));
+            if (b.t <= 0) { b.m = 'idle'; b.y = 0; b.t = R(1, 4); }
+          } else if (b.m === 'walk') {
+            const dx = b.tx - b.x, dz = b.tz - b.z, d = Math.hypot(dx, dz); b.t -= dt;
+            if (d < .05 || b.t <= 0) { b.m = 'idle'; b.t = R(1, 5); } else { const sp = P ? .45 : .6; b.x += dx / d * sp * dt; b.z += dz / d * sp * dt; b.ry = Math.atan2(dx, dz); }
+            tilt = Math.sin(t * 14 + b.ph) * .08;
+          } else {
+            b.t -= dt; tilt = Math.sin(t * 5 + b.ph) > .55 ? .55 : 0;
+            if (b.t <= 0) { const a = R(0, 6.28), r = R(.3, 1.2); let x = b.x + Math.cos(a) * r, z = b.z + Math.sin(a) * r; const dc = Math.hypot(x - b.cx, z - b.cz); if (dc < b.r0 || dc > b.r1) { x = b.cx + (x - b.cx) / dc * Math.min(b.r1, Math.max(b.r0, dc)); z = b.cz + (z - b.cz) / dc * Math.min(b.r1, Math.max(b.r0, dc)); } b.tx = x; b.tz = z; b.m = 'walk'; b.t = R(1, 3); }
+          }
+          bd.position.set(b.x, b.y + .05, b.z); bd.rotation.set(tilt, b.ry, 0); bd.scale.set(flap, 1, 1); bd.updateMatrix(); b.im.setMatrixAt(b.k, bd.matrix);
+        }
+        for (const b of birds) if (b.k === 0) b.im.instanceMatrix.needsUpdate = true;
+      }
+      if (DONKEY) { DONKEY.head.rotation.x = .25 + Math.sin(t * .7) * .15 + (Math.sin(t * .23) > .8 ? .35 : 0); DONKEY.tail.rotation.z = Math.sin(t * 2.4) * .35; }
+      // zászlók lengése
+      if (FLAGS && Math.abs(me.z - 175) < 60) { const fl = FLAGS.userData.flags; fl.forEach((f, k) => { bd.position.set(f.x, f.y, f.z); bd.rotation.set(Math.sin(t * 2.2 + f.x * .7) * .35, 0, 0); bd.scale.set(1, 1, 1); bd.updateMatrix(); FLAGS.setMatrixAt(k, bd.matrix); }); FLAGS.instanceMatrix.needsUpdate = true; }
       for (const b of boats) { b.b.position.y = b.y + Math.sin(t * 1.1 + b.ph) * .06; b.b.rotation.z = Math.sin(t * .8 + b.ph) * .03; }
       if (MM.river.normalMap) MM.river.normalMap.offset.set(t * .01, t * .02);
     },

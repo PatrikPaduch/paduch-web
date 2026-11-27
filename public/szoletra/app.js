@@ -14,7 +14,7 @@ const NEAR = { ...NEAR1 }; for (const [k, v] of Object.entries(NEAR2)) NEAR[k.to
 
 /* ================= beállítások, szabályok ================= */
 const KEY = 'szoletra-v1';
-const KERT_KEYS = ['kert-szavak', 'kert-ismetles', 'kert-kuldetes', 'kert-kertesz', 'kert-tablak'];
+const KERT_KEYS = ['kert-szavak', 'kert-ismetles', 'kert-kuldetes', 'kert-kertesz', 'kert-tablak', 'kert-mentes', 'kert-beszelgetes'];
 const INTERVALS = [0, 1, 2, 4, 7, 14, 30, 60];      // doboz -> hány nap múlva jön újra
 const MASTERED = 5;                                  // ettől a doboztól "megszilárdult"
 const PTS = { newWord: 10, review: 3, mastered: 15, sentence: 5, shade: 5, dialog: 5, weak: 2, daily: 20, weekly: 50 };
