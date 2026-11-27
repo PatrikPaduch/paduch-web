@@ -43,6 +43,22 @@ export const CITY_WORDS = {
   harbour: ['harbour', 'kikötő', 'The ships stayed in the harbour during the storm.', 'A hajók a vihar alatt a kikötőben maradtak.', 'b1'],
   fisherman: ['fisherman', 'halász', 'The fisherman goes out before sunrise.', 'A halász napkelte előtt indul.', 'b1'],
   rope: ['rope', 'kötél', 'Tie the boat with a strong rope.', 'Kösd ki a csónakot egy erős kötéllel.', 'b1'],
+  bouquet: ['bouquet', 'virágcsokor', 'He bought a bouquet of roses for his mother.', 'Egy csokor rózsát vett az anyjának.', 'b1'],
+  petal: ['petal', 'szirom', 'The petals of the lily are white and soft.', 'A liliom szirmai fehérek és puhák.', 'b1'],
+  ring: ['ring', 'gyűrű', 'She wears a silver ring on her left hand.', 'Ezüstgyűrűt hord a bal kezén.', 'a2'],
+  necklace: ['necklace', 'nyaklánc', 'The necklace was made of gold and blue stones.', 'A nyaklánc aranyból és kék kövekből készült.', 'b1'],
+  bracelet: ['bracelet', 'karkötő', 'Her bracelet jingled when she moved.', 'A karkötője csilingelt, amikor mozgott.', 'b1'],
+  bargain: ['bargain', 'jó vétel, alku', 'Three loaves for one coin? That is a real bargain!', 'Három cipó egy érméért? Ez aztán a jó vétel!', 'b1'],
+  ripe: ['ripe', 'érett', 'These figs are ripe, eat them today.', 'Ezek a fügék érettek, edd meg őket ma.', 'b1'],
+  bunch: ['bunch', 'csokor, köteg, fürt', 'I bought a bunch of carrots and a bunch of grapes.', 'Vettem egy köteg répát és egy fürt szőlőt.', 'b1'],
+  rug: ['rug', 'szőnyeg (kisebb)', 'The cat sleeps on the rug by the door.', 'A macska az ajtó melletti szőnyegen alszik.', 'a2'],
+  pattern: ['pattern', 'minta', 'I love the blue pattern on this rug.', 'Imádom a kék mintát ezen a szőnyegen.', 'b1'],
+  wool: ['wool', 'gyapjú', 'This rug is made of sheep wool.', 'Ez a szőnyeg birkagyapjúból készült.', 'a2'],
+  lantern: ['lantern', 'lámpás', 'He carried a lantern through the dark street.', 'Egy lámpást vitt a sötét utcán.', 'b1'],
+  anvil: ['anvil', 'üllő', 'The smith hammered the hot copper on the anvil.', 'A kovács az üllőn kalapálta a forró rezet.', 'b2'],
+  hammer: ['hammer', 'kalapács', 'Can you pass me the hammer, please?', 'Ideadnád a kalapácsot, kérlek?', 'a2'],
+  copper: ['copper', 'réz', 'These pots are made of copper.', 'Ezek az edények rézből készültek.', 'b1'],
+  oven: ['oven', 'kemence, sütő', 'The baker lit the oven before sunrise.', 'A pék napkelte előtt begyújtotta a kemencét.', 'a2'],
   donkey: ['donkey', 'szamár', 'The donkey pulled the cart to the market.', 'A szamár húzta a kocsit a piacra.', 'a2'],
   cart: ['cart', 'kocsi, szekér', 'The cart was full of sacks of grain.', 'A szekér tele volt gabonászsákokkal.', 'b1'],
   sack: ['sack', 'zsák', 'He carried a heavy sack of flour on his back.', 'Egy nehéz liszteszsákot vitt a hátán.', 'b1'],
@@ -184,6 +200,138 @@ export const CONVOS = {
         ["I'd love to! What time should I come?", 1, 'Early, before it gets hot. Around six.'],
         ['I would love to helping.', 0, 'To help, my friend, to help!', '"Would love to" után alapalak: to help.'],
         ['Next week was good.', 0, 'Was? Next week is in the future!', 'A jövőre nem használunk múlt időt.']] },
+    ] },
+  ],
+  flowers: [
+    { title: 'Csokor valakinek', steps: [
+      { say: 'Good morning! Are you looking for flowers for someone special?', hu: 'Jó reggelt! Valakinek, aki különleges, keresel virágot?', replies: [
+        ["Yes, I\'d like a bouquet for my mother, please.", 1, 'How lovely! Mothers always deserve flowers.'],
+        ['Yes, I would like flowers to my mother.', 0, 'For your mother, you mean? Flowers FOR someone.', 'Valakinek: for (nem to). Flowers for my mother.'],
+        ['Yes, I am looking flowers.', 0, 'Looking FOR flowers, my dear.', 'A look után for kell: look for = keres.']] },
+      { say: 'Roses or lilies? The roses smell sweeter, but the lilies last longer.', hu: 'Rózsát vagy liliomot? A rózsa édesebb illatú, de a liliom tovább bírja.', replies: [
+        ['Which ones will last longer in a vase?', 1, 'The lilies. Change the water every day and they will last a week.'],
+        ['Which ones are more long?', 0, 'Longer, not more long. And for flowers we say they LAST longer.', 'Rövid melléknév: -er (longer). Az eltarthatóság: last longer.'],
+        ['The lilies are more sweet than roses?', 0, 'Sweeter! And no, the roses are sweeter.', 'Egy szótagú melléknév: sweeter, nem more sweet.']] },
+    ] },
+    { title: 'Bocsánatkérő virág', steps: [
+      { say: 'You look worried. Did something happen?', hu: 'Gondterheltnek tűnsz. Történt valami?', replies: [
+        ['I forgot my friend\'s birthday. I want to say sorry.', 1, 'Oh dear. A small bouquet with a kind note will help.'],
+        ['I have forgot my friend birthday.', 0, 'You forgot your friend\'s birthday? That happens!', 'Múlt idő: I forgot. Birtokos: friend\'s birthday.'],
+        ['My friend is birthday, I am sorry him.', 0, 'I am not sure I understand. Is it your friend\'s birthday?', 'Helyesen: It is my friend\'s birthday. I want to apologise to him.']] },
+      { say: 'Shall I write something on the card for you?', hu: 'Írjak valamit a kártyára helyetted?', replies: [
+        ['Yes, please. Could you write "Sorry I forgot"?', 1, 'Of course. Short and honest is the best.'],
+        ['Yes, write please me.', 0, 'Write it for you? Say: Could you write it for me?', 'Udvarias kérés: Could you write ... for me?'],
+        ['No, thanks, I write myself.', 0, 'You will write it yourself? Fine, here is the pen.', 'Jövő/szándék: I\'ll write it myself.']] },
+    ] },
+  ],
+  jewel: [
+    { title: 'Valódi arany?', steps: [
+      { say: 'Welcome! Everything here is made by my own hands.', hu: 'Üdvözöllek! Itt mindent a saját kezemmel készítettem.', replies: [
+        ['It is beautiful. Is this ring made of real gold?', 1, 'Real gold, from the mountains in the east. Feel how heavy it is.'],
+        ['Is this ring made from real gold?', 0, 'Made OF gold. We say made of when you can still see the material.', 'Anyag, ami látszik: made of gold. A made from átalakított anyagnál kell.'],
+        ['This ring is real golden?', 0, 'Is it real gold, you mean? Yes, it is.', 'Kérdés: Is it real gold? (golden inkább színre mondjuk)']] },
+      { say: 'This necklace is the most expensive piece in my shop.', hu: 'Ez a nyaklánc a legdrágább darab a boltomban.', replies: [
+        ['Do you have anything cheaper? Maybe a bracelet?', 1, 'Of course. This silver bracelet is much cheaper, but just as pretty.'],
+        ['Do you have something more cheap?', 0, 'Cheaper! Cheap is a short word, so we add -er.', 'Rövid melléknév: cheaper, nem more cheap.'],
+        ['It is the expensivest?', 0, 'The MOST expensive. Long words take most.', 'Hosszú melléknév: the most expensive.']] },
+    ] },
+    { title: 'Alkudozás', steps: [
+      { say: 'For you, this bracelet is only five silver coins.', hu: 'Neked ez a karkötő csak öt ezüstérme.', replies: [
+        ['That is a bit too much for me. Would you take three?', 1, 'Three? You want to ruin me! Four, and it is a bargain.'],
+        ['It is too much expensive.', 0, 'Too expensive, or much too expensive. Not too much expensive.', 'Túl drága: too expensive (erősítve: much too expensive).'],
+        ['I give you three coin.', 0, 'Three coinS. And it sounds like an order, not an offer!', 'Többes szám: three coins. Ajánlat: Would you take three?']] },
+      { say: 'Four coins, and I wrap it in a silk cloth for you.', hu: 'Négy érme, és becsomagolom neked egy selyemkendőbe.', replies: [
+        ['Deal! Thank you, it is a lovely gift.', 1, 'A pleasure doing business with you. Come again!'],
+        ['Okay, I am agree.', 0, 'You agree, not you are agree. But yes, deal!', 'Az agree ige: I agree (am nélkül).'],
+        ['Yes, I wrap it myself.', 0, 'No need, I will wrap it. You just pay!', 'Ő csomagolja be, te csak fogadd el: Deal! / Thank you.']] },
+    ] },
+  ],
+  veg: [
+    { title: 'Mennyit kérsz?', steps: [
+      { say: 'Fresh from the fields this morning! What would you like?', hu: 'Ma reggel szedtem a földekről! Mit kérsz?', replies: [
+        ['Half a kilo of onions and a bunch of carrots, please.', 1, 'Here you are. The carrots are very sweet this week.'],
+        ['I want some onion and one carrots.', 0, 'Some onionS, and a bunch of carrots, perhaps?', 'Megszámolható többes: some onions. Répából: a bunch of carrots.'],
+        ['Give half kilo onions.', 0, 'Half A kilo OF onions, please! Say please at the market.', 'Mennyiség: half a kilo of onions, please.']] },
+      { say: 'Anything else? I also have cabbages and pumpkins.', hu: 'Még valamit? Van káposztám és tököm is.', replies: [
+        ['How much is a cabbage? And how many pumpkins do you have?', 1, 'One coin for a cabbage. I have only three pumpkins left.'],
+        ['How many is a cabbage?', 0, 'How MUCH is it. We ask how much about price.', 'Ár: How much is it? Darabszám: How many?'],
+        ['How much pumpkins you have?', 0, 'How MANY pumpkins DO you have? Pumpkins can be counted.', 'Megszámolható: how many. Kérdésben: do you have.']] },
+    ] },
+    { title: 'Friss-e?', steps: [
+      { say: 'These figs are the best in Babylon. Try one!', hu: 'Ezek a legjobb fügék Babilonban. Kóstolj meg egyet!', replies: [
+        ['Mmm, they are very sweet. Are they ripe?', 1, 'Perfectly ripe. Eat them today or tomorrow.'],
+        ['They are very sweets.', 0, 'Sweet, not sweets. Sweets are candies!', 'Melléknév nem kap -s-t: they are sweet.'],
+        ['Are they mature?', 0, 'Ha! Fruit is not mature, it is RIPE. People are mature.', 'Gyümölcsre: ripe. A mature embereknél, borra stb. jó.']] },
+      { say: 'Do you need a bag, or do you have your own basket?', hu: 'Kell zacskó, vagy van saját kosarad?', replies: [
+        ["I have my own basket, thanks.", 1, 'Good! Put the figs on top so they don\'t get crushed.'],
+        ['I have an own basket.', 0, 'My OWN basket. Own always comes after my, your, his...', 'Saját: my own basket (nem an own).'],
+        ['No, I don\'t need any bag.', 0, 'Close! But you have a basket, right? Say: I don\'t need a bag.', 'Egyetlen dologra: I don\'t need a bag. (any inkább többesnél)']] },
+    ] },
+  ],
+  carpet: [
+    { title: 'Szőnyeg a szobába', steps: [
+      { say: 'Welcome, friend! Every rug here is handmade from sheep wool.', hu: 'Üdv, barátom! Itt minden szőnyeg kézzel készült birkagyapjúból.', replies: [
+        ['I love this red one. How long did it take to make?', 1, 'Almost three months. My wife and her sister work on each one.'],
+        ['How long it took to make?', 0, 'How long DID it take? Questions need did in the past.', 'Múlt idejű kérdés: How long did it take?'],
+        ['I love this red. How many time it took?', 0, 'This red ONE. And how long did it take? Time is not counted.', 'Egy dologra: this red one. Idő: how long (nem how many time).']] },
+      { say: 'This one is three metres long. Is it the right size for your room?', hu: 'Ez három méter hosszú. Jó méret a szobádba?', replies: [
+        ["I\'m afraid it\'s too big. Do you have a smaller one?", 1, 'Of course. This blue one is smaller, and the pattern is the same.'],
+        ['It is too much big for my room.', 0, 'Too big, not too much big.', 'Túl nagy: too big.'],
+        ['It is not enough small.', 0, 'Small enough! Enough comes after the adjective.', 'Elég kicsi: small enough (az enough a melléknév után).']] },
+    ] },
+    { title: 'Kiszállítás', steps: [
+      { say: 'It is heavy. Shall I send my son to carry it to your house?', hu: 'Nehéz. Elküldjem a fiamat, hogy elvigye a házadhoz?', replies: [
+        ['Yes, please. Could you deliver it tomorrow morning?', 1, 'Tomorrow morning, before the sun gets hot. Where do you live?'],
+        ['Yes, you can deliver it tomorrow morning?', 0, 'It sounds better as a polite question: Could you deliver it...?', 'Udvarias kérés: Could you deliver it tomorrow morning?'],
+        ['Yes, please bring it on tomorrow.', 0, 'Just tomorrow, no on. We say on Monday, but just tomorrow.', 'Tomorrow előtt nincs elöljáró: bring it tomorrow.']] },
+      { say: 'Where is your house?', hu: 'Hol van a házad?', replies: [
+        ['Near the Ishtar Gate, next to the big fountain.', 1, 'I know it well. My son will be there before breakfast.'],
+        ['It is near to Ishtar Gate, next the fountain.', 0, 'Near the Ishtar Gate, next TO the fountain.', 'Near után nem kell to, next után igen: next to.'],
+        ['My house is in the Ishtar Gate.', 0, 'IN the gate? You live inside the gate? Near it, I think!', 'Helyhatározó: near the gate (a közelében).']] },
+    ] },
+  ],
+  tea: [
+    { title: 'Egy csésze tea', steps: [
+      { say: 'Good evening! Would you like a cup of hot mint tea?', hu: 'Jó estét! Kérsz egy csésze forró mentateát?', replies: [
+        ['Yes, please. With a little honey, if you have some.', 1, 'Of course. Honey from the kitchen garden, very fresh.'],
+        ['Yes, I like.', 0, 'You would like ONE, I think. Yes, please!', 'Kínálásra: Yes, please. (I like = szeretem általában)'],
+        ['Yes, with honey and without sugar and with.', 0, 'With honey, without sugar? Let us keep it simple!', 'With honey = mézzel, without sugar = cukor nélkül.']] },
+      { say: 'Careful, the kettle is very hot. Do you want it with or without mint leaves?', hu: 'Vigyázz, a teáskanna nagyon forró. Mentalevéllel vagy anélkül kéred?', replies: [
+        ['With mint leaves, please. It smells wonderful.', 1, 'It does. My grandmother grew this mint.'],
+        ['With mint leafs, please.', 0, 'Leaves! One leaf, two leaves.', 'Rendhagyó többes szám: leaf, leaves.'],
+        ['Without of mint.', 0, 'Just without mint. No of after without.', 'Without után nincs of: without mint.']] },
+    ] },
+    { title: 'Esti beszélgetés', steps: [
+      { say: 'The market is quiet now. Have you been in Babylon long?', hu: 'Most csendes a piac. Régóta vagy Babilonban?', replies: [
+        ["Not very long. I arrived a few weeks ago.", 1, 'Welcome, then! You will love the night market.'],
+        ['I am in Babylon since few weeks.', 0, 'I HAVE BEEN here FOR a few weeks. Or: I arrived a few weeks ago.', 'Időtartam: have been ... for a few weeks.'],
+        ['I arrived before few weeks.', 0, 'A few weeks AGO. Ago comes after the time.', 'Ezelőtt: a few weeks ago (nem before).']] },
+      { say: 'What do you like most about the city?', hu: 'Mit szeretsz a legjobban a városban?', replies: [
+        ['The lanterns at night. The streets look magical.', 1, 'Yes! When the lanterns are lit, Babylon looks like the sky.'],
+        ['I like the most the lanterns.', 0, 'I like the lanterns most. Most goes at the end.', 'Szórend: I like the lanterns most / the most.'],
+        ['The lanterns at the night.', 0, 'At night, without the. Very nice choice though!', 'Éjjel: at night (névelő nélkül).']] },
+    ] },
+  ],
+  story: [
+    { title: 'Az özönvíz meséje', steps: [
+      { say: 'Long ago, the gods sent a great flood. One wise man built a huge boat and saved the animals. Do you know his name?', hu: 'Régen az istenek nagy özönvizet küldtek. Egy bölcs ember hatalmas hajót épített, és megmentette az állatokat. Tudod a nevét?', replies: [
+        ['No, I don\'t. What was his name?', 1, 'His name was Utnapishtim. The gods gave him eternal life.'],
+        ['No, what is was his name?', 0, 'What WAS his name. Just one verb!', 'Múlt idejű kérdés: What was his name?'],
+        ['No, I don\'t know he.', 0, 'You don\'t know HIM. After a verb: him, her, them.', 'Tárgyeset: know him.']] },
+      { say: 'When the rain stopped, he sent out a bird to find land. What do you think happened?', hu: 'Amikor elállt az eső, kiküldött egy madarat, hogy szárazföldet keressen. Szerinted mi történt?', replies: [
+        ['Maybe the bird found land and didn\'t come back.', 1, 'Clever! The raven found land and never returned. So they knew the water was going down.'],
+        ['Maybe the bird finded land.', 0, 'FOUND. Find, found, found.', 'Rendhagyó ige: find, found, found.'],
+        ['Maybe the bird didn\'t came back.', 0, 'Didn\'t COME back. After did, the verb stays simple.', 'Did/didn\'t után alapalak: didn\'t come.']] },
+    ] },
+    { title: 'Gilgames és Enkidu', steps: [
+      { say: 'King Gilgamesh was strong but proud. Then he met Enkidu, a wild man from the forest. They fought, and then...?', hu: 'Gilgames király erős volt, de büszke. Aztán találkozott Enkiduval, egy erdei vademberrel. Megküzdöttek, és aztán...?', replies: [
+        ['And then they became best friends?', 1, 'Exactly! The fight made them brothers. They went on many adventures together.'],
+        ['And then they becomed friends?', 0, 'BECAME. Become, became, become.', 'Rendhagyó ige: become, became, become.'],
+        ['And then they were friendship.', 0, 'They BECAME FRIENDS. Friendship is the thing, friends are the people.', 'Barátok lettek: became friends.']] },
+      { say: 'Later Enkidu died, and Gilgamesh was very sad. He wanted to live forever. Do you think he found the secret?', hu: 'Később Enkidu meghalt, és Gilgames nagyon szomorú volt. Örökké akart élni. Szerinted megtalálta a titkot?', replies: [
+        ['I don\'t think so. Nobody can live forever.', 1, 'Wise words. He learned that a good life is better than a long one.'],
+        ['I think not he found it.', 0, 'I DON\'T THINK he found it. In English we put the not on think.', 'Tagadásnál: I don\'t think he found it.'],
+        ['Nobody can\'t live forever.', 0, 'Nobody CAN live forever. Nobody is already negative!', 'A nobody már tagad, nem kell mellé can\'t.']] },
     ] },
   ],
   boatman: [

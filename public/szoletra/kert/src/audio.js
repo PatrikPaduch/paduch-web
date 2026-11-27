@@ -13,6 +13,10 @@ export class GardenAudio {
     const o = C.createOscillator(); o.frequency.value = 4400; const am = C.createGain(); am.gain.value = 0;
     const lfo = C.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 21; const lg = C.createGain(); lg.gain.value = .5; lfo.connect(lg).connect(am.gain);
     this.cricket = C.createGain(); this.cricket.gain.value = 0; o.connect(am).connect(this.cricket).connect(this.master); o.start(); lfo.start();
+    // város: zsivaj-alap (három sávban), folyó
+    this.crowd = [this.loop('bandpass', 380, 1.1), this.loop('bandpass', 760, 1.3), this.loop('bandpass', 1500, 1.6)];
+    this.river = this.loop('lowpass', 480, .7); this.river2 = this.loop('bandpass', 1800, .9);
+    this.nSyl = 0; this.nHag = 0; this.nLyre = 0; this.nDog = 0; this.nFire = 0; this.nRiv = 0; this.lyreBuf = {}; this.mel = 0;
   }
   loop(type, freq, q) {
     const C = this.ctx, src = C.createBufferSource(); src.buffer = this.noise; src.loop = true; src.playbackRate.value = .9 + Math.random() * .2;
@@ -29,6 +33,49 @@ export class GardenAudio {
     set(this.cricket, (1 - st.day) * .018);
     if (st.day > .3 && now > this.nb) { this.nb = now + .7 + Math.random() * 3; this.bird(); }
     if (st.day < .25 && now > this.nn) { this.nn = now + 5 + Math.random() * 9; this.owl(); }
+  }
+  // a város: st.city = { market, marketPan, haggle, haggleSide, river, riverPan, music, musicPan, fire, dogs }
+  cityUpdate(c) {
+    if (!this.ctx || this.muted || !this.crowd) return;
+    const C = this.ctx, now = C.currentTime, set = (g, v) => g.gain.setTargetAtTime(v, now, .5), R = (a, b) => a + Math.random() * (b - a);
+    const m = c.market;
+    set(this.crowd[0], m * .11); set(this.crowd[1], m * .07); set(this.crowd[2], m * .025);
+    const sw = .75 + .25 * Math.sin(now * .45) * Math.sin(now * .17 + 1); set(this.river, c.river * .32 * sw); set(this.river2, c.river * .035 * sw);
+    // távoli beszéd: rövid "szótagok" formánsszűrt hanggal
+    if (this.nSyl < now) this.nSyl = now;
+    while (m > .04 && this.nSyl < now + .4) { this.syl(this.nSyl, R(.004, .012) * m, Math.max(-1, Math.min(1, c.marketPan + R(-.8, .8))), R(105, 250)); this.nSyl += R(.05, .2) / (.35 + m); }
+    // alkudozás: egy közelebbi, élénk mondat a standok felől
+    if (c.haggle > .1 && now > this.nHag) { this.nHag = now + R(4, 10); const f0 = R(110, 230), n = 4 + Math.floor(Math.random() * 5), up = Math.random() < .5, pan = R(-.7, .7); for (let k = 0; k < n; k++) this.syl(now + k * R(.12, .17), .035 * c.haggle, pan, f0 * (1 + (up ? k / n * .35 : -k / n * .2)), true); }
+    // folyó: loccsanás, csónaknyikorgás
+    if (c.river > .15 && now > this.nRiv) { this.nRiv = now + R(3, 8); Math.random() < .6 ? this.splash(c.river, R(-.8, .8)) : this.creak(c.river, R(-.6, .6)); }
+    // éjjel: lant, pattogó tűz, távoli kutyák
+    if (c.music > .03 && now > this.nLyre) { const SC = [293.66, 349.23, 392, 440, 523.25, 587.33, 698.46]; this.mel = Math.max(0, Math.min(SC.length - 1, this.mel + Math.floor(R(-2, 3)))); this.pluck(SC[this.mel], .09 * c.music, c.musicPan); if (Math.random() < .25) this.pluck(SC[Math.max(0, this.mel - 2)] / 2, .06 * c.music, c.musicPan); this.nLyre = now + (Math.random() < .15 ? R(.9, 1.6) : R(.28, .5)); }
+    if (c.fire > .05 && now > this.nFire) { this.nFire = now + R(.05, .4) / c.fire; this.crackle(.05 * c.fire); }
+    if (c.dogs && now > this.nDog) { this.nDog = now + R(14, 40); const pan = R(-1, 1), n = 2 + Math.floor(Math.random() * 3); for (let k = 0; k < n; k++) this.bark(now + k * R(.28, .4), pan); }
+  }
+  syl(t, vol, pan, f0, loud) {
+    const C = this.ctx, o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (.92 + Math.random() * .16), t + .15);
+    const V = [[730, 1090], [270, 2290], [300, 870], [530, 1840], [570, 840], [440, 1020], [660, 1720]][Math.floor(Math.random() * 7)];
+    const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = pan; g.connect(p).connect(this.master);
+    for (const [f, q, a] of [[V[0], 7, 1], [V[1], 9, .6]]) { const b = C.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; const bg = C.createGain(); bg.gain.value = a; o.connect(b).connect(bg).connect(g); }
+    const d = loud ? .1 + Math.random() * .08 : .06 + Math.random() * .14; this.env(g, t, .015, vol, d); o.start(t); o.stop(t + d + .05);
+  }
+  hammer(vol, pan) {
+    if (!this.ctx || this.muted || vol <= 0) return;
+    const C = this.ctx, t = C.currentTime, f0 = 720 + Math.random() * 60, p = C.createStereoPanner(); p.pan.value = pan; p.connect(this.master);
+    for (const [r, a, d] of [[1, 1, .5], [2.76, .5, .3], [5.4, .3, .18], [8.93, .15, .1]]) { const o = C.createOscillator(); o.frequency.value = f0 * r; const g = C.createGain(); o.connect(g).connect(p); this.env(g, t, .002, .05 * vol * a, d); o.start(t); o.stop(t + d + .05); }
+    const src = C.createBufferSource(); src.buffer = this.noise; const f = C.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2500; const g = C.createGain(); src.connect(f).connect(g).connect(p); this.env(g, t, .001, .06 * vol, .04); src.start(t, Math.random() * 2); src.stop(t + .06);
+  }
+  splash(v, pan) { const C = this.ctx, t = C.currentTime, src = C.createBufferSource(); src.buffer = this.noise; const f = C.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(500, t + .35); f.Q.value = .8; const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = pan; src.connect(f).connect(g).connect(p).connect(this.master); this.env(g, t, .02, .09 * v, .4); src.start(t, Math.random() * 2); src.stop(t + .5); }
+  creak(v, pan) { const C = this.ctx, t = C.currentTime, o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(95, t); o.frequency.linearRampToValueAtTime(70, t + .6); const f = C.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 650; f.Q.value = 3; const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = pan; o.connect(f).connect(g).connect(p).connect(this.master); this.env(g, t, .08, .025 * v, .7); o.start(t); o.stop(t + .8); }
+  crackle(vol) { const C = this.ctx, t = C.currentTime + Math.random() * .05, src = C.createBufferSource(); src.buffer = this.noise; const f = C.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1800; const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = Math.random() * 1.2 - .6; src.connect(f).connect(g).connect(p).connect(this.master); this.env(g, t, .001, vol, .012 + Math.random() * .02); src.start(t, Math.random() * 2); src.stop(t + .05); }
+  bark(t, pan) { const C = this.ctx, o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(230, t + .13); const f = C.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 950; f.Q.value = 2.2; const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = pan; o.connect(f).connect(g).connect(p).connect(this.master); this.env(g, t, .01, .018, .16); o.start(t); o.stop(t + .2); }
+  // lant: Karplus-Strong pengetés (a hangmagasságonként egyszer kiszámolt hullámforma)
+  pluck(freq, vol, pan) {
+    const C = this.ctx; let buf = this.lyreBuf[freq];
+    if (!buf) { const sr = C.sampleRate, len = Math.floor(sr * 2.2), N = Math.round(sr / freq), d = new Float32Array(len); for (let i = 0; i < N; i++) d[i] = Math.random() * 2 - 1; for (let i = N; i < len; i++) d[i] = .4985 * (d[i - N] + d[i - N + 1]); buf = C.createBuffer(1, len, sr); buf.getChannelData(0).set(d); this.lyreBuf[freq] = buf; }
+    const t = C.currentTime, src = C.createBufferSource(); src.buffer = buf; const f = C.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2600; const g = C.createGain(); g.gain.value = vol; const p = C.createStereoPanner(); p.pan.value = pan;
+    src.connect(f).connect(g).connect(p).connect(this.master); src.start(t);
   }
   voice(type, pan, vol) { const C = this.ctx, o = C.createOscillator(); o.type = type; const g = C.createGain(); g.gain.value = 0; const p = C.createStereoPanner(); p.pan.value = pan; o.connect(g).connect(p).connect(this.master); return { o, g }; }
   env(g, s, a, v, d) { g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(v, s + a); g.gain.exponentialRampToValueAtTime(.0001, s + d); }

@@ -277,12 +277,12 @@ export function makePerson(i, scale = 1) {
   g.scale.setScalar(scale);
   let ph = Math.random() * 6, t = Math.random() * 9, talk = 0;
   return {
-    object: g,
+    object: g, arm: null,
     talk(sec) { talk = sec; },
     update(dt, speed = 0) {
       t += dt; talk = Math.max(0, talk - dt); const k = Math.min(1, speed / 1.2); ph += dt * (5 + speed * 2) * k; const s = Math.sin(ph);
       P.legL.rotation.x = s * .55 * k; P.legR.rotation.x = -s * .55 * k;
-      P.armL.rotation.x = -s * .45 * k; P.armR.rotation.x = talk > 0 ? -.8 + Math.sin(t * 3) * .3 : s * .45 * k;
+      P.armL.rotation.x = -s * .45 * k; P.armR.rotation.x = this.arm != null ? this.arm : talk > 0 ? -.8 + Math.sin(t * 3) * .3 : s * .45 * k;
       body.position.y = Math.abs(Math.cos(ph)) * .04 * k;
       P.head.rotation.y = talk > 0 ? Math.sin(t * 1.3) * .15 : Math.sin(t * .5 + ph) * .25 * (1 - k);
     },

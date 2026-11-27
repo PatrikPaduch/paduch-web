@@ -5,6 +5,9 @@ export const PLAZA = { x0: -92, x1: 92, z0: -84, z1: 112 };
 // Babilon utcái az Istár-kapun túl (a kert déli fala mögött), délen a rakpart és a stég az Eufráteszen
 export const CITY = { x0: -80, x1: 80, z0: 113.5, z1: 230 };
 export const PIER = { x0: 18.4, x1: 21.6, z0: 229, z1: 244 };
+// a túlpart: kikötő az Eufrátesz északi partján (csak csónakkal érhető el), és a túlparti stég
+export const HARB = { x0: -76, x1: 96, z0: 320, z1: 392 };
+export const FPIER = { x0: 18.4, x1: 21.6, z0: 300, z1: 321 };
 // öt terasz: magasság és fél-szélesség (a gyűrűk 9 m szélesek)
 export const LV = [{ h: 5, r: 46 }, { h: 10, r: 37 }, { h: 15, r: 28 }, { h: 20, r: 19 }, { h: 25, r: 10 }];
 export const WALL_H = 7;
@@ -59,7 +62,8 @@ export function blocked(x, z, rad = .35) {
   const inGate = Math.abs(x) < 4.4 && z >= PLAZA.z1 - 1.3 && z <= CITY.z0 + 1.2;
   const inCity = x > CITY.x0 + 1.4 && x < CITY.x1 - 1.4 && z > CITY.z0 + .9 && z < CITY.z1 - .8;
   const onPier = x > PIER.x0 && x < PIER.x1 && z >= CITY.z1 - 1 && z < PIER.z1;
-  if (!inGarden && !inGate && !inCity && !onPier) return true;
+  const inHarb = x > HARB.x0 + 1 && x < HARB.x1 - 1 && z > HARB.z0 + .9 && z < HARB.z1 - 1, onFPier = x > FPIER.x0 && x < FPIER.x1 && z > FPIER.z0 && z <= HARB.z0 + 1;
+  if (!inGarden && !inGate && !inCity && !onPier && !inHarb && !onFPier) return true;
   if (inLake(x, z) && !onIsland(x, z) && !onBridge(x, z)) return true;
   if (x > BASIN.x0 && x < BASIN.x1 && z > BASIN.z0 && z < BASIN.z1) return true;
   for (const [a, b, c, d] of CANALS) if (x > a - .3 && x < b + .3 && z > c - .3 && z < d + .3) return true;

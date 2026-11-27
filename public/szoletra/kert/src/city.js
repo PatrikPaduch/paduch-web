@@ -15,12 +15,14 @@ const tex = (w, h, draw, rep = true) => { const c = document.createElement('canv
 
 export function buildCity(M, q) {
   srand(77);
-  let FLAGS = null, DONKEY = null;
+  let FLAGS = null, DONKEY = null, PLANTS = null;
+  const EVENTS = [];   // hang-események (pl. kalapácsütés), a main.js üríti
+  const STALL_ST = [];   // standonként: { i, type, sx, sz, dir, goods: [[tömb, tól, ig]], meshes, open }
   const root = new THREE.Group(), geos = {}, trig = (w, x, z, r, y = 0) => CITY_TRIG.push({ w, x, z, r, y });
   const add = (k, g) => (geos[k] ??= []).push(g);
   const box = (k, x0, y0, z0, x1, y1, z1) => { const g = new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)); g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); add(k, g); return g; };
   const cyl = (k, x, y0, z, r0, r1, h, seg = 12) => { const g = new THREE.CylinderGeometry(r1, r0, h, seg); g.translate(x, y0 + h / 2, z); add(k, g); return g; };
-  const I = { jar: [], fruit: [], loaf: [], cone: [], roll: [], fish: [], gold: [], cabbage: [], onion: [], carrot: [], pumpkin: [], basket: [], tabletS: [], scroll: [], post: [], rail: [], beam: [], pot: [], palmT: [], bollard: [], crate: [], hive: [] };
+  const I = { copper: [], jar: [], fruit: [], loaf: [], cone: [], roll: [], fish: [], gold: [], cabbage: [], onion: [], carrot: [], pumpkin: [], basket: [], tabletS: [], scroll: [], post: [], rail: [], beam: [], pot: [], palmT: [], bollard: [], crate: [], hive: [] };
   const UVS = { plaster: 3, mud: 3, brick: 3, brick2: 3, pave: 6, cobble: 5, glaze: 2, wood: 2, soil: 3, column: 2, marble: 3, dark: 1, quay: 4 };
 
   /* ---------- anyagok ---------- */
@@ -123,17 +125,17 @@ export function buildCity(M, q) {
     ['fruit', -22, 158, 1], ['baker', -22, 166.5, 1], ['spice', -22, 175, 1], ['potter', -22, 183.5, 1], ['weaver', -22, 192, 1],
     ['fish', 22, 158, -1], ['flowers', 22, 166.5, -1], ['jewel', 22, 175, -1], ['veg', 22, 183.5, -1], ['carpet', 22, 192, -1],
   ];
-  const NPC_NAMES = { fruit: 'Ilu, a gyümölcsárus', baker: 'Bel, a pék', spice: 'Zakir, a fűszerárus', potter: 'Ninsun, a fazekas', weaver: 'Tabni, a kelmeárus', fish: 'Ea, a halárus' };
+  const NPC_NAMES = { fruit: 'Ilu, a gyümölcsárus', baker: 'Bel, a pék', spice: 'Zakir, a fűszerárus', potter: 'Ninsun, a fazekas', weaver: 'Tabni, a kelmeárus', fish: 'Ea, a halárus', flowers: 'Ninlil, a virágárus', jewel: 'Ishme, az ékszerész', veg: 'Gula, a zöldségárus', carpet: 'Arad, a szőnyegárus' };
   STALLS.forEach(([type, sx, sz, dir], i) => {
     // helyi koordináták: a pult a +x (dir=1) vagy -x irányba néz, az árus mögötte áll
     const fx = dir, p = (lx, lz) => [sx + lx * fx, sz + lz];   // lx: előre (a vevő felé), lz: oldalirány
     const [tx, tz] = p(.3, 0);
     box('wood', tx - .55, .85, tz - 1.6, tx + .55, .95, tz + 1.6); box('wood', tx - .5, 0, tz - 1.55, tx + .5, .85, tz + 1.55);
     for (const [a, b] of [[-.9, -1.75], [-.9, 1.75], [1.1, -1.75], [1.1, 1.75]]) { const [px, pz] = p(a, b); I.post.push({ x: px, y: 0, z: pz, sx: 1, sy: a < 0 ? 2.75 : 2.3, sz: 1 }); }
-    { const ag = new THREE.PlaneGeometry(2.4, 3.9); ag.rotateX(-Math.PI / 2); ag.rotateZ(fx * .32); ag.translate(...[sx + .1 * fx, 2.6, sz]); const am = new THREE.Mesh(ag, awn[i % awn.length]); am.castShadow = true; root.add(am); }
+    { const ag = new THREE.PlaneGeometry(2.4, 3.9); ag.rotateX(-Math.PI / 2); ag.rotateZ(fx * .32); ag.translate(...[sx + .1 * fx, 2.6, sz]); const am = new THREE.Mesh(ag, awn[i % awn.length]); am.castShadow = true; root.add(am); STALL_ST[i] = { i, type, sx, sz, dir, tx: sx + .3 * fx, goods: [], meshes: [am], open: true }; }
     rectCollider(tx - .7, tz - 1.8, tx + .7, tz + 1.8);
     CITY_MAP.stalls.push([sx, sz, type]);
-    const top = .95, gx = (lz) => p(.3, lz);
+    const top = .95, gx = (lz) => p(.3, lz), snap = Object.fromEntries(Object.entries(I).map(([k, a]) => [k, a.length]));
     trig('stall', tx + fx * 1.6, tz, 3.2); trig('awning', tx + fx * 1.4, tz, 2.8, 0);
     if (type === 'fruit') { for (let k = -1; k <= 1; k++) { const [bx, bz] = gx(k * 1.05); I.basket.push({ x: bx, y: top, z: bz, s: 1 }); for (let n = 0; n < 9; n++) I.fruit.push({ x: bx + R(-.25, .25), y: top + .14 + R(0, .12), z: bz + R(-.25, .25), s: R(.07, .1), c: ['#e8741c', '#b8222a', '#5a2a5a'][k + 1] }); } trig('basket', tx + fx * 1.5, tz, 2.6); trig('scale', tx + fx * 1.5, tz + 1, 2.4); }
     if (type === 'baker') { for (let n = 0; n < 14; n++) { const [bx, bz] = gx(R(-1.3, 1.3)); I.loaf.push({ x: bx + R(-.25, .25), y: top + .08, z: bz, ry: R(0, 3), s: 1 }); } trig('loaf', tx + fx * 1.5, tz, 2.8); trig('baker', tx + fx * 2.1, tz + 1, 2.6); }
@@ -141,13 +143,14 @@ export function buildCity(M, q) {
     if (type === 'potter') { for (let n = 0; n < 6; n++) { const [bx, bz] = gx(-1.2 + n * .48); I.jar.push({ x: bx, y: top, z: bz, s: R(.35, .55) }); } for (let n = 0; n < 5; n++) { const [bx, bz] = p(1.5 + R(0, .5), -1.6 + n * .8); I.jar.push({ x: bx, y: 0, z: bz, s: R(.8, 1.2) }); } trig('pottery', tx + fx * 1.6, tz, 2.8); trig('jar', tx + fx * 2, tz + 1.2, 2.4); }
     if (type === 'weaver') { ['#2a5aa8', '#c23a2a', '#2f7a46', '#e8c070', '#8a3a8a'].forEach((c, k) => { const [bx, bz] = gx(-1.2 + k * .6); I.roll.push({ x: bx, y: top + .1, z: bz, s: 1, c }); }); trig('fabric', tx + fx * 1.5, tz, 2.8); }
     if (type === 'fish') { box('marble', tx - .5, top, tz - 1.5, tx + .5, top + .05, tz + 1.5); for (let n = 0; n < 10; n++) { const [bx, bz] = gx(R(-1.3, 1.3)); I.fish.push({ x: bx + R(-.2, .2), y: top + .08, z: bz, ry: R(-.4, .4) + Math.PI / 2, s: R(.9, 1.2) }); } trig('fishmonger', tx + fx * 1.5, tz, 2.8); }
-    if (type === 'flowers') { for (let n = 0; n < 5; n++) { const [bx, bz] = gx(-1.2 + n * .6); I.pot.push({ x: bx, y: top, z: bz, s: .6 }); } }
-    if (type === 'jewel') { box('dark', tx - .5, top, tz - 1.5, tx + .5, top + .02, tz + 1.5); for (let n = 0; n < 16; n++) { const [bx, bz] = gx(R(-1.3, 1.3)); I.gold.push({ x: bx + R(-.3, .3), y: top + .05, z: bz, s: R(.04, .07) }); } trig('jewellery', tx + fx * 1.5, tz, 2.8); trig('coin', tx + fx * 1.5, tz + 1, 2.4); trig('purse', tx + fx * 1.5, tz - 1, 2.4); }
-    if (type === 'veg') { for (let n = 0; n < 6; n++) { const [bx, bz] = gx(-1.2 + n * .48); I.basket.push({ x: bx, y: top, z: bz, s: .85 }); for (let k = 0; k < 5; k++) (n % 3 === 0 ? I.cabbage : n % 3 === 1 ? I.onion : I.carrot).push({ x: bx + R(-.15, .15), y: top + .16, z: bz + R(-.15, .15), s: n % 3 === 0 ? .17 : .08, ry: R(0, 6), rx: n % 3 === 2 ? 1.4 : 0 }); } trig('basket', tx + fx * 1.5, tz, 2.6); }
-    if (type === 'carpet') { for (let k = 0; k < 3; k++) { const g = new THREE.PlaneGeometry(1.1, 1.8); g.rotateY(Math.PI / 2); g.translate(sx - fx * .8, 1.6, sz - 1.2 + k * 1.2); const cm = new THREE.Mesh(g, carpetM); cm.castShadow = true; root.add(cm); } }
+    if (type === 'flowers') { for (let n = 0; n < 5; n++) { const [bx, bz] = gx(-1.2 + n * .6); I.pot.push({ x: bx, y: top, z: bz, s: .6 }); } trig('bouquet', tx + fx * 1.5, tz, 2.8); trig('petal', tx + fx * 1.5, tz + 1, 2.2); }
+    if (type === 'jewel') { box('dark', tx - .5, top, tz - 1.5, tx + .5, top + .02, tz + 1.5); for (let n = 0; n < 16; n++) { const [bx, bz] = gx(R(-1.3, 1.3)); I.gold.push({ x: bx + R(-.3, .3), y: top + .05, z: bz, s: R(.04, .07) }); } trig('jewellery', tx + fx * 1.5, tz, 2.8); trig('coin', tx + fx * 1.5, tz + 1, 2.4); trig('purse', tx + fx * 1.5, tz - 1, 2.4); trig('ring', tx + fx * 2.2, tz + .5, 2.2); trig('necklace', tx + fx * 2.2, tz - .5, 2.2); trig('bracelet', tx + fx * 2.6, tz, 2.2); trig('bargain', tx + fx * 2.6, tz + 1.4, 2.4); }
+    if (type === 'veg') { for (let n = 0; n < 6; n++) { const [bx, bz] = gx(-1.2 + n * .48); I.basket.push({ x: bx, y: top, z: bz, s: .85 }); for (let k = 0; k < 5; k++) (n % 3 === 0 ? I.cabbage : n % 3 === 1 ? I.onion : I.carrot).push({ x: bx + R(-.15, .15), y: top + .16, z: bz + R(-.15, .15), s: n % 3 === 0 ? .17 : .08, ry: R(0, 6), rx: n % 3 === 2 ? 1.4 : 0 }); } trig('basket', tx + fx * 1.5, tz, 2.6); trig('bunch', tx + fx * 1.5, tz + 1, 2.4); trig('ripe', tx + fx * 2.2, tz - 1, 2.4); }
+    if (type === 'carpet') { for (let k = 0; k < 3; k++) { const g = new THREE.PlaneGeometry(1.1, 1.8); g.rotateY(Math.PI / 2); g.translate(sx - fx * .8, 1.6, sz - 1.2 + k * 1.2); const cm = new THREE.Mesh(g, carpetM); cm.castShadow = true; root.add(cm); STALL_ST[i].meshes.push(cm); } trig('rug', tx + fx * 1.5, tz, 2.8); trig('pattern', tx + fx * 1.5, tz + 1.2, 2.2); trig('wool', tx + fx * 1.5, tz - 1.2, 2.2); }
+    for (const [k, a] of Object.entries(I)) if (a.length > (snap[k] ?? 0)) STALL_ST[i].goods.push([a, snap[k] ?? 0, a.length]);
     // árus
     const [nx, nz] = p(-.6, 0), id = NPC_NAMES[type] ? type : null;
-    CITY_NPC.push({ id, x: nx, z: nz, ry: fx > 0 ? Math.PI / 2 : -Math.PI / 2, name: NPC_NAMES[type] || 'Árus', look: i, talkX: sx + fx * 1.7, talkZ: sz });
+    CITY_NPC.push({ id, x: nx, z: nz, ry: fx > 0 ? Math.PI / 2 : -Math.PI / 2, name: NPC_NAMES[type] || 'Árus', look: i, talkX: sx + fx * 1.7, talkZ: sz, stall: i, opens: type === 'baker' ? '5:30' : '7' });
     trig('merchant', sx + fx * 1.9, sz, 2.6);
   });
 
@@ -296,9 +299,10 @@ export function buildCity(M, q) {
     }
   }
   // túlpart: pálmák és házak
-  for (let n = 0; n < 40; n++) I.palmT.push({ x: R(-300, 300), z: R(CITY.z1 + 96, CITY.z1 + 150), far: true });
+  for (let n = 0; n < 40; n++) { const x = R(-300, 300); if (x > -90 && x < 110) continue; I.palmT.push({ x, z: R(CITY.z1 + 96, CITY.z1 + 150), far: true }); }
 
   /* ---------- lámpások ---------- */
+  trig('lantern', -5.4, 125, 2.6); trig('lantern', 5.4, 215, 2.6);
   const lamp = (x, z) => { cyl('bronze', x, 0, z, .09, .06, 2.3, 8); LANTERNS.push([x, 2.5, z]); collider(x, z, .22); };
   for (let z = 120; z <= 220; z += 10) for (const s of [-1, 1]) if (z < 146 || z > 199) lamp(s * 5.4, z);
   for (const [x, z] of [[-36, 152], [36, 152], [-36, 198], [36, 198], [-42, 166], [42, 182], [-40, 222], [40, 222], [0, 222]]) lamp(x, z);
@@ -312,23 +316,26 @@ export function buildCity(M, q) {
   }
   /* ---------- példányosított apróságok ---------- */
   const jarG = new THREE.LatheGeometry([[0, 0], [.3, 0], [.42, .3], [.38, .7], [.2, .9], [.22, 1]].map(([x, y]) => new THREE.Vector2(x, y)), 14);
-  root.add(instanced(jarG, M.terracotta, I.jar));
-  root.add(instanced(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ roughness: .5 }), I.fruit, { cast: false }));
-  { const lg = new THREE.SphereGeometry(1, 12, 8); lg.scale(.22, .1, .12); root.add(instanced(lg, col('#b8782e'), I.loaf, { cast: false })); }
-  { const cg = new THREE.ConeGeometry(.2, .22, 14); cg.translate(0, .11, 0); root.add(instanced(cg, new THREE.MeshStandardMaterial({ roughness: 1 }), I.cone, { cast: false })); }
-  { const rg = new THREE.CylinderGeometry(.11, .11, .9, 12); rg.rotateZ(Math.PI / 2); root.add(instanced(rg, new THREE.MeshStandardMaterial({ roughness: .9 }), I.roll)); }
-  { const fg = new THREE.SphereGeometry(1, 10, 6); fg.scale(.08, .04, .22); root.add(instanced(fg, new THREE.MeshStandardMaterial({ color: '#a8b4bc', metalness: .5, roughness: .35 }), I.fish, { cast: false })); }
-  root.add(instanced(new THREE.TorusGeometry(1, .35, 8, 14), M.gold, I.gold, { cast: false }));
-  { const cg = new THREE.IcosahedronGeometry(1, 2); root.add(instanced(cg, col('#6f9a4a'), I.cabbage)); }
-  { const og = new THREE.SphereGeometry(1, 10, 8); og.scale(1, .9, 1); root.add(instanced(og, col('#e8d8b0'), I.onion, { cast: false })); }
-  { const cg = new THREE.ConeGeometry(.6, 2.2, 8); cg.rotateX(Math.PI); cg.translate(0, -.5, 0); const tops = new THREE.ConeGeometry(.9, 2, 5); tops.translate(0, 1.4, 0); root.add(instanced(cg, col('#e8741c'), I.carrot, { cast: false })); root.add(instanced(tops, col('#5a8a34'), I.carrot.map(c => ({ ...c, y: c.y }) ), { cast: false })); }
+  const IM = new Map(), reg = (arr, im) => { if (!IM.has(arr)) IM.set(arr, []); IM.get(arr).push(im); return im; };
+  const inst = (g, m, arr, o) => reg(arr, instanced(g, m, arr, o));
+  root.add(inst(jarG, M.terracotta, I.jar));
+  root.add(instanced(jarG, new THREE.MeshStandardMaterial({ color: '#c8743a', metalness: .85, roughness: .3 }), I.copper));
+  root.add(inst(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ roughness: .5 }), I.fruit, { cast: false }));
+  { const lg = new THREE.SphereGeometry(1, 12, 8); lg.scale(.22, .1, .12); root.add(inst(lg, col('#b8782e'), I.loaf, { cast: false })); }
+  { const cg = new THREE.ConeGeometry(.2, .22, 14); cg.translate(0, .11, 0); root.add(inst(cg, new THREE.MeshStandardMaterial({ roughness: 1 }), I.cone, { cast: false })); }
+  { const rg = new THREE.CylinderGeometry(.11, .11, .9, 12); rg.rotateZ(Math.PI / 2); root.add(inst(rg, new THREE.MeshStandardMaterial({ roughness: .9 }), I.roll)); }
+  { const fg = new THREE.SphereGeometry(1, 10, 6); fg.scale(.08, .04, .22); root.add(inst(fg, new THREE.MeshStandardMaterial({ color: '#a8b4bc', metalness: .5, roughness: .35 }), I.fish, { cast: false })); }
+  root.add(inst(new THREE.TorusGeometry(1, .35, 8, 14), M.gold, I.gold, { cast: false }));
+  { const cg = new THREE.IcosahedronGeometry(1, 2); root.add(inst(cg, col('#6f9a4a'), I.cabbage)); }
+  { const og = new THREE.SphereGeometry(1, 10, 8); og.scale(1, .9, 1); root.add(inst(og, col('#e8d8b0'), I.onion, { cast: false })); }
+  { const cg = new THREE.ConeGeometry(.6, 2.2, 8); cg.rotateX(Math.PI); cg.translate(0, -.5, 0); const tops = new THREE.ConeGeometry(.9, 2, 5); tops.translate(0, 1.4, 0); root.add(inst(cg, col('#e8741c'), I.carrot, { cast: false })); root.add(reg(I.carrot, instanced(tops, col('#5a8a34'), I.carrot.map(c => ({ ...c, y: c.y }) ), { cast: false }))); }
   { const pg = new THREE.SphereGeometry(1, 14, 10); pg.scale(1, .7, 1); root.add(instanced(pg, col('#e08a24'), I.pumpkin)); }
-  { const bg = new THREE.CylinderGeometry(.32, .26, .24, 14, 1, true); bg.translate(0, .12, 0); const bm = new THREE.MeshStandardMaterial({ color: '#b8925a', side: THREE.DoubleSide, roughness: 1 }); root.add(instanced(bg, bm, I.basket)); }
+  { const bg = new THREE.CylinderGeometry(.32, .26, .24, 14, 1, true); bg.translate(0, .12, 0); const bm = new THREE.MeshStandardMaterial({ color: '#b8925a', side: THREE.DoubleSide, roughness: 1 }); root.add(inst(bg, bm, I.basket)); }
   { const tg = new THREE.BoxGeometry(.24, .32, .05); tg.translate(0, .16, 0); root.add(instanced(tg, col('#a87a4e'), I.tabletS, { cast: false })); }
   { const sg = new THREE.CylinderGeometry(.06, .06, .3, 8); sg.rotateZ(Math.PI / 2); root.add(instanced(sg, col('#e8dcb8'), I.scroll, { cast: false })); }
   { const pg = new THREE.CylinderGeometry(.06, .07, 1, 6); pg.translate(0, .5, 0); root.add(instanced(pg, M.wood, I.post)); }
   { const bg = new THREE.BoxGeometry(.14, .14, .8); root.add(instanced(bg, M.wood, I.beam)); }
-  { const pg = new THREE.LatheGeometry([[0, 0], [.22, 0], [.3, .35], [.34, .42]].map(([x, y]) => new THREE.Vector2(x, y)), 12); root.add(instanced(pg, M.terracotta, I.pot)); const plants = I.pot.filter(p => !p.noPlant).map(p => ({ x: p.x, y: p.y + .45 * p.s, z: p.z, s: p.s * .7, ry: R(0, 6) })); root.add(instanced(new THREE.IcosahedronGeometry(.6, 1), col('#4f8a3a'), plants)); }
+  { const pg = new THREE.LatheGeometry([[0, 0], [.22, 0], [.3, .35], [.34, .42]].map(([x, y]) => new THREE.Vector2(x, y)), 12); root.add(inst(pg, M.terracotta, I.pot)); const plants = I.pot.map((p, k) => [p, k]).filter(([p]) => !p.noPlant).map(([p, k]) => ({ x: p.x, y: p.y + .45 * p.s, z: p.z, s: p.s * .7, ry: R(0, 6), src: k })); const pm = instanced(new THREE.IcosahedronGeometry(.6, 1), col('#4f8a3a'), plants); root.add(pm); PLANTS = { pm, of: new Map(plants.map((p, j) => [p.src, j])) }; }
   { const bg = new THREE.CylinderGeometry(.2, .26, .7, 10); bg.translate(0, .35, 0); root.add(instanced(bg, M.quay, I.bollard)); }
   { const cg = new THREE.BoxGeometry(.8, .5, .6); cg.translate(0, .25, 0); root.add(instanced(cg, M.wood, I.crate)); }
   { const hg = new THREE.CylinderGeometry(.45, .55, 1.1, 12); hg.translate(0, .55, 0); root.add(instanced(hg, col('#d8b878'), I.hive)); }
@@ -339,12 +346,96 @@ export function buildCity(M, q) {
     const tl = [], cl = []; for (const p of I.palmT) { const H = p.far ? R(6, 9) : p.small ? R(1.6, 2.2) : R(6, 7.5), ry = R(0, 6.28), y0 = p.far ? -.4 : p.small ? .55 : 0, k = p.small ? .3 : .3; tl.push({ x: p.x, y: y0, z: p.z, ry, sx: p.small ? .55 : 1, sy: H, sz: p.small ? .55 : 1 }); cl.push({ x: p.x + Math.cos(ry) * k * (p.small ? .4 : 1), y: y0 + H, z: p.z - Math.sin(ry) * k * (p.small ? .4 : 1), ry: R(0, 6), s: p.small ? .55 : 1.1 }); }
     root.add(instanced(trunk, M.palmBark, tl)); root.add(instanced(crown, M.frond, cl, { cast: q.maps })); }
   // túlparti házak
-  { const hs = []; for (let n = 0; n < 60; n++) hs.push({ x: R(-320, 320), y: -.4, z: R(345, 420), sx: R(6, 14), sy: R(4, 9), sz: R(6, 12) }); root.add(instanced(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), MM.mud, hs, { cast: false })); }
+  { const hs = []; for (let n = 0; n < 60; n++) { const x = R(-320, 320), z = R(345, 420); if (x > -95 && x < 115 && z < 405) continue; hs.push({ x, y: -.4, z, sx: R(6, 14), sy: R(4, 9), sz: R(6, 12) }); } root.add(instanced(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), MM.mud, hs, { cast: false })); }
 
   /* ---------- emberek: árusok és járókelők ---------- */
+  /* ---------- rézműves-műhely (a kalapálás hangja innen szól) ---------- */
+  const SMITH = { x: 31, z: 159.5 };
+  { const { x, z } = SMITH;
+    for (const [a, b] of [[-1.6, -1.4], [1.6, -1.4], [-1.6, 1.4], [1.6, 1.4]]) I.post.push({ x: x + a, y: 0, z: z + b, sx: 1.2, sy: 2.7, sz: 1.2 });
+    box('wood', x - 1.9, 2.7, z - 1.7, x + 1.9, 2.85, z + 1.7);
+    box('dark', x - .35, 0, z - .2, x + .35, .55, z + .2); box('dark', x - .5, .55, z - .22, x + .45, .75, z + .22); { const h = new THREE.ConeGeometry(.12, .4, 8); h.rotateZ(Math.PI / 2); h.translate(x - .7, .65, z); add('dark', h); }
+    box('wood', x + .9, 0, z - 1.2, x + 1.5, .8, z + 1.2);
+    for (let k = 0; k < 7; k++) I.copper.push({ x: x + 1.2 + R(-.15, .15), y: .8, z: z - 1 + k * .33, s: R(.28, .4) });
+    for (let k = 0; k < 4; k++) I.copper.push({ x: x - 1.3 + k * .5, y: .05, z: z + 1.9, s: R(.6, .9) });
+    rectCollider(x - 1.8, z - 1.6, x + 1.8, z + 1.6);
+    trig('anvil', x - 2.4, z, 2.6); trig('hammer', x - 2.4, z + 1.2, 2.4); trig('copper', x - 2.4, z - 1.2, 2.6); }
+
+  /* ---------- napszak-kellékek ---------- */
+  const AWC = ['#c23a2a', '#2a5aa8', '#2f7a46', '#8a3a8a', '#d08a1c'];
+  // feltekert napellenző és ponyvás pult standonként (zárva látszanak)
+  const rollIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(.16, .16, 3.9, 12).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: .9 }), STALL_ST.length);
+  const coverIM = new THREE.InstancedMesh(new THREE.BoxGeometry(1.35, .34, 3.6), new THREE.MeshStandardMaterial({ color: '#a89272', roughness: 1 }), STALL_ST.length);
+  { const cc = new THREE.Color(); STALL_ST.forEach((st, k) => rollIM.setColorAt(k, cc.set(AWC[k % AWC.length]))); }
+  for (const m of [rollIM, coverIM]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; for (let k = 0; k < m.count; k++) m.setMatrixAt(k, new THREE.Matrix4().makeScale(0, 0, 0)); root.add(m); }
+  // lángok: additív sprite-ok, pislákolnak
+  const flameT = tex(64, 128, (c, w, h) => { const g = c.createRadialGradient(32, 92, 2, 32, 80, 60); g.addColorStop(0, 'rgba(255,250,210,1)'); g.addColorStop(.25, 'rgba(255,190,70,.95)'); g.addColorStop(.6, 'rgba(255,90,20,.45)'); g.addColorStop(1, 'rgba(255,40,0,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(32, 2); c.bezierCurveTo(60, 60, 62, 120, 32, 126); c.bezierCurveTo(2, 120, 4, 60, 32, 2); c.fill(); });
+  const flameM = new THREE.SpriteMaterial({ map: flameT, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
+  const FLAMES = [];
+  const flame = (parent, x, y, z, w = .35, h = .6) => { const sp = new THREE.Sprite(flameM); sp.position.set(x, y, z); sp.scale.set(w, h, 1); sp.renderOrder = 4; parent.add(sp); FLAMES.push({ sp, w, h, ph: R(0, 6), y }); return sp; };
+  const smokeT = tex(64, 64, (c) => { const g = c.createRadialGradient(32, 32, 2, 32, 32, 30); g.addColorStop(0, 'rgba(200,195,190,.55)'); g.addColorStop(1, 'rgba(200,195,190,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); });
+  // a pék agyagkemencéje (tannur) a standja mögött, füsttel
+  const OVEN = { x: -24.6, z: 168.4 }, SMOKE = [];
+  { const g = new THREE.LatheGeometry([[0, 0], [.75, 0], [.78, .5], [.6, .95], [.3, 1.18], [.22, 1.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.translate(OVEN.x, .05, OVEN.z); add('terracotta', g); collider(OVEN.x, OVEN.z, .9);
+    const sm = new THREE.SpriteMaterial({ map: smokeT, depthWrite: false, transparent: true });
+    for (let k = 0; k < 7; k++) { const sp = new THREE.Sprite(sm.clone()); sp.renderOrder = 4; root.add(sp); SMOKE.push({ sp, t: k / 7 }); } trig('oven', OVEN.x + 1.4, OVEN.z, 2.6); }
+  // éjjeli piac: 4 bódé a kút körül (csak 20:30 és 0:30 között)
+  const nightG = new THREE.Group(); nightG.visible = false; root.add(nightG);
+  const NIGHT_TORCH = [];   // a LANTERNS-be tett fáklyák (nappal mélyre tesszük őket, így nem kapnak fényt)
+  const NB = [['tea', -12.5, 175, 1, '#6a1f2a'], ['food', 12.5, 175, -1, '#1f3a6a'], ['story', 0, 188.5, -1, '#4a2a5a'], ['music', 0, 161.5, 1, '#2a4a3a']];
+  const nmat = c => new THREE.MeshStandardMaterial({ color: c, roughness: .85 }), nwood = M.wood;
+  const nbox = (mt, x0, y0, z0, x1, y1, z1) => { const g = new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)); const m = new THREE.Mesh(g, mt); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); m.castShadow = true; m.receiveShadow = true; nightG.add(m); return m; };
+  const NIGHT_NPC = [];
+  for (const [type, bx, bz, dir, roofC] of NB) {
+    const alongZ = type === 'tea' || type === 'food';            // a pult iránya
+    const P = (f, l) => alongZ ? [bx + f * dir, bz + l] : [bx + l, bz + f * dir];   // f: előre, l: oldalra
+    if (type === 'tea' || type === 'food') {
+      { const [x, z] = P(0, 0); nbox(nwood, x - .45, 0, z - 1.1, x + .45, .9, z + 1.1); }
+      for (const [f, l] of [[-.7, -1.3], [-.7, 1.3], [.6, -1.3], [.6, 1.3]]) { const [x, z] = P(f, l); nbox(nwood, x - .05, 0, z - .05, x + .05, 2.5, z + .05); }
+      { const [x, z] = P(-.05, 0); const r = nbox(nmat(roofC), x - .9, 2.5, z - 1.5, x + .9, 2.56, z + 1.5); }
+      // parázstartó a pult mellett
+      { const [x, z] = P(.9, 1.7); const b = new THREE.Mesh(new THREE.CylinderGeometry(.38, .2, .35, 14, 1, true), new THREE.MeshStandardMaterial({ color: '#3a302a', metalness: .6, roughness: .5, side: THREE.DoubleSide })); b.position.set(x, .65, z); nightG.add(b); const lg = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .5, 6), nwood); lg.position.set(x, .25, z); nightG.add(lg);
+        const coal = new THREE.Mesh(new THREE.CircleGeometry(.34, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a0a00', emissive: '#ff5a10', emissiveIntensity: 1.6 })); coal.position.set(x, .78, z); nightG.add(coal); flame(nightG, x, 1.05, z, .45, .7); NIGHT_TORCH.push([x, 1.4, z]); }
+      if (type === 'tea') { const [x, z] = P(0, -.4); const k = new THREE.Mesh(new THREE.SphereGeometry(.16, 14, 10), new THREE.MeshStandardMaterial({ color: '#b87333', metalness: .8, roughness: .35 })); k.position.set(x, 1.05, z); nightG.add(k); for (let n = 0; n < 5; n++) { const [cx, cz] = P(.1, .2 + n * .22); const c = new THREE.Mesh(new THREE.CylinderGeometry(.045, .035, .08, 10), M.terracotta); c.position.set(cx, .95, cz); nightG.add(c); } }
+      if (type === 'food') { for (let n = 0; n < 6; n++) { const [x, z] = P(0, -.9 + n * .35); const f = new THREE.Mesh(new THREE.CircleGeometry(.14, 12).rotateX(-Math.PI / 2), nmat('#d8a860')); f.position.set(x, .91, z); nightG.add(f); } }
+    } else {
+      // mesemondó és zenész: szőnyeg a földön, két ülőpárna
+      { const g = new THREE.PlaneGeometry(2.6, 1.8); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, carpetM); m.position.set(bx, .066, bz); nightG.add(m); }
+      for (const l of [-1.5, 1.5]) { const [x, z] = P(1.6, l); const c = new THREE.Mesh(new THREE.CylinderGeometry(.35, .38, .18, 14), nmat(type === 'story' ? '#8a3a3a' : '#3a5a8a')); c.position.set(x, .14, z); nightG.add(c); }
+    }
+    // két fáklya a bódé két oldalán
+    for (const l of [-1.7, 1.7]) { const [x, z] = P(type === 'tea' || type === 'food' ? .9 : -.6, l * (type === 'tea' || type === 'food' ? -1 : 1)); if (type === 'tea' || type === 'food') { if (l > 0) continue; } nbox(nwood, x - .04, 0, z - .04, x + .04, 1.9, z + .04); const cup = new THREE.Mesh(new THREE.CylinderGeometry(.09, .06, .18, 10), new THREE.MeshStandardMaterial({ color: '#3a302a', metalness: .5 })); cup.position.set(x, 1.95, z); nightG.add(cup); flame(nightG, x, 2.22, z, .32, .55); NIGHT_TORCH.push([x, 2.3, z]); }
+    const [nx, nz] = P(type === 'tea' || type === 'food' ? -.75 : 0, 0), ry = alongZ ? (dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (dir > 0 ? 0 : Math.PI);
+    const [tx2, tz2] = P(type === 'tea' || type === 'food' ? 1.7 : 1.9, 0);
+    const npc = { id: type === 'tea' || type === 'story' ? type : null, x: nx, z: nz, ry, name: { tea: 'Belet, a teaárus', food: 'Kubaba, a lepénysütő', story: 'Ludingirra, a mesemondó', music: 'Enlil-bani, a lantos' }[type], look: { tea: 2, food: 5, story: 0, music: 4 }[type], talkX: tx2, talkZ: tz2, hidden: true, night: true, type };
+    CITY_NPC.push(npc); NIGHT_NPC.push(npc);
+  }
+  for (const t of NIGHT_TORCH) { t.push(t[1]); LANTERNS.push(t); }   // [x, y, z, eredeti y]
+  // őrök fáklyával, macska (csak éjjel)
+  const GUARD_RT = [
+    [[-33, 155], [33, 155], [33, 195], [-33, 195]],
+    [[3, 120], [3, 149.5], [-60, 149.5], [3, 149.5], [3, 200.5], [3, 224], [50, 224], [3, 224], [3, 200.5], [3, 149.5]],
+  ];
+  const CAT = (() => {
+    const g = new THREE.Group(), m = nmat('#6a5a4a'), S = (sx, sy, sz, x, y, z) => { const o = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); g.add(o); return o; };
+    S(.11, .1, .22, 0, .2, 0); const hd = S(.08, .075, .08, 0, .3, .2); for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.ConeGeometry(.025, .06, 4), m); e.position.set(s * .045, .38, .2); g.add(e); }
+    for (const [x, z] of [[.05, .12], [-.05, .12], [.05, -.12], [-.05, -.12]]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .16, 5), m); l.position.set(x, .08, z); g.add(l); }
+    const tl = new THREE.Mesh(new THREE.CylinderGeometry(.015, .012, .3, 5), m); tl.position.set(0, .3, -.3); tl.rotation.x = -.7; g.add(tl);
+    g.visible = false; root.add(g); return { g, tl, x: -4, z: 168, tx: -4, tz: 168, t: 0 };
+  })();
+
   const people = [];
   const LQ = !q.maps;   // gyenge gép: kevesebb vásárló és madár
-  for (const n of CITY_NPC) { const p = makePerson(n.look); p.object.position.set(n.x, 0, n.z); p.object.rotation.y = n.ry; root.add(p.object); n.person = p; people.push({ p, still: true, x: n.x, z: n.z }); collider(n.x, n.z, .45); }
+  for (const n of CITY_NPC) {
+    const p = makePerson(n.look); p.object.position.set(n.x, 0, n.z); p.object.rotation.y = n.ry; root.add(p.object); n.person = p;
+    const w = { p, still: true, x: n.x, z: n.z, n, home: [n.x, n.z, n.ry], on: true, path: [] };
+    if (n.stall !== undefined) { w.merchant = STALL_ST[n.stall]; STALL_ST[n.stall].w = w; }
+    if (n.night) { w.nightNpc = true; w.on = false; p.object.visible = false; if (n.type === 'music') { const ly = new THREE.Group(); const fr = new THREE.Mesh(new THREE.TorusGeometry(.16, .025, 6, 16, Math.PI * 1.3), new THREE.MeshStandardMaterial({ color: '#8a5a2a' })); fr.rotation.z = -.6; ly.add(fr); ly.position.set(.12, 1.25, .28); ly.rotation.y = .3; p.object.add(ly); } }
+    if (!n.night) collider(n.x, n.z, .45);
+    people.push(w);
+  }
+  const smith = (() => { const p = makePerson(6, 1.05); p.object.position.set(SMITH.x + .9, .05, SMITH.z); p.object.rotation.y = -Math.PI / 2; root.add(p.object); const w = { p, smithW: true, on: true, still: true, x: SMITH.x + .9, z: SMITH.z, u: 0, hits: 0, rest: 0 }; people.push(w); collider(w.x, w.z, .45); return w; })();
+  const guards = GUARD_RT.map((rt, k) => { const p = makePerson(k ? 6 : 1, 1.04); root.add(p.object); const tch = new THREE.Group(); const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .8, 6), M.wood); pole.position.set(0, -.25, 0); tch.add(pole); flame(tch, 0, .28, 0, .3, .5); tch.position.set(.36, 1.25, .2); p.object.add(tch); const w = { p, rt, i: 0, x: rt[0][0], z: rt[0][1], sp: .85, guard: true, on: false, torch: [rt[0][0], -999, rt[0][1], -999] }; p.object.visible = false; LANTERNS.push(w.torch); people.push(w); return w; });
   const ROUTES = [
     [[-3, 118], [-3, 146], [-14, 154], [-14, 196], [5.5, 200], [5.5, 150], [3, 118]],
     [[30, 154], [-30, 154], [-30, 196], [30, 196]],
@@ -353,10 +444,16 @@ export function buildCity(M, q) {
     [[-12, 160], [12, 160], [12, 190], [-12, 190]],
     [[-40, 200.5], [40, 200.5], [40, 224], [-40, 224]],
   ];
-  ROUTES.forEach((rt, i) => { const p = makePerson(i + 2); root.add(p.object); people.push({ p, rt, i: 0, x: rt[0][0], z: rt[0][1], sp: R(.9, 1.3) }); });
+  ROUTES.forEach((rt, i) => { const p = makePerson(i + 2); root.add(p.object); people.push({ p, rt, i: 0, x: rt[0][0], z: rt[0][1], sp: R(.9, 1.3), walker: i, on: true }); });
   // vásárlók: standról standra mennek, megállnak, nézelődnek, alkudoznak
   const SPOTS = STALLS.flatMap(([, sx, sz, dir]) => [-1.2, 1.2].map(o => ({ x: sx + dir * 2.2, z: sz + o, ry: dir > 0 ? -Math.PI / 2 : Math.PI / 2, busy: false })));
-  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + .2; SPOTS.push({ x: Math.cos(a) * 4.3, z: 175 + Math.sin(a) * 4.3, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), busy: false }); }
+  SPOTS.forEach((s, k) => { s.stall = STALL_ST[k >> 1]; });
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + .2; SPOTS.push({ x: Math.cos(a) * 4.3, z: 175 + Math.sin(a) * 4.3, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), busy: false, fountain: true }); }
+  // éjjel: a bódék elé (a mesemondót és a lantost körbeállják)
+  for (const n of NIGHT_NPC) { const fx = n.talkX - n.x, fz = n.talkZ - n.z, l = Math.hypot(fx, fz) || 1; for (const o of [-1.1, 1.1]) { const x = n.talkX + fx / l * .4 - fz / l * o, z = n.talkZ + fz / l * .4 + fx / l * o; SPOTS.push({ x, z, ry: Math.atan2(n.x - x, n.z - z), busy: false, night: true }); } }
+  const EXITS = [[-30, 149.5, -46], [30, 149.5, 46], [-30, 200.5, -46], [30, 200.5, 46]];   // [x, z, ahol eltűnik (x)]
+  const exitPath = (x, z) => { const e = EXITS.reduce((b, e) => Math.hypot(e[0] - x, e[1] - z) < Math.hypot(b[0] - x, b[1] - z) ? e : b); return [...viaFountain(x, z, e[0], e[1]), [e[2], e[1]]]; };
+  const enterFrom = (x, z) => { const e = pick(EXITS); return { start: [e[2], e[1]], path: [[e[0], e[1]], ...viaFountain(e[0], e[1], x, z)] }; };
   const viaFountain = (ax, az, bx, bz) => {           // ha a szakasz a kúton menne át, megkerüli
     const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((0 - ax) * dx + (175 - az) * dz) / L2)), px = ax + dx * u, pz = az + dz * u, d = Math.hypot(px, pz - 175);
     if (d > 4.8) return [[bx, bz]];
@@ -366,11 +463,11 @@ export function buildCity(M, q) {
   for (let k = 0; k < (LQ ? 6 : 12); k++) {
     const sp = SPOTS.filter(s => !s.busy)[Math.floor(Math.random() * 10)]; sp.busy = true;
     const p = makePerson(k + 3, R(.92, 1.04)); root.add(p.object);
-    const w = { p, shop: true, x: sp.x, z: sp.z, spot: sp, path: [], m: 'stay', t: R(1, 8), sp: R(.8, 1.15), face: sp.ry };
+    const w = { p, shop: true, k, on: true, x: sp.x, z: sp.z, spot: sp, path: [], m: 'stay', t: R(1, 8), sp: R(.8, 1.15), face: sp.ry };
     p.object.position.set(w.x, .05, w.z); p.object.rotation.y = sp.ry; people.push(w); shoppers.push(w);
   }
   // gyerekek kergetőznek a kút körül
-  for (let k = 0; k < 2; k++) { const p = makePerson(k + 1, .62); root.add(p.object); people.push({ p, kid: true, a: k * Math.PI + .5, r: 9.6, x: 0, z: 175, sp: 2.6 }); }
+  for (let k = 0; k < 2; k++) { const p = makePerson(k + 1, .62); root.add(p.object); people.push({ p, kid: true, on: true, a: k * Math.PI + .5, r: 9.6, x: 0, z: 175, sp: 2.6 }); }
   // talpfoltok (egy példányos háló mindenkinek)
   const blobT = tex(64, 64, (c, w) => { const g = c.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,.42)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); });
   const blobs = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.15, 1.15).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: blobT, transparent: true, depthWrite: false }), people.length);
@@ -395,31 +492,108 @@ export function buildCity(M, q) {
   flock('c', LQ ? 3 : 6, 30.5, 186.5, .6, 3.8, ['#f2ece0', '#b8743a', '#8a4a22', '#e8dcc8']);
   const bd = new THREE.Object3D();
 
+  /* ---------- napszak: ki van kint, mi van nyitva ---------- */
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0), ID = new THREE.Matrix4();
+  const origOf = im => im.userData.orig ??= Array.from({ length: im.count }, (_, k) => { const m = new THREE.Matrix4(); im.getMatrixAt(k, m); return m; });
+  let dirty = false;
+  function setStall(st, on) {
+    st.open = on;
+    for (const [arr, a, b] of st.goods) for (const im of IM.get(arr) || []) { const o = origOf(im); for (let k = a; k < b && k < im.count; k++) im.setMatrixAt(k, on ? o[k] : ZERO); im.instanceMatrix.needsUpdate = true; }
+    if (PLANTS) for (const [arr, a, b] of st.goods) if (arr === I.pot) { const o = origOf(PLANTS.pm); for (let k = a; k < b; k++) { const j = PLANTS.of.get(k); if (j !== undefined) PLANTS.pm.setMatrixAt(j, on ? o[j] : ZERO); } PLANTS.pm.instanceMatrix.needsUpdate = true; }
+    st.meshes.forEach(m => m.visible = on);
+    if (on) { rollIM.setMatrixAt(st.i, ZERO); coverIM.setMatrixAt(st.i, ZERO); }
+    else { bd.position.set(st.sx - st.dir * 1.0, 2.95, st.sz); bd.rotation.set(0, 0, 0); bd.scale.set(1, 1, 1); bd.updateMatrix(); rollIM.setMatrixAt(st.i, bd.matrix); bd.position.set(st.tx, 1.1, st.sz); bd.updateMatrix(); coverIM.setMatrixAt(st.i, bd.matrix); }
+    rollIM.instanceMatrix.needsUpdate = true; coverIM.instanceMatrix.needsUpdate = true; dirty = true;
+  }
+  const openH = st => st.type === 'baker' ? 5.5 : 7 + st.i * .06, closeH = st => st.type === 'baker' ? 17.5 : 18.5 + st.i * .17;
+  const isOpen = (st, h) => h >= openH(st) && h < closeH(st);
+  const phase = h => h >= 5.5 && h < 7 ? 'dawn' : h >= 7 && h < 18.5 ? 'day' : h >= 18.5 && h < 20.5 ? 'closing' : (h >= 20.5 || h < .5) ? 'night' : 'quiet';
+  const WANT = { dawn: 2, day: 12, closing: 4, night: 5, quiet: 0 };
+  let curPhase = null, lastH = null, schedT = 0;
+  const show = (w, on) => { w.on = on; w.p.object.visible = on; if (!on) { w.path = []; w.m = null; } };
+  const go = (w, path, then) => { w.path = path; w.then = then; w.m = 'walk'; };
+  function schedule(h, instant, me) {
+    const ph = phase(h), farMe = w => !me || Math.hypot(w.x - me.x, w.z - me.z) > 38;
+    // standok és árusok
+    for (const st of STALL_ST) {
+      const want = isOpen(st, h), w = st.w; if (want === st.open && (want ? w.on && w.m !== 'leave' : !w.on || w.m === 'leave')) continue;
+      if (!instant && (w.m === 'pack' || w.m === 'leave' || w.m === 'walk')) continue;
+      if (instant || farMe(w)) { setStall(st, want); show(w, want); if (want) { [w.x, w.z] = w.home; w.p.object.position.set(w.x, 0, w.z); w.p.object.rotation.y = w.home[2]; } w.n.away = !want; continue; }
+      if (!want && st.open) { w.n.away = true; w.m = 'pack'; w.t = 3.5; w.p.talk(3); }         // pakol, aztán hazamegy
+      if (want && !w.on) { const e = pick(EXITS.filter(x => Math.sign(x[0]) === Math.sign(st.sx))), bx2 = st.sx - st.dir * 3.9; show(w, true); w.x = e[2]; w.z = e[1]; go(w, [[e[0], e[1]], [bx2, e[1]], [bx2, w.home[1]], [w.home[0], w.home[1]]], () => { setStall(st, true); w.n.away = false; w.m = null; w.p.object.rotation.y = w.home[2]; }); }
+    }
+    // vásárlók
+    const want = Math.round(WANT[ph] * (LQ ? .5 : 1));
+    for (const w of shoppers) {
+      const should = w.k < want;
+      if (should === w.on && w.m !== 'leave') continue;
+      if (instant || farMe(w)) { if (!should && w.spot) { w.spot.busy = false; w.spot = null; } show(w, should); if (should) { const sp = freeSpot(ph); if (sp) { if (w.spot) w.spot.busy = false; sp.busy = true; w.spot = sp; w.x = sp.x; w.z = sp.z; w.m = 'stay'; w.t = R(2, 8); w.face = sp.ry; w.p.object.position.set(w.x, .05, w.z); } } continue; }
+      if (!should && w.on && w.m !== 'leave') { if (w.spot) w.spot.busy = false; w.spot = null; go(w, exitPath(w.x, w.z), () => show(w, false)); w.m = 'leave'; }
+      else if (should && !w.on) { const sp = freeSpot(ph); if (!sp) continue; sp.busy = true; w.spot = sp; const e = enterFrom(sp.x, sp.z); show(w, true); [w.x, w.z] = e.start; go(w, e.path, () => { w.m = 'stay'; w.t = R(4, 10); w.face = sp.ry; }); }
+    }
+    // a többiek: csak ha nem látod (vagy azonnali váltásnál) tűnnek el / jelennek meg
+    const night = ph === 'night' || ph === 'quiet';
+    for (const w of people) {
+      let should = null;
+      if (w.kid) should = ph === 'day';
+      else if (w.walker !== undefined) should = ph === 'quiet' ? w.walker < 2 : true;
+      else if (w.guard) should = night;
+      else if (w.nightNpc) should = ph === 'night';
+      else if (w.smithW) should = ph === 'day';
+      if (should === null || should === w.on) continue;
+      if (instant || farMe(w) || w.nightNpc) { show(w, should); if (w.guard) w.torch[1] = should ? 2.2 : -999; if (w.nightNpc) { w.n.hidden = !should; [w.x, w.z] = w.home; w.p.object.position.set(w.x, 0, w.z); w.p.object.rotation.y = w.home[2]; } }
+    }
+    if (nightG.visible !== (ph === 'night')) { nightG.visible = ph === 'night'; dirty = true; for (const t of NIGHT_TORCH) t[1] = ph === 'night' ? t[3] : -999; }
+    const birdsOn = !night; for (const b of birds) if (b.im.visible !== birdsOn && (instant || !me || Math.hypot(me.x, me.z - 175) > 45)) b.im.visible = birdsOn;
+    CAT.g.visible = night;
+    curPhase = ph;
+  }
+  function freeSpot(ph) {
+    const ok = SPOTS.filter(s => !s.busy && (s.night ? ph === 'night' : s.fountain ? ph !== 'quiet' : s.stall && s.stall.open && ph !== 'night'));
+    return ok.length ? ok[Math.floor(Math.random() * ok.length)] : null;
+  }
+  // kezdeti állapot (a portéka-mátrixok elmentése előtt minden nyitva)
+  let firstSched = true;
+
   let wt = 0;
   return {
     root,
-    update(t, dt, me) {
-      wt += dt;
+    update(t, dt, me, hour = 12) {
+      wt += dt; dirty = false;
+      const jump = lastH === null || Math.abs(((hour - lastH + 36) % 24) - 12) > .5;   // nagy ugrás (napszak-választó): azonnal
+      if (firstSched || jump || (schedT += dt) > 1) { schedT = 0; schedule(hour, firstSched || jump, firstSched ? null : me); firstSched = false; }
+      lastH = hour;
       let bi = 0;
       for (const w of people) {
-        const far = Math.hypot(w.x - me.x, w.z - me.z) > 70; w.p.object.visible = !far;
+        const far = !w.on || Math.hypot(w.x - me.x, w.z - me.z) > 70; w.p.object.visible = !far;
         if (!far) { bd.position.set(w.x, .07, w.z); bd.rotation.set(0, 0, 0); bd.scale.setScalar(w.kid ? .7 : 1); } else { bd.position.set(0, -50, 0); bd.scale.setScalar(0); }
         bd.updateMatrix(); blobs.setMatrixAt(bi++, bd.matrix);
         if (far) continue;
-        if (w.still) { w.p.update(dt, 0); continue; }
+        if (w.m === 'pack') { w.t -= dt; w.p.update(dt, 0); if (w.t <= 0) { const st = w.merchant; setStall(st, false); go(w, [[st.sx - st.dir * 3.9, w.z], ...exitPath(st.sx - st.dir * 3.9, w.z).slice(-2)], () => show(w, false)); w.m = 'leave'; } continue; }
+        if (w.m === 'walk' || w.m === 'leave') {
+          if (!w.path.length) { const f = w.then; w.then = null; if (w.m === 'walk') w.m = null; if (f) f(); else w.m = null; if (!w.on) continue; }
+          else { const [tx, tz] = w.path[0], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz), sp = w.sp || 1;
+            if (d < .25) w.path.shift(); else { w.x += dx / d * sp * dt; w.z += dz / d * sp * dt; w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(dx, dz); }
+            w.p.update(dt, sp); if (w.m === 'leave' && !w.path.length) { const f = w.then; w.then = null; w.m = null; f && f(); } continue; }
+        }
+        if (w.smithW) {
+          if (w.rest > 0) { w.rest -= dt; w.p.arm = -.5; }
+          else { const u0 = w.u; w.u = (w.u + dt / .62) % 1; const u = w.u; w.p.arm = u < .72 ? -.5 - 1.8 * Math.sin(u / .72 * Math.PI / 2) : -2.3 + 1.8 * ((u - .72) / .28);
+            if (u < u0) { EVENTS.push(['hammer', SMITH.x, SMITH.z]); if (++w.hits >= 9) { w.hits = 0; w.rest = R(2, 4.5); } } }
+          w.p.update(dt, 0); continue;
+        }
+        if (w.still) { if (w.nightNpc && (w.n.type === 'music' || w.n.type === 'story') && Math.random() < dt * .6) w.p.talk(R(1.5, 3)); w.p.update(dt, 0); continue; }
+        if (w.guard) { const [tx, tz] = w.rt[w.i], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz); if (d < .4) { w.i = (w.i + 1) % w.rt.length; } else { w.x += dx / d * w.sp * dt; w.z += dz / d * w.sp * dt; } w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(dx, dz); w.p.update(dt, w.sp); w.torch[0] = w.x; w.torch[1] = 2.2; w.torch[2] = w.z; continue; }
         if (w.kid) { w.a += w.sp / w.r * dt; w.x = Math.cos(w.a) * w.r; w.z = 175 + Math.sin(w.a) * w.r * .9; w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(-Math.sin(w.a), Math.cos(w.a) * .9); w.p.update(dt, w.sp); continue; }
         if (w.shop) {
-          if (w.m === 'stay') {
+          if (w.m === 'stay' || !w.path.length && w.m !== 'walk') { w.m = 'stay';
             w.t -= dt; w.p.object.rotation.y += (w.face - w.p.object.rotation.y) * Math.min(1, dt * 4);
             if (Math.random() < dt * .25) w.p.talk(R(1, 2.5));
             w.p.update(dt, 0);
-            if (w.t <= 0) { const free = SPOTS.filter(s => !s.busy && s !== w.spot); const n = free[Math.floor(Math.random() * free.length)]; w.spot.busy = false; n.busy = true; w.spot = n; w.path = viaFountain(w.x, w.z, n.x, n.z); w.m = 'walk'; }
+            if (w.t <= 0) { const n = freeSpot(curPhase); if (n) { if (w.spot) w.spot.busy = false; n.busy = true; w.spot = n; go(w, viaFountain(w.x, w.z, n.x, n.z), () => { w.m = 'stay'; w.t = R(4, 12); w.face = n.ry; }); } else w.t = 3; }
             continue;
           }
-          const [tx, tz] = w.path[0], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz);
-          if (d < .25) { w.path.shift(); if (!w.path.length) { w.m = 'stay'; w.t = R(4, 12); w.face = w.spot.ry; } continue; }
-          w.x += dx / d * w.sp * dt; w.z += dz / d * w.sp * dt;
-          w.p.object.position.set(w.x, .05, w.z); w.p.object.rotation.y = Math.atan2(dx, dz); w.p.update(dt, w.sp); continue;
+          continue;
         }
         const [tx, tz] = w.rt[w.i], dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz);
         if (d < .4) { w.i = (w.i + 1) % w.rt.length; continue; }
@@ -428,7 +602,7 @@ export function buildCity(M, q) {
       }
       blobs.instanceMatrix.needsUpdate = true;
       // madarak (csak ha a piac közelében vagy)
-      if (Math.hypot(me.x, me.z - 175) < 80) { B.me = me;
+      if (Math.hypot(me.x, me.z - 175) < 80 && birds[0].im.visible) { B.me = me;
         for (const b of birds) {
           const dm = Math.hypot(b.x - me.x, b.z - me.z), P = b.kind === 'p';
           if (b.m !== 'fly' && dm < (P ? 3.4 : 2.2)) { const a = Math.atan2(b.x - me.x, b.z - me.z) + R(-.7, .7), sp = P ? R(3, 4.5) : R(2.4, 3.2); b.m = 'fly'; b.t = P ? R(2.6, 4) : R(.7, 1.1); b.vx = Math.sin(a) * sp; b.vz = Math.cos(a) * sp; b.vy = P ? R(2.6, 3.6) : 1.8; b.ry = a; b.land = false; }
@@ -452,11 +626,36 @@ export function buildCity(M, q) {
         }
         for (const b of birds) if (b.k === 0) b.im.instanceMatrix.needsUpdate = true;
       }
+      if (Math.abs(me.z - 175) < 70) {
+        for (const f of FLAMES) { if (!f.sp.parent.visible && f.sp.parent !== root) continue; const k = 1 + Math.sin(t * 13 + f.ph) * .12 + Math.sin(t * 23 + f.ph * 2) * .08; f.sp.scale.set(f.w * (2 - k), f.h * k, 1); }
+        const bakerOpen = STALL_ST.find(s => s.type === 'baker')?.open;
+        for (const sm of SMOKE) { sm.sp.visible = !!bakerOpen; if (!bakerOpen) continue; sm.t = (sm.t + dt * .12) % 1; const u = sm.t; sm.sp.position.set(OVEN.x + Math.sin(u * 5 + t * .3) * .3 * u, 1.3 + u * 4.5, OVEN.z + u * .8); sm.sp.scale.setScalar(.4 + u * 1.8); sm.sp.material.opacity = (1 - u) * .55 * Math.min(1, u * 6); }
+        if (CAT.g.visible) { const c = CAT; c.t -= dt; const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz); if (d > .1) { c.x += dx / d * .55 * dt; c.z += dz / d * .55 * dt; c.g.rotation.y = Math.atan2(dx, dz); c.g.position.y = Math.abs(Math.sin(t * 9)) * .02; } else if (c.t <= 0) { const a = R(0, 6.28), r = R(4.5, 9); c.tx = Math.cos(a) * r; c.tz = 175 + Math.sin(a) * r; c.t = R(3, 9); } c.g.position.x = c.x; c.g.position.z = c.z; c.tl.rotation.z = Math.sin(t * 2) * .4; }
+      }
       if (DONKEY) { DONKEY.head.rotation.x = .25 + Math.sin(t * .7) * .15 + (Math.sin(t * .23) > .8 ? .35 : 0); DONKEY.tail.rotation.z = Math.sin(t * 2.4) * .35; }
       // zászlók lengése
       if (FLAGS && Math.abs(me.z - 175) < 60) { const fl = FLAGS.userData.flags; fl.forEach((f, k) => { bd.position.set(f.x, f.y, f.z); bd.rotation.set(Math.sin(t * 2.2 + f.x * .7) * .35, 0, 0); bd.scale.set(1, 1, 1); bd.updateMatrix(); FLAGS.setMatrixAt(k, bd.matrix); }); FLAGS.instanceMatrix.needsUpdate = true; }
       for (const b of boats) { b.b.position.y = b.y + Math.sin(t * 1.1 + b.ph) * .06; b.b.rotation.z = Math.sin(t * .8 + b.ph) * .03; }
       if (MM.river.normalMap) MM.river.normalMap.offset.set(t * .01, t * .02);
+      return dirty;
+    },
+    get phase() { return curPhase; },
+    events: EVENTS,
+    // a város hangjainak forrásai és szintjei (a törpe helyéhez képest)
+    audio(me) {
+      const ph = curPhase || 'day', inCity = me.z > 112, dM = Math.hypot(me.x, me.z - 175);
+      const crowdK = { day: 1, closing: .45, dawn: .15, night: .35, quiet: 0 }[ph];
+      let stall = 1e9; for (const st of STALL_ST) if (st.open) stall = Math.min(stall, Math.hypot(st.sx - me.x, st.sz - me.z));
+      const nb = NIGHT_NPC.map(n => Math.hypot(n.x - me.x, n.z - me.z)), mus = NIGHT_NPC.find(n => n.type === 'music');
+      return {
+        market: inCity ? crowdK * Math.max(0, 1 - dM / 48) : 0, marketSrc: [0, 175],
+        haggle: ph === 'day' ? Math.max(0, 1 - stall / 14) : 0,
+        river: Math.max(0, 1 - (me.z < CITY.z1 ? CITY.z1 - me.z : me.z > CITY.z1 + 90 ? me.z - CITY.z1 - 90 : 0) / 26), riverSrc: [me.x, me.z < CITY.z1 + 45 ? CITY.z1 + 4 : CITY.z1 + 86],
+        music: ph === 'night' ? Math.max(0, 1 - Math.hypot(mus.x - me.x, mus.z - me.z) / 34) : 0, musicSrc: [mus.x, mus.z],
+        fire: ph === 'night' ? Math.max(0, 1 - Math.min(...nb) / 12) : 0,
+        dogs: inCity && (ph === 'night' || ph === 'quiet'),
+        fountain: Math.min(1, Math.max(0, 1 - (dM - 3.4) / 16)),
+      };
     },
     people,
   };

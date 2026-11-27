@@ -3,8 +3,10 @@ import * as THREE from 'three';
 import { GARDEN_WORDS, WORD_IDS } from './words.js';
 import { TABLETS as TABLETS0, TASKS } from './tablets.js';
 import { CONVOS, CITY_TABLETS } from './citydata.js';
+import { HARBOUR_CONVOS, HARBOUR_TABLETS, HARBOUR_WORDS, RIDE_TALK } from './harbourdata.js';
+Object.assign(CONVOS, HARBOUR_CONVOS);
 import { CITY_NPC } from './city.js';
-const TABLETS = [...TABLETS0, ...CITY_TABLETS];   // a kert és a könyvtár táblái
+const TABLETS = [...TABLETS0, ...CITY_TABLETS, ...HARBOUR_TABLETS];   // a kert és a könyvtár táblái
 import { makeGardener } from './hero.js';
 import { collider } from './world.js';
 
@@ -130,6 +132,25 @@ export function createLearn(ctx) {
     if (b.dataset.k === 'say') { ctx.say(talkEl.dataset.en, .85); (who.person || gard).talk(4); }
     if (b.dataset.k === 'task') { talkToGardener(true); return; }
     if (b.dataset.k === 'chat') { startConv('nabu'); return; }
+    if (b.dataset.k === 'bchat') { startConv('boatman', boatN, true); return; }
+    if (b.dataset.k === 'cross') {
+      const dir = boatN.side || 1, rk = ctx.rank();
+      if (dir > 0 && rk.tier < 1) { talk('The harbour is only for experienced travellers. Come back when you are a Silver Star!', 'A kikötő csak tapasztalt utazóknak való. Gyere vissza, ha Ezüst csillag leszel!', `</div><p class="why" style="color:#ffd54a;font-size:13.5px;margin:6px 0 0">🔒 A túlparti kikötő Ezüst csillagtól nyílik. Még ${rk.need.toLocaleString('hu-HU')} pont a Szólétrában.`); return; }
+      askFare(); return;
+    }
+    if (b.dataset.fare) {
+      const ok = b.dataset.fare === fare.k;
+      if (!ok) { b.disabled = true; askFare(`Nem ez volt: „${HARBOUR_WORDS[fare.k][1].split(',')[0]}” = ${HARBOUR_WORDS[fare.k][0]}. Kérdezek mást!`); return; }
+      const dir = boatN.side || 1; ctx.say('Correct! Sit down and hold on.', .9);
+      ride = { dir, t: 0, i: 0, n: boatN, q: null }; talkEl.classList.remove('on'); ctx.startRide(dir); return;
+    }
+    if (b.dataset.rq !== undefined && (ride || rideQ) && (ride || rideQ).q) {
+      const RQ = ride || rideQ, L = RIDE_TALK[RQ.dir][2], ok = +b.dataset.rq === L[3]; talkEl.querySelectorAll('[data-rq]').forEach(x => { x.disabled = true; if (+x.dataset.rq === L[3]) x.classList.add('ok'); });
+      if (!ok) b.classList.add('bad');
+      ctx.say(ok ? 'Well done! You listen carefully.' : 'Not quite. Listen to the river next time!', .9);
+      if (ok && !RQ.q.paid) { RQ.q.paid = true; ctx.addPts(5, 'Hallás utáni értés a csónakban', '+5 pont'); }
+      RQ.q.done = true; rideQ = null; return;
+    }
     if (b.dataset.k === 'cnext') { conv.si++; if (conv.si < conv.c.steps.length) showStep(); else endConv(); return; }
     if (b.dataset.rep !== undefined && conv) { replyConv(b); return; }
     if (b.dataset.k === 'hu') talkEl.querySelector('.hu').hidden = !talkEl.querySelector('.hu').hidden;
@@ -179,7 +200,24 @@ export function createLearn(ctx) {
   /* ---------- beszélgetések: az NPC angolul mond valamit, te választod ki a jó angol választ ---------- */
   const CD = ld('kert-beszelgetes', {});        // beszélgetés-kulcs -> utolsó teljesítés napja
   let conv = null;
-  function startConv(id, n) {
+  /* ---------- a révész: átkelés a túlpartra (Ezüst csillagtól), viteldíj = egy jó angol válasz ---------- */
+  let boatN = null, fare = null, ride = null, rideQ = null;
+  const FARE = ['oar', 'anchor', 'deck', 'mast', 'hull', 'pier', 'cargo', 'barge', 'ferry'];
+  function boatMenu(n) {
+    boatN = n; who = { name: n.name, person: n.person, x: n.x, z: n.z };
+    const dir = n.side || 1;
+    talk(dir > 0 ? 'Shall I take you across the river to the north harbour?' : 'Do you want to go back to the city?', dir > 0 ? 'Átvigyelek a folyón az északi kikötőbe?' : 'Vissza akarsz menni a városba?',
+      `<button data-k="cross" class="pri">⛵ ${dir > 0 ? 'Átkelés a túlpartra' : 'Vissza a városba'}</button><button data-k="bchat">💬 Beszélgessünk</button>`);
+  }
+  function askFare(note) {
+    const pool = FARE.filter(k => HARBOUR_WORDS[k] && k !== fare?.k), k = pool[Math.floor(Math.random() * pool.length)], w = HARBOUR_WORDS[k];
+    const wrong = shuffle(FARE.filter(x => x !== k)).slice(0, 2), opts = shuffle([k, ...wrong]);
+    fare = { k, opts };
+    talk(`My fare is one English word. How do you say "${w[1].split(',')[0]}" in English?`, `A viteldíjam egy angol szó. Hogy mondod angolul: „${w[1].split(',')[0]}”?`,
+      `</div>${note ? `<p class="why" style="color:#ff9aa6;font-size:13.5px;margin:6px 0 0">${esc(note)}</p>` : ''}<div class="cnv"><small>⛵ Viteldíj · válaszd ki az angol szót:</small>${opts.map(o => `<button data-fare="${o}">${esc(HARBOUR_WORDS[o][0])}</button>`).join('')}`);
+  }
+  function startConv(id, n, chat) {
+    if (id === 'boatman' && !chat && n) { boatMenu(n); return; }
     const list = CONVOS[id]; if (!list) return;
     if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z };
     let ci = list.findIndex((c, i) => CD[id + i] !== dstr(0)); if (ci < 0) ci = Math.floor(Math.random() * list.length);
@@ -215,7 +253,8 @@ export function createLearn(ctx) {
   /* ---------- interakció (E gomb) ---------- */
   function target() {
     if (Math.hypot(GP.x - me.x, GP.z - me.z) < 2.8 && me.y < 1) return { kind: 'gard', text: 'E: beszélgetés Nabuval, a kertésszel' };
-    const np = CITY_NPC.find(n => n.id && CONVOS[n.id] && Math.hypot(n.talkX - me.x, n.talkZ - me.z) < 2.4);
+    const np = CITY_NPC.find(n => n.id && CONVOS[n.id] && !n.hidden && Math.hypot(n.talkX - me.x, n.talkZ - me.z) < 2.4);
+    if (np && np.away) return { kind: 'closed', text: `${np.name.split(',')[0]} standja zárva · ${np.opens || '7'} órakor nyit` };
     if (np) return { kind: 'npc', n: np, text: `E: beszélgetés · ${np.name}` };
     const tb = tabs.find(t => Math.hypot(t.x - me.x, t.z - me.z) < 2.4 && Math.abs(t.y - me.y) < 1.5);
     if (tb) return { kind: 'tab', t: tb, text: 'E: az agyagtábla elolvasása' };
@@ -254,7 +293,7 @@ export function createLearn(ctx) {
       else if (!MS) renderMission();
       const t = taskOf();
       if (t && t.visit && !KS.visited && TRIG.some(tr => tr.w === t.visit && near(tr))) { KS.visited = true; saveKS(); renderTask(); ctx.toast('Megnézted!', 'menj vissza Nabuhoz, és válaszolj'); }
-      if (talkEl.classList.contains('on') && Math.hypot(who.x - me.x, who.z - me.z) > 6) { talkEl.classList.remove('on'); conv = null; }
+      if (talkEl.classList.contains('on') && !who.ride && Math.hypot(who.x - me.x, who.z - me.z) > 6) { talkEl.classList.remove('on'); conv = null; }
       if (tabEl.classList.contains('on')) { const t = tabs[+tabEl.dataset.i]; if (Math.hypot(t.x - me.x, t.z - me.z) > 5) tabEl.classList.remove('on'); }
     },
     update(dt, t) {
@@ -263,5 +302,13 @@ export function createLearn(ctx) {
       for (const tb of tabs) if (tb.glow.visible) tb.glow.material.opacity = .6 + .4 * Math.sin(t * 2.5 + tb.i);
     },
     closeAll() { talkEl.classList.remove('on'); tabEl.classList.remove('on'); },
+    rideTick(dt) {
+      if (!ride) return; ride.t += dt; const L = RIDE_TALK[ride.dir];
+      const say = (en, hu, extra) => { who = { name: ride.n.name, person: { talk() { } }, ride: true }; talk(en, hu, extra); };
+      if (ride.i === 0 && ride.t > 2.5) { ride.i = 1; say(L[0][0], L[0][1]); }
+      if (ride.i === 1 && ride.t > 11) { ride.i = 2; say(L[1][0], L[1][1]); }
+      if (ride.i === 2 && ride.t > 20) { ride.i = 3; ride.q = { done: false }; say(L[2][0], L[2][1], `</div><div class="cnv"><small>🎧 Mit mondott a révész?</small>${L[2][2].map((o, k) => `<button data-rq="${k}">${esc(o)}</button>`).join('')}`); }
+    },
+    rideEnd() { if (ride && (!ride.q || ride.q.done)) talkEl.classList.remove('on'); if (ride && ride.q && !ride.q.done) { who.ride = false; rideQ = ride; } ride = null; },
   };
 }
