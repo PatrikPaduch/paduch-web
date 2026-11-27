@@ -1,5 +1,6 @@
 import { CITY_WORDS } from './citydata.js';
 import { HARBOUR_WORDS } from './harbourdata.js';
+import { PALACE_WORDS } from './palacedata.js';
 // Kertszavak: ha a törpe a közelébe ér, felbukkan az angol neve. Az első felfedezés +5 pont, és a szó
 // bekerül a Szólétra szavai közé (saját szó, "kert" témával). [angol, magyar, példamondat, fordítás, szint]
 export const GARDEN_WORDS = {
@@ -46,4 +47,6 @@ export const CITY_IDS = Object.keys(CITY_WORDS);
 // a túlparti kikötő szavai "hajózás" témával
 for (const [k, v] of Object.entries(HARBOUR_WORDS)) GARDEN_WORDS[k] = [...v, 'hajózás'];
 export const HARB_IDS = Object.keys(HARBOUR_WORDS);
+for (const [k, v] of Object.entries(PALACE_WORDS)) GARDEN_WORDS[k] = [...v, 'palota'];
+export const PAL_IDS = Object.keys(PALACE_WORDS);
 export const WORD_IDS = Object.keys(GARDEN_WORDS);

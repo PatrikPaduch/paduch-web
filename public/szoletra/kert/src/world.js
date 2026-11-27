@@ -8,6 +8,17 @@ export const PIER = { x0: 18.4, x1: 21.6, z0: 229, z1: 244 };
 // a túlpart: kikötő az Eufrátesz északi partján (csak csónakkal érhető el), és a túlparti stég
 export const HARB = { x0: -76, x1: 96, z0: 320, z1: 392 };
 export const FPIER = { x0: 18.4, x1: 21.6, z0: 300, z1: 321 };
+// a királyi palota a nyugati városfalon túl: kapu a falban (z 149.5), előudvar, díszlépcső, 1. szint (3,5 m: külső és
+// középső udvar), lépcső délre, 2. szint (7 m: trónterem-udvar, trónterem, folyóparti terasz)
+export const PAL = {
+  gate: { x0: -82.6, x1: -78.2, z0: 146.6, z1: 152.4 },
+  fore: { x0: -92, x1: -81.6, z0: 141, z1: 158 },
+  st1: { x0: -104, x1: -92, z0: 142.6, z1: 156.4 },
+  l1: { x0: -262, x1: -104, z0: 122, z1: 186, h: 3.5 },
+  st2: { x0: -183, x1: -167, z0: 176, z1: 186 },
+  l2: { x0: -232, x1: -118, z0: 186, z1: 228.5, h: 7 },
+  hall: { x0: -200, x1: -150, z0: 205, z1: 222 },
+};
 // öt terasz: magasság és fél-szélesség (a gyűrűk 9 m szélesek)
 export const LV = [{ h: 5, r: 46 }, { h: 10, r: 37 }, { h: 15, r: 28 }, { h: 20, r: 19 }, { h: 25, r: 10 }];
 export const WALL_H = 7;
@@ -29,6 +40,8 @@ function run(side, w, from, to) {
   }
 }
 run('S', 5, 0, 5); run('N', 3.5, 0, 4); run('W', 3.5, 0, 2);
+// a palota lépcsői külön listában (a kert lépcső-építője és rangzára a STAIRS-t járja be)
+const PAL_STAIRS = [{ ...PAL.st1, ax: 'x', a0: PAL.st1.x1, a1: PAL.st1.x0, h0: 0, h1: PAL.l1.h }, { ...PAL.st2, ax: 'z', a0: PAL.st2.z0, a1: PAL.st2.z1, h0: PAL.l1.h, h1: PAL.l2.h }];
 
 /* ---------- víz ---------- */
 export const LAKE = { cx: 72, cz: 0, rx: 17, rz: 33 };
@@ -45,6 +58,7 @@ export const bridgeH = x => { const t = Math.min(1, Math.max(0, (x - BRIDGE.x0) 
 
 export function heightAt(x, z) {
   for (const s of STAIRS) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) { const a = s.ax === 'z' ? z : x; return s.h0 + (s.h1 - s.h0) * (a - s.a0) / (s.a1 - s.a0); }
+  if (x < -81.6) { for (const s of PAL_STAIRS) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) { const a = s.ax === 'z' ? z : x; return s.h0 + (s.h1 - s.h0) * (a - s.a0) / (s.a1 - s.a0); } for (const L of [PAL.l2, PAL.l1]) if (x >= L.x0 && x <= L.x1 && z >= L.z0 && z <= L.z1) return L.h; }
   const m = Math.max(Math.abs(x), Math.abs(z));
   if (m <= 6) return LV[4].h + .4;                                       // templom padlója
   for (let i = LV.length - 1; i >= 0; i--) if (m <= LV[i].r) return LV[i].h;
@@ -63,7 +77,9 @@ export function blocked(x, z, rad = .35) {
   const inCity = x > CITY.x0 + 1.4 && x < CITY.x1 - 1.4 && z > CITY.z0 + .9 && z < CITY.z1 - .8;
   const onPier = x > PIER.x0 && x < PIER.x1 && z >= CITY.z1 - 1 && z < PIER.z1;
   const inHarb = x > HARB.x0 + 1 && x < HARB.x1 - 1 && z > HARB.z0 + .9 && z < HARB.z1 - 1, onFPier = x > FPIER.x0 && x < FPIER.x1 && z > FPIER.z0 && z <= HARB.z0 + 1;
-  if (!inGarden && !inGate && !inCity && !onPier && !inHarb && !onFPier) return true;
+  const inR = (R, m = .9) => x > R.x0 + m && x < R.x1 - m && z > R.z0 + m && z < R.z1 - m;
+  const inPal = x < -78 && (inR(PAL.gate, 0) || inR(PAL.fore, .5) || inR(PAL.st1, .3) || inR(PAL.l1) || inR(PAL.st2, .3) || inR(PAL.l2) || (x > PAL.st1.x0 - 1 && x < PAL.st1.x0 + 1 && z > PAL.st1.z0 + .3 && z < PAL.st1.z1 - .3) || (z > PAL.st2.z0 - 1 && z < PAL.st2.z0 + 1 && x > PAL.st2.x0 + .3 && x < PAL.st2.x1 - .3) || (z > PAL.st2.z1 - 1 && z < PAL.st2.z1 + 1 && x > PAL.st2.x0 + .3 && x < PAL.st2.x1 - .3));
+  if (!inGarden && !inGate && !inCity && !onPier && !inHarb && !onFPier && !inPal) return true;
   if (inLake(x, z) && !onIsland(x, z) && !onBridge(x, z)) return true;
   if (x > BASIN.x0 && x < BASIN.x1 && z > BASIN.z0 && z < BASIN.z1) return true;
   for (const [a, b, c, d] of CANALS) if (x > a - .3 && x < b + .3 && z > c - .3 && z < d + .3) return true;

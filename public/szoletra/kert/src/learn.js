@@ -4,7 +4,16 @@ import { GARDEN_WORDS, WORD_IDS } from './words.js';
 import { TABLETS as TABLETS0, TASKS } from './tablets.js';
 import { CONVOS, CITY_TABLETS } from './citydata.js';
 import { HARBOUR_CONVOS, HARBOUR_TABLETS, HARBOUR_WORDS, RIDE_TALK } from './harbourdata.js';
-Object.assign(CONVOS, HARBOUR_CONVOS);
+import { PALACE_CONVOS } from './palacedata.js';
+Object.assign(CONVOS, HARBOUR_CONVOS, PALACE_CONVOS);
+// a kihallgatás lépései: melyik beszélgetés hányadik lépést teljesíti
+const PAL_FLOW = { pguard: 1, pscribe: 2, chamberlain: 3, herald: 4, king: 5 };
+const PAL_WAIT = {
+  pscribe: ['First the guard at the gate must let you in.', 'Előbb a kapuőrnek kell beengednie.'],
+  chamberlain: ['Have you registered your petition? The scribes are in the outer court.', 'Leadtad már a kérvényedet? Az írnokok a külső udvarban vannak.'],
+  herald: ['You are not ready yet. The chamberlain must teach you the rules of the court first.', 'Még nem állsz készen. Előbb az udvarmesternek kell megtanítania az udvari szabályokat.'],
+  king: ['The guards stop you: wait until the herald announces you!', 'Az őrök megállítanak: várd meg, amíg a hírnök bejelent!'],
+};
 import { CITY_NPC } from './city.js';
 const TABLETS = [...TABLETS0, ...CITY_TABLETS, ...HARBOUR_TABLETS];   // a kert és a könyvtár táblái
 import { makeGardener } from './hero.js';
@@ -219,6 +228,7 @@ export function createLearn(ctx) {
   function startConv(id, n, chat) {
     if (id === 'boatman' && !chat && n) { boatMenu(n); return; }
     const list = CONVOS[id]; if (!list) return;
+    if (PAL_FLOW[id]) { const P = CD._palota || { step: 0 }; if (P.step < PAL_FLOW[id] - 1) { if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z }; const w = PAL_WAIT[id]; talk(w[0], w[1]); return; } }
     if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z };
     let ci = list.findIndex((c, i) => CD[id + i] !== dstr(0)); if (ci < 0) ci = Math.floor(Math.random() * list.length);
     conv = { id, ci, c: list[ci], si: 0, first: 0, wrong: false };
@@ -238,15 +248,24 @@ export function createLearn(ctx) {
       re.innerHTML = `<p class="en">“${esc(r[2])}”</p><div class="row2"><button data-k="cnext" class="pri">${conv.si + 1 < conv.c.steps.length ? 'Tovább ⏎' : 'Befejezés'}</button></div>`;
     } else {
       conv.wrong = true; b.disabled = true; b.classList.add('bad');
-      re.innerHTML = `<p class="en">“${esc(r[2])}”</p><p class="why">✗ ${esc(r[3] || 'Ez nem illik ide.')} Próbáld újra!</p>`;
+      const lv = r[4] === 'nyers' ? '<b>Túl nyers.</b> ' : r[4] === 'kor' ? '<b>Túl körülményes.</b> ' : '';
+      re.innerHTML = `<p class="en">“${esc(r[2])}”</p><p class="why">✗ ${lv}${esc(r[3] || 'Ez nem illik ide.')} Próbáld újra!</p>`;
     }
   }
   function endConv() {
     const key = conv.id + conv.ci, n = conv.c.steps.length, fresh = CD[key] !== dstr(0);
     CD[key] = dstr(0); sv('kert-beszelgetes', CD);
     const pts = fresh ? 5 + 3 * conv.first : 0;
-    talk(conv.first === n ? 'Lovely talking to you!' : 'It was nice to talk to you. See you soon!', conv.first === n ? 'Öröm volt veled beszélgetni!' : 'Jó volt beszélgetni. Hamarosan találkozunk!');
+    if (conv.c.bye) talk(conv.c.bye[0], conv.c.bye[1]);
+    else talk(conv.first === n ? 'Lovely talking to you!' : 'It was nice to talk to you. See you soon!', conv.first === n ? 'Öröm volt veled beszélgetni!' : 'Jó volt beszélgetni. Hamarosan találkozunk!');
     if (pts) ctx.addPts(pts, 'Beszélgetés: ' + conv.c.title, `+${pts} pont · ${conv.first}/${n} elsőre jó válasz`);
+    if (PAL_FLOW[conv.id]) {
+      const P = CD._palota || { step: 0 }; P.step = Math.max(P.step, PAL_FLOW[conv.id]);
+      if (conv.id === 'king' && !P.seal) { P.seal = true; P.sealDate = dstr(0); setTimeout(() => { ctx.addPts(50, '👑 Királyi pecsét', '+50 pont · a pecsét mostantól a rangjelvényed mellett áll'); ctx.onSeal && ctx.onSeal(); }, 1600); }
+      const next = { 1: 'Következő lépés: az írnok a külső udvarban', 2: 'Következő lépés: az udvarmester a kertben', 3: 'Következő lépés: a hírnök a trónterem kapujában', 4: 'Következő lépés: lépj a trón elé (E)' }[PAL_FLOW[conv.id]];
+      if (next && conv.id !== 'king') setTimeout(() => ctx.toast('👑 Kihallgatás', next), 1200);
+      CD._palota = P; sv('kert-beszelgetes', CD);
+    }
     conv = null;
   }
 

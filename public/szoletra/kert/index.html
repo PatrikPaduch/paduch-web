@@ -29,6 +29,7 @@
   #zone small{display:block;font-size:12px;font-weight:600;color:#ffd54a;letter-spacing:1.5px;text-transform:uppercase}
   #zone.on{opacity:1}
   #fps{position:fixed;right:12px;bottom:12px;font-size:11px;color:#9fb3d8;background:#0a1222b0;border-radius:8px;padding:4px 8px}
+  #seal{position:absolute;right:-20px;bottom:-4px;filter:drop-shadow(0 1px 3px #000a)}
   #plate{position:fixed;left:0;top:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;transform-origin:50% 100%;will-change:transform}
   #plate .n{font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;margin-top:-4px;white-space:nowrap}
   #word{left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);padding:10px 16px;min-width:260px;max-width:min(560px,92vw);opacity:0;transition:opacity .35s,transform .35s;pointer-events:none;text-align:center}
@@ -111,7 +112,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="plate"><div id="emb"></div><div class="n" id="rname"></div></div>
+<div id="plate"><div style="position:relative"><div id="emb"></div><div id="seal" hidden title="Királyi pecsét"><svg viewBox="0 0 40 40" width="26" height="26"><circle cx="20" cy="20" r="17" fill="#c8901c" stroke="#7a5208" stroke-width="2.5"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#7a5208" stroke-width="1.5"/><path d="M13 16l5 2-5 2zM20 13l2 5-2 0zM22 22l5 2-5 2zM15 23l2 4-3 0z" fill="#5a3a08"/></svg></div></div><div class="n" id="rname"></div></div>
 <div id="zone"></div>
 <div id="pause"><div class="pbox">
   <h2>Szünet</h2>
