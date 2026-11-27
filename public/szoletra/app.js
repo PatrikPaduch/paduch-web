@@ -1,6 +1,7 @@
 // Szólétra: angol szótanuló ranglétrával. Az adat a böngészőben (localStorage) marad.
 import { emblem, TIERS, LATER, FAMS, STEPS } from './emblems.js';
 import { CORE } from './data/core.js';
+import { EXTRA } from './data/extra.js';
 import { SZODOBOZ } from './data/szodoboz.js';
 import { initSync } from './sync.js';
 // a paduch.hu-n indulás előtt lehúzzuk a legfrissebb mentést (más eszközről)
@@ -35,7 +36,7 @@ function lev(a, b) {
 }
 
 /* ================= állapot ================= */
-const defaults = () => ({ v: 1, settings: { newPerDay: 8, levels: ['a2', 'b1', 'b2'], szodoboz: false }, words: {}, custom: [], points: 0, log: {}, streak: { days: 0, last: null } });
+const defaults = () => ({ v: 1, settings: { newPerDay: 8, levels: ['a2', 'b1', 'b2'], szodoboz: false, offTopics: [] }, words: {}, custom: [], points: 0, log: {}, streak: { days: 0, last: null } });
 let S = load();
 function load() {
   try {
@@ -57,6 +58,7 @@ function buildWords() {
   const add = (r, pack) => { const id = r[0].toLowerCase().trim(); if (!id || WORDS.has(id)) return; WORDS.set(id, { id, en: r[0], hu: r[1], sen: r[2] || '', shu: r[3] || '', topic: r[4] || 'saját', level: r[5] || 'b1', pack }); };
   S.custom.forEach(r => add(r, 'saját'));
   CORE.forEach(r => add(r, 'core'));
+  EXTRA.forEach(r => add(r, 'core'));
   if (S.settings.szodoboz) SZODOBOZ.forEach(r => add(r, 'szodoboz'));
 }
 buildWords();
@@ -66,7 +68,8 @@ function newCandidates() {
   const lv = S.settings.levels, ord = { a2: 0, b1: 1, b2: 2, c1: 3 }, pk = { 'saját': 0, core: 1, szodoboz: 2 };
   // a könnyebbek kicsit előbb jönnek, de keverve: nem 48 könnyű szó egymás után
   const key = w => ord[w.level] * .7 + hash(w.id) * 2.2;
-  return [...WORDS.values()].filter(w => !P(w.id) && lv.includes(w.level)).sort((a, b) => (pk[a.pack] - pk[b.pack]) || (key(a) - key(b)));
+  const off = S.settings.offTopics || [];
+  return [...WORDS.values()].filter(w => !P(w.id) && lv.includes(w.level) && !off.includes(w.topic)).sort((a, b) => (pk[a.pack] - pk[b.pack]) || (key(a) - key(b)));
 }
 function dueIds() {
   const t = today();
@@ -158,7 +161,7 @@ function showRankUp() {
 $('#up').addEventListener('click', () => $('#up').classList.remove('on'));
 
 /* ================= nézetek ================= */
-let view = 'home', sess = null, combo = 0, advT = null, wFilter = 'all', wQuery = '';
+let view = 'home', sess = null, combo = 0, advT = null, wFilter = 'all', wQuery = '', wTopic = '';
 function go(v) { clearTimeout(advT); view = v; if (v !== 'session') sess = null; window.scrollTo(0, 0); render(); }
 function render() {
   renderTop(); renderNav();
@@ -211,7 +214,7 @@ function homeHtml() {
     <button class="tile" data-act="start" data-k="shade"><div class="ic">🎯</div><b>Árnyalatok</b><small>hasonló jelentések</small></button>
   </div>
   <div class="stats" style="margin-top:14px">
-    <div class="stat"><b>${learned}</b><small>megtanult szó</small></div>
+    <div class="stat"><b>${learned}</b><small>megtanult szó (${WORDS.size}-ből)</small></div>
     <div class="stat"><b>${mastered}</b><small>megszilárdult</small></div>
     <div class="stat"><b>${streakNow()}</b><small>napos sorozat</small></div>
     <div class="stat"><b>${fmt(S.points)}</b><small>összes pont</small></div>
@@ -402,11 +405,14 @@ function wordsHtml() {
   return `<div class="panel"><h2>Szavaim</h2>
     <input class="search" id="wq" placeholder="Keresés angolul vagy magyarul..." value="${esc(wQuery)}">
     <div class="filt">${f.map(([k, l]) => `<button data-act="wf" data-f="${k}" class="${wFilter === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <select class="search" id="wt" style="margin-top:8px"><option value="">Minden téma (${WORDS.size} szó)</option>${topics().map(([t, n]) => `<option value="${esc(t)}" ${wTopic === t ? 'selected' : ''}>${esc(t)} (${n})</option>`).join('')}</select>
     <details class="add"><summary>＋ Saját szó felvétele</summary>
       <div class="form"><input id="aEn" placeholder="angol szó vagy kifejezés *"><input id="aHu" placeholder="magyar jelentés *"><input id="aSen" placeholder="példamondat angolul (nem kötelező)"><input id="aShu" placeholder="a példamondat magyarul (nem kötelező)">
       <button class="btn pri" data-act="addword">Felvétel</button></div></details>
     <div id="wlist" style="margin-top:10px"></div></div>`;
 }
+// témák (szószámmal), a szólisták sorrendjében
+function topics() { const m = new Map(); for (const w of WORDS.values()) m.set(w.topic, (m.get(w.topic) || 0) + 1); return [...m.entries()]; }
 function renderWordList() {
   const q = wQuery.trim().toLowerCase();
   let list = [...WORDS.values()].filter(w => {
@@ -414,13 +420,14 @@ function renderWordList() {
     if (wFilter === 'new' && p) return false;
     if (wFilter === 'learning' && !(p && p.box >= 1 && p.box < MASTERED)) return false;
     if (wFilter === 'mastered' && !(p && p.box >= MASTERED)) return false;
+    if (wTopic && w.topic !== wTopic) return false;
     return !q || w.en.toLowerCase().includes(q) || w.hu.toLowerCase().includes(q);
   });
   const shown = list.slice(0, 300);
   $('#wlist').innerHTML = `<div class="mut small" style="margin-bottom:6px">${list.length} szó${list.length > 300 ? ' (az első 300 látszik)' : ''}</div>` + shown.map(w => {
     const p = P(w.id);
     const st = !p ? '<span class="bx">új</span>' : p.box >= MASTERED ? '<span class="bx m">✓ megszilárdult</span>' : `<span class="bx">${[1, 2, 3, 4].map(i => `<i class="d ${p.box >= i ? 'on' : ''}"></i>`).join('')}</span>`;
-    return `<div class="wrow"><button class="spk" data-act="say" data-t="${esc(w.en)}">🔊</button><div class="w"><b>${esc(w.en)}</b><small>${esc(w.hu)}</small></div>${st}</div>`;
+    return `<div class="wrow"><button class="spk" data-act="say" data-t="${esc(w.en)}">🔊</button><div class="w"><b>${esc(w.en)}</b><small>${esc(w.hu)} · <span class="mut">${esc(w.topic)}, ${w.level.toUpperCase()}</span></small></div>${st}</div>`;
   }).join('');
 }
 function addWord() {
@@ -467,6 +474,7 @@ function settingsHtml() {
   const s = S.settings;
   return `<div class="panel"><h2>Beállítások</h2>
     <div class="row"><span>Új szavak naponta</span><div class="seg">${[5, 8, 12, 15, 20].map(n => `<button data-act="npd" data-n="${n}" class="${s.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div></div>
+    <div class="row" style="align-items:flex-start"><span>Témák az új szavakhoz<br><small class="mut">Kattints egy témára a ki- vagy bekapcsoláshoz.</small></span><div class="filt" style="max-width:62%;justify-content:flex-end">${topics().map(([t, n]) => `<button data-act="topic" data-t="${esc(t)}" class="${(s.offTopics || []).includes(t) ? '' : 'on'}">${esc(t)} <small>${n}</small></button>`).join('')}<button data-act="topicall">Mind be</button></div></div>
     <div class="row"><span>Szintek</span><div class="seg">${LEVELS.map(([k, l]) => `<button data-act="lvl" data-l="${k}" class="${s.levels.includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="row"><span>Szódoboz szavai is (${SZODOBOZ.length} szó, főleg munkahelyi)<br><small class="mut">Ezekhez nincs magyar mondatfordítás, a mondatfeladatokban ritkábban jönnek.</small></span><button class="sw ${s.szodoboz ? 'on' : ''}" data-act="szd" aria-label="Szódoboz szavai"></button></div>
     <div class="row"><span>Mentés fájlba</span><button class="btn" data-act="export">⬇ Letöltés</button></div>
@@ -489,6 +497,8 @@ document.addEventListener('click', e => {
   else if (a === 'check') answer($('#typed').value);
   else if (a === 'giveup') answer('');
   else if (a === 'wf') { wFilter = b.dataset.f; render(); }
+  else if (a === 'topic') { const o = S.settings.offTopics ||= [], t = b.dataset.t; S.settings.offTopics = o.includes(t) ? o.filter(x => x !== t) : [...o, t]; if (topics().every(([x]) => S.settings.offTopics.includes(x))) S.settings.offTopics = []; save(); render(); }
+  else if (a === 'topicall') { S.settings.offTopics = []; save(); render(); }
   else if (a === 'addword') addWord();
   else if (a === 'npd') { S.settings.newPerDay = +b.dataset.n; save(); render(); }
   else if (a === 'lvl') { const L = S.settings.levels, k = b.dataset.l; S.settings.levels = L.includes(k) ? (L.length > 1 ? L.filter(x => x !== k) : L) : [...L, k]; save(); render(); }
@@ -500,7 +510,7 @@ document.addEventListener('click', e => {
   }
   else if (a === 'reset') { if (confirm('Biztosan törlöd az összes haladást? Ezt nem lehet visszavonni.')) { S = defaults(); buildWords(); save(); go('home'); } }
 });
-document.addEventListener('input', e => { if (e.target.id === 'wq') { wQuery = e.target.value; renderWordList(); } });
+document.addEventListener('input', e => { if (e.target.id === 'wq') { wQuery = e.target.value; renderWordList(); } if (e.target.id === 'wt') { wTopic = e.target.value; renderWordList(); } });
 document.addEventListener('change', e => {
   if (e.target.id !== 'imp' || !e.target.files[0]) return;
   e.target.files[0].text().then(txt => {
