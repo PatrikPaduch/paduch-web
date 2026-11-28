@@ -9,6 +9,7 @@ import { worldUV, LANTERNS } from './build.js';
 import { TEX } from './mats.js';
 import { makePerson } from './hero.js';
 import { CITY_NPC, CITY_TRIG } from './city.js';
+import { CONSTELLATIONS } from './zikkdata.js';
 
 export const ZIG_BLDG = [];   // a térképhez: [x0, z0, x1, z1, szín]
 export const BAND = ['#efeae0', '#2a2a2e', '#7b2d6e', '#2c5aa8', '#d9772e', '#c7ccd4', '#d8a93a'];
@@ -52,6 +53,9 @@ export function buildZiggurat(M, q, lit = 0) {
     dark: std({ color: '#1c140e', roughness: 1 }),
     clayw: std({ color: '#7a5434', roughness: .7 }),
     straw: std({ color: '#d8bc6a', roughness: 1 }),
+    rug: std({ color: '#8a2a3a', roughness: 1 }),
+    rug2: std({ color: '#2c4a7a', roughness: 1 }),
+    cloth: std({ color: '#d8c49a', roughness: 1 }),
   };
   BAND.forEach((c, i) => { MM['band' + i] = std({ color: c, emissive: c, emissiveIntensity: 0, roughness: i >= 5 ? .32 : .25, metalness: i >= 5 ? .65 : .05 }); });
   const MAT = k => MM[k] || M[k];
@@ -138,6 +142,43 @@ export function buildZiggurat(M, q, lit = 0) {
   npc('tforeman', 3, 162.6, 155.4, 0, ZIG_TOPS[0], 'Shamash-nasir, a munkavezető', 162.6, 157.8, 1.05); trig('foreman', 162.6, 153.6, 3, ZIG_TOPS[0]);
   npc('tworkers', 0, 170.2, 181.4, Math.PI, ZIG_TOPS[1], 'Ubar és Zakir, a munkások', 171.2, 179); person(4, 172.2, 181.8, Math.PI - .3, ZIG_TOPS[1]); collider(172.2, 181.8, .4); trig('language', 171.2, 183.6, 3, ZIG_TOPS[1]);
   npc('tmerchant', 5, 176.4, cz + 8.2, Math.PI, ZIG_TOPS[2], 'Tarhunta, a kereskedő', 176.4, cz + 5.8);
+  /* ---------- a felső emeletek: kellékek és tanítók ---------- */
+  { const y = ZIG_TOPS[2];   // 4. emelet: a kereskedő szőnyege, zsákjai, fűszeres korsói
+    box('rug', 175.2, y, cz + 9.6, 178.6, y + .04, cz + 12.8);
+    for (const [x, z, r, h] of [[175.6, cz + 13.6, .45, .8], [176.3, cz + 13.8, .4, .7], [177.6, cz + 13.4, .5, .9]]) { cyl('cloth', x, y, z, r, r * .7, h, 10); collider(x, z, r + .1); }
+    for (const [x, z] of [[178.9, cz + 10.2], [179.1, cz + 11.3], [178.8, cz + 12.3]]) { cyl('terracotta', x, y, z, .22, .3, .55, 10); cyl('terracotta', x, y + .55, z, .3, .16, .25, 10); }
+    trig('idiom', 176.6, cz + 11.2, 2.6, y); }
+  { const y = ZIG_TOPS[3];   // 5. emelet: a vak mesemondó és a hallgatói
+    box('rug2', 181.1, y, cz + 9.4, 184.3, y + .04, cz + 13.4);
+    npc('tstory', 1, 182.6, cz + 8, Math.PI, y, 'Kidin, a vak mesemondó', 182.6, cz + 5.6, .98);
+    cyl('wood', 183.3, y, cz + 8.2, .05, .05, 1.9, 6);
+    for (const [x, z, ry] of [[181.8, cz + 11.6, Math.PI + .3], [183.5, cz + 11.9, Math.PI - .3]]) { person(pick([0, 3]), x, z, ry, y, .72); collider(x, z, .3); }
+    trig('storyteller', 182.6, cz + 9.6, 2.4, y); trig('tale', 182.7, cz + 12.8, 2.2, y); }
+  { const y = ZIG_TOPS[4];   // 6. emelet: a király követe, a tolmács-írnok, a szerződés asztala
+    npc('tenvoy', 6, 187.3, cz + 7.4, Math.PI, y, 'A király követe', 187.3, cz + 5, 1.03);
+    box('wood', 186.1, y, cz + 10.4, 188, y + .8, cz + 11.8); rectCollider(185.9, cz + 10.2, 188.2, cz + 12);
+    for (let k = 0; k < 3; k++) box('clayw', 186.4 + k * .55, y + .8, cz + 10.8, 186.8 + k * .55, y + .86, cz + 11.3);
+    person(2, 188.7, cz + 11.2, -Math.PI / 2 - .4, y); collider(188.7, cz + 11.2, .35);
+    cyl('wood', 186.3, y, cz + 14, .07, .06, 4.2, 6); box('band5', 186.35, y + 2.6, cz + 14, 186.4, y + 4.1, cz + 15.8);
+    trig('envoy', 187.3, cz + 8.9, 2.4, y); trig('interpreter', 188.6, cz + 12.4, 2.2, y); trig('treaty', 187, cz + 11.1, 2, y); }
+  { const y = ZIG_TOPS[5];   // 7. emelet: a főpap-csillagjós és a gyűrűs égi műszere
+    npc('tpriest', 6, 191, cz + 8.4, Math.PI, y, 'Bel-ushezib, a főpap-csillagjós', 191, cz + 6.4, 1.04);
+    box('stone', 190.5, y, cz + 11.4, 191.7, y + 1, cz + 12.6); rectCollider(190.3, cz + 11.2, 191.9, cz + 12.8);
+    for (const [rx, rz] of [[0, 0], [Math.PI / 2, 0], [Math.PI / 2, Math.PI / 2]]) { const g = new THREE.TorusGeometry(.62, .035, 6, 32); g.rotateX(rx); g.rotateY(rz); g.translate(191.1, y + 1.75, cz + 12); S.add('bronze', g); }
+    cyl('bronze', 191.1, y + 1, cz + 12, .05, .05, .75, 6);
+    trig('astronomer', 191, cz + 9.8, 2.2, y); trig('zodiac', 191.1, cz + 13.3, 2, y);
+    // falfestmények a szentély falán: üstökös (észak), csillagkép (észak), fogyatkozás (dél), bolygók (kelet)
+    const SHx = ZIG_SH + .07, paint = (draw, x, z, ry, w = 3.6, h = 2.4) => { const c = document.createElement('canvas'); c.width = 384; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#14234a'; g.fillRect(0, 0, 384, 256); g.strokeStyle = '#d8a93a'; g.lineWidth = 10; g.strokeRect(5, 5, 374, 246); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const pg = new THREE.PlaneGeometry(w, h); pg.rotateY(ry); pg.translate(x, y + 3.2, z); root.add(new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ map: t, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: .18, roughness: .6 }))); };
+    const dot = (g, x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+    paint(g => { const gr = g.createLinearGradient(70, 190, 300, 70); gr.addColorStop(0, 'rgba(255,240,200,0)'); gr.addColorStop(1, 'rgba(255,240,200,.9)'); g.fillStyle = gr; g.beginPath(); g.moveTo(60, 200); g.lineTo(290, 60); g.lineTo(312, 92); g.closePath(); g.fill(); dot(g, 300, 74, 16, '#fff6dc'); for (let k = 0; k < 18; k++) dot(g, 30 + (k * 89) % 330, 30 + (k * 53) % 200, 2, '#d9dee8'); }, cx - 5, cz + SHx, 0);
+    paint(g => { const P = [[60, 170], [110, 140], [180, 128], [228, 152], [262, 104], [238, 64], [190, 56], [300, 170], [344, 150]]; g.strokeStyle = '#8fb0ff'; g.lineWidth = 3; for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 2], [3, 7], [7, 8]]) { g.beginPath(); g.moveTo(...P[i]); g.lineTo(...P[j]); g.stroke(); } P.forEach(([x, yy]) => dot(g, x, yy, 7, '#fff6dc')); g.fillStyle = '#f3e2b0'; g.font = '28px Georgia'; g.fillText('the Lion', 30, 236); }, cx + 5, cz + SHx, 0);
+    paint(g => { dot(g, 192, 128, 74, '#fff2c0'); g.globalAlpha = .9; dot(g, 214, 120, 72, '#0c1530'); g.globalAlpha = 1; for (let k = 0; k < 12; k++) dot(g, 30 + (k * 97) % 330, 24 + (k * 61) % 210, 2, '#d9dee8'); }, cx, cz - SHx, Math.PI);
+    paint(g => { dot(g, 60, 128, 34, '#ffd54a'); [['#c7ccd4', 6], ['#f0e2b0', 9], ['#d9772e', 7], ['#e8c890', 13], ['#d8c49a', 11]].forEach(([c, r], k) => { g.strokeStyle = 'rgba(200,210,255,.25)'; g.lineWidth = 1.5; g.beginPath(); g.arc(60, 128, 70 + k * 52, -.5, .5); g.stroke(); dot(g, 60 + (70 + k * 52) * Math.cos(.18 * (k - 2)), 128 + (70 + k * 52) * Math.sin(.18 * (k - 2)), r, c); }); }, cx + SHx, cz + 5, Math.PI / 2, 4, 2.6);
+    trig('comet', cx - 5, cz + 13.4, 2.4, y); trig('constellation', cx + 5, cz + 13.4, 2.4, y); trig('eclipse', cx, cz - 13.4, 2.6, y); trig('planet', cx + 13.4, cz + 5, 2.4, y); trig('horizon', cx + 13.6, cz - 6, 2.6, y);
+    // az előjel-táblák asztala és a sorsok táblája
+    box('wood', cx - 9, y, cz - 14.6, cx - 6, y + .8, cz - 13.2); rectCollider(cx - 9.2, cz - 14.8, cx - 5.8, cz - 13); for (let k = 0; k < 4; k++) box('clayw', cx - 8.7 + k * .7, y + .8, cz - 14.2, cx - 8.25 + k * .7, y + .87, cz - 13.6);
+    box('stone', cx + 7.4, y, cz - 14.4, cx + 8.6, y + 1.1, cz - 13.4); box('gold', cx + 7.55, y + 1.1, cz - 14.05, cx + 8.45, y + 2.3, cz - 13.8); rectCollider(cx + 7.2, cz - 14.6, cx + 8.8, cz - 13.2);
+    trig('omen', cx - 7.5, cz - 12.6, 2.2, y); trig('fate', cx + 8, cz - 12.6, 2.2, y); }
 
   S.merge(root, MAT, UVS);
 
@@ -211,6 +252,28 @@ export function buildZiggurat(M, q, lit = 0) {
   }
   setLit(lit);
 
+  /* ---------- éjjel a csúcsról: a babiloni csillagképek vonalakkal és felirattal ---------- */
+  const skyG = new THREE.Group(), skyM = [], top = new THREE.Vector3(cx, ZIG_TOPS[5] + 2, cz), RAD = 1250, U = Math.tan(3.4 * Math.PI / 180) * RAD;
+  { const pts = [], segs = [], label = (en, hu, p) => {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+      g.font = '600 54px Georgia, serif'; g.textAlign = 'center'; g.fillStyle = '#f3e2b0'; g.shadowColor = '#000'; g.shadowBlur = 12; g.fillText(en, 256, 62); g.font = '36px Georgia, serif'; g.fillStyle = '#b9c6e8'; g.fillText(hu, 256, 108);
+      const m = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, depthWrite: false, fog: false }); skyM.push(m); const s = new THREE.Sprite(m); s.position.copy(p); s.scale.set(U * 5, U * 1.25, 1); skyG.add(s); };
+    for (const [en, hu, az, el, st, ln] of CONSTELLATIONS) {
+      const a = az * Math.PI / 180, e = el * Math.PI / 180, d = new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)), r = new THREE.Vector3(-Math.cos(a), 0, Math.sin(a)), up = new THREE.Vector3().crossVectors(r, d);
+      const cxs = st.reduce((s, p) => s + p[0], 0) / st.length, cys = st.reduce((s, p) => s + p[1], 0) / st.length;
+      const P = st.map(([x, y]) => top.clone().addScaledVector(d, RAD).addScaledVector(r, (x - cxs) * U).addScaledVector(up, (y - cys) * U));
+      P.forEach(p => pts.push(p.x, p.y, p.z)); for (const [i, j] of ln) segs.push(P[i].x, P[i].y, P[i].z, P[j].x, P[j].y, P[j].z);
+      label(en, hu, top.clone().addScaledVector(d, RAD).addScaledVector(up, -(Math.max(...st.map(p => p[1])) - cys + 1.4) * U));
+    }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    const pm = new THREE.PointsMaterial({ color: '#fff6dc', size: 4.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false }); skyM.push(pm);
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+    const lm = new THREE.LineBasicMaterial({ color: '#a9c2ff', transparent: true, opacity: 0, depthWrite: false, fog: false }); skyM.push(lm);
+    skyG.add(new THREE.Points(pg, pm), new THREE.LineSegments(lg, lm));
+    skyG.traverse(o => { o.frustumCulled = false; o.renderOrder = -1; }); skyG.visible = false; root.add(skyG);
+  }
+  let skyA = 0;
+
   return {
     root,
     setLit, get lit() { return lit; },
@@ -218,8 +281,11 @@ export function buildZiggurat(M, q, lit = 0) {
       const night = Math.max(0, Math.min(1, (.55 - dayF) / .45)), fin = lit >= 7;
       MM.lapis.emissiveIntensity = night * .9;
       for (let i = 0; i < 7; i++) MM['band' + i].emissiveIntensity = night * .45;
-      if (glowS) glowS.material.opacity = fin ? .25 + night * .7 : night * .35;
+      if (glowS) { const G = glowS.position, d = Math.hypot(G.x - me.x, G.y - (me.y || 0), G.z - me.z), near = Math.min(1, Math.max(0, (d - 14) / 40)); glowS.material.opacity = (fin ? .25 + night * .7 : night * .35) * near; }   // közelről nem vakít
       if (doorM && !fin) doorM.opacity = .25 + night * .5;
+      // a csillagképek a hatodik-hetedik emeleten jelennek meg, sötétedéskor
+      { const want = me.y > ZIG_TOPS[4] - 1 && me.x > 150 ? Math.max(0, (night - .35) / .65) : 0; skyA += (want - skyA) * Math.min(1, dt * 1.5);
+        skyG.visible = skyA > .01; if (skyG.visible) { const tw = .85 + Math.sin(t * 1.7) * .08; skyM.forEach((m, k) => { m.opacity = skyA * (k === skyM.length - 1 ? .8 : k === skyM.length - 2 ? tw : .9); }); } }
       if (me.x < 60) { for (const w of people) w.p.object.visible = false; return; }   // a körzeten kívül semmi mozgás
       for (const f of FL) { const k = 1 + Math.sin(t * 13 + f.ph) * .12 + Math.sin(t * 23 + f.ph * 2) * .08; f.s.scale.set(f.w * (2 - k), f.h * k, 1); }
       for (const w of people) { const far = Math.hypot(w.x - me.x, w.z - me.z) > 60 || (Math.abs(me.y - w.y) > 8 && Math.hypot(w.x - me.x, w.z - me.z) > 25); w.p.object.visible = !far; if (!far) w.p.update(dt, 0); }

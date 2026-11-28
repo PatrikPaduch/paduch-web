@@ -181,17 +181,22 @@ const TRAVEL = [
   ['👑 A palotakapu', -75, 149.5, -Math.PI / 2, 'A palotakapu', 'Nabukodonozor palotája'],
   ['🏛 Bábel tornya, kapu', 75, 200.5, Math.PI / 2, 'A torony kapuja', 'a szent körzet bejárata'],
   ['🧱 A téglavetők udvara', 121, 184.6, Math.PI, 'Téglavetők udvara', 'Bábel tornya · 1. emelet'],
+  // az építők emelője: a legmagasabb emelet tanítójához visz, ahová már szabad
+  ['🏗 Emelő a toronyban', () => LIFT[zigFloorMax() - 1][0], () => LIFT[zigFloorMax() - 1][1], () => LIFT[zigFloorMax() - 1][2], () => FLOORS[zigFloorMax() - 1][0], () => `Bábel tornya · ${zigFloorMax()}. emelet`, () => zigFloorMax() >= 2 ? '' : 'az 1. emelet után'],
 ];
+// az emelők érkezése emeletenként: a tanító elé, felé fordulva
+const LIFT = [[121, 184.6, Math.PI], [162.6, 158.4, Math.PI], [171.2, 178.4, 0], [176.4, 175.4, 0], [182.6, 175.2, 0], [187.3, 174.6, 0], [191, 176, 0]];
+const tv = v => typeof v === 'function' ? v() : v;
 function travelList() {
   const el = document.getElementById('tgrid'); if (!el) return;
-  el.innerHTML = TRAVEL.map((t, i) => { const lock = t[6] ? t[6]() : ''; return `<button data-p="tp" data-i="${i}" ${lock ? 'disabled' : ''}>${t[0]}${lock ? `<small>🔒 ${lock}</small>` : ''}</button>`; }).join('');
+  el.innerHTML = TRAVEL.map((t, i) => { const lock = t[6] ? t[6]() : ''; return `<button data-p="tp" data-i="${i}" ${lock ? 'disabled' : ''}>${t[0]}${lock ? `<small>🔒 ${lock}</small>` : i === TRAVEL.length - 1 ? `<small>${tv(t[5])}</small>` : ''}</button>`; }).join('');
 }
 function travel(i) {
   const t = TRAVEL[i]; if (t[6] && t[6]()) return;
-  const x = typeof t[1] === 'function' ? t[1]() : t[1], z = t[2];
-  Object.assign(me, { x, z, y: heightAt(x, z), ang: t[3], spd: 0 }); cam.yaw = t[3] + Math.PI; sitting = null; pose = null;
+  const x = tv(t[1]), z = tv(t[2]), ang = tv(t[3]);
+  Object.assign(me, { x, z, y: heightAt(x, z), ang, spd: 0 }); cam.yaw = ang + Math.PI; sitting = null; pose = null;
   if (z > PLAZA.z1 && autoWalk) setAuto(false); else if (autoWalk) nearestWp();
-  learn && learn.closeAll(); togglePause(false); zoneNow = t[4]; zoneShow(t[4], t[5]);
+  learn && learn.closeAll(); togglePause(false); zoneNow = tv(t[4]); zoneShow(tv(t[4]), tv(t[5]));
 }
 document.getElementById('menu').addEventListener('click', () => togglePause());
 setInterval(() => { if (ready && !paused) saveGame(false); }, 30000);
@@ -286,7 +291,7 @@ function zigRefresh() {
   }
   scene.add(zlocks);
 }
-function floorDone(f) { zigRefresh(); const c = ['fehér', 'fekete', 'bíbor', 'kék', 'narancs', 'ezüst', 'arany'][f - 1]; setTimeout(() => zoneShow(`Kigyúlt a ${c} sáv`, `Bábel tornya · ${f}. emelet teljesítve`), 2200); }
+function floorDone(f) { zigRefresh(); const c = ['fehér', 'fekete', 'bíbor', 'kék', 'narancs', 'ezüst', 'arany'][f - 1]; setTimeout(() => f === 7 ? zoneShow('Elkészült Bábel tornya', 'arany szentély, Istár csillaga, fehér lépcső') : zoneShow(`Kigyúlt a ${c} sáv`, `Bábel tornya · ${f}. emelet teljesítve`), 2200); }
 const azNum = n => (n === 1 || n === 5 ? 'az ' : 'a ') + n + '.';
 function applyRank(first) {
   const r = myRank(), changed = !rk || r.n !== rk.n;
@@ -359,7 +364,7 @@ function discover(id) {
   if (!sitting && pose !== 'dance') { pose = 'interact'; poseT = 1.3; }
 }
 /* ---------- lebegő szócímkék: a szó ott marad a tárgy fölött, amíg a közelben vagy ---------- */
-const LABEL_H = { ziggurat: 9, priest: 2.6, clay: 1.2, straw: 2, mould: 1.7, brick: 2.2, bucket: 1.5, kiln: 4.6, sledge: 1.9, worker: 3, scaffolding: 14, shrine: 10, foreman: 2.8, language: 2.8, audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
+const LABEL_H = { idiom: 1.6, storyteller: 2.6, tale: 1.2, envoy: 2.8, interpreter: 2.6, treaty: 1.3, astronomer: 2.8, zodiac: 2.6, comet: 5.2, constellation: 5.2, eclipse: 5.2, planet: 5.4, horizon: 1.8, omen: 1.4, fate: 2.7, ziggurat: 9, priest: 2.6, clay: 1.2, straw: 2, mould: 1.7, brick: 2.2, bucket: 1.5, kiln: 4.6, sledge: 1.9, worker: 3, scaffolding: 14, shrine: 10, foreman: 2.8, language: 2.8, audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
 const labelTex = {};
 function getLabelTex(id, quiz) {
   const key = id + (quiz ? '?' : ''); if (labelTex[key]) return labelTex[key];
