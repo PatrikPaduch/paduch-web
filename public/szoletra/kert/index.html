@@ -72,6 +72,17 @@
   #mission .mb{display:flex;gap:6px;margin-top:7px}#mission .mb button{flex:1;padding:4px}
   #task{left:12px;bottom:46px;padding:9px 11px;display:none;font-size:13px;min-width:190px}
   #task.on{display:block}#task b{color:#7fe0a0}#task div{margin:3px 0 6px;font-size:15px}
+  #dayq{right:12px;bottom:40px;width:214px;padding:9px 11px;display:none;font-size:13px}
+  #dayq.on{display:block}#dayq b{color:#ffd54a;cursor:pointer;display:block}#dayq b small{color:#8fa3c8;font-weight:400}
+  #dayq .dw{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}#dayq .dw span{background:#16233f;border:1px solid #2d3f6b;border-radius:7px;padding:2px 7px;font-size:12.5px;color:#c8d4ee}
+  #dayq .dw span.ok{background:#0f2a1c;border-color:#2f9a5a;color:#bff0cf}#dayq .dt{font-size:12.5px;color:#c8d4ee;margin:3px 0}#dayq .dd{color:#7fe0a0;font-weight:700;margin-top:4px}
+  #dayq button{margin-top:6px;background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:9px;padding:4px 9px;cursor:pointer;font:inherit;font-size:12.5px}
+  #pday{text-align:left}#pday .dtoday{display:flex;gap:10px;align-items:flex-start;background:#121c33;border:1px solid #2a3a5c;border-radius:10px;padding:9px 10px}
+  #pday .di{font-size:30px;line-height:1}#pday b{color:#ffd54a}#pause #pday small{display:block;border:0;padding:0;font-size:12px;color:#aebbd8;opacity:1;margin-top:3px;border-radius:0}#pause #pday small.dq{color:#7fe0a0}
+  #pday .dgo{width:100%;margin-top:6px;background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:9px;padding:7px 8px;cursor:pointer;font:inherit;font-size:13px;text-align:left}#pday .dgo:hover{border-color:#3fa0ff}
+  #pday .dnext{display:flex;gap:4px;margin-top:8px}#pday .dnext span{flex:1;text-align:center;font-size:11px;color:#8fa3c8;background:#0e1628;border-radius:7px;padding:4px 0}#pday .dnext i{display:block;font-style:normal;font-size:18px}
+  #pday .dall{margin-top:8px;font-size:12px;color:#8fa3c8}#pday .dall i{font-style:normal;font-size:16px;margin-left:2px;filter:grayscale(1);opacity:.35}#pday .dall i.on{filter:none;opacity:1}
+  #pday .ddev{margin-top:8px;font-size:11px;color:#8fa3c8}#pday .ddev button{background:#16233f;border:1px solid #2d3f6b;border-radius:6px;padding:2px 5px;cursor:pointer;margin:2px}#pday .ddev button.on{border-color:#ffd54a}
   #tablet,#talk{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:84vh;overflow:auto;padding:14px 18px;display:none;z-index:7}
   #talk{top:auto;bottom:24px;transform:translateX(-50%)}
   #tablet.on,#talk.on{display:block}
@@ -131,6 +142,8 @@
     <button data-p="save">💾 Mentés</button>
     <button data-p="quit">💾 Mentés és kilépés a Szólétrába</button>
   </div>
+  <h3 class="pt">📅 Babiloni napok</h3>
+  <div id="pday"></div>
   <h3 class="pt">🧭 Gyors utazás</h3>
   <div class="tgrid" id="tgrid"></div>
   <p class="ps" id="psave"></p>
@@ -159,6 +172,7 @@
 <div id="joy"><i></i></div>
 <div id="mission" class="panel"></div>
 <div id="task" class="panel"></div>
+<div id="dayq" class="panel"></div>
 <div id="tablet" class="panel"></div>
 <div id="talk" class="panel"></div>
 <div id="load"><h2>Szemiramisz függőkertje</h2><div class="bar"><i id="lbar"></i></div><div class="t" id="ltxt">Betöltés...</div></div>

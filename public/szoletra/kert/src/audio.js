@@ -60,6 +60,38 @@ export class GardenAudio {
     for (const [f, q, a] of [[V[0], 7, 1], [V[1], 9, .6]]) { const b = C.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; const bg = C.createGain(); bg.gain.value = a; o.connect(b).connect(bg).connect(g); }
     const d = loud ? .1 + Math.random() * .08 : .06 + Math.random() * .14; this.env(g, t, .015, vol, d); o.start(t); o.stop(t + d + .05);
   }
+  // időjárás: eső (sziszegő zaj két sávban) és viharos szél (lüktető széllökések)
+  weather(rain, wind) {
+    if (!this.ctx || this.muted) return;
+    if (!this.rainG) { this.rainG = [this.loop('highpass', 2200, .4), this.loop('bandpass', 750, .5)]; this.gust = [this.loop('bandpass', 420, .8), this.loop('lowpass', 900, .5)]; }
+    const now = this.ctx.currentTime, set = (g, v) => g.gain.setTargetAtTime(v, now, .6), gs = .6 + .4 * Math.sin(now * .7) * Math.sin(now * .23 + 2);
+    set(this.rainG[0], rain * .2); set(this.rainG[1], rain * .1); set(this.gust[0], wind * .5 * gs); set(this.gust[1], wind * .22 * gs);
+  }
+  thunder(vol) {
+    if (!this.ctx || this.muted || vol <= 0) return;
+    const C = this.ctx, t = C.currentTime;
+    for (const [d, f, a, len] of [[0, 160, 1, 2.6], [.15, 80, .9, 3.4], [.9, 120, .6, 2.2]]) {
+      const src = C.createBufferSource(); src.buffer = this.noise; const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f; lp.Q.value = .7; const g = C.createGain();
+      src.connect(lp).connect(g).connect(this.master); g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.9 * vol * a, t + d + .08); g.gain.exponentialRampToValueAtTime(.001, t + d + len);
+      src.start(t + d, Math.random() * 2); src.stop(t + d + len + .1);
+    }
+  }
+  // kürtszó: két hang, fémes felhangokkal
+  horn(vol, pan) {
+    if (!this.ctx || this.muted || vol <= 0) return;
+    const C = this.ctx, t = C.currentTime, p = C.createStereoPanner(); p.pan.value = pan; p.connect(this.master);
+    for (const [st, f, len] of [[0, 233, .5], [.55, 311, .45], [1.05, 349, 1.1]]) {
+      const o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * .97, t + st); o.frequency.linearRampToValueAtTime(f, t + st + .08);
+      const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; const g = C.createGain(); o.connect(lp).connect(g).connect(p);
+      this.env(g, t + st, .05, .05 * vol, len); o.start(t + st); o.stop(t + st + len + .1);
+    }
+  }
+  // taps: sok rövid zajcsattanás
+  clap(vol, pan) {
+    if (!this.ctx || this.muted || vol <= 0) return;
+    const C = this.ctx, t = C.currentTime;
+    for (let k = 0; k < 40; k++) { const tk = t + Math.random() * 2.4, src = C.createBufferSource(); src.buffer = this.noise; const f = C.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1100 + Math.random() * 900; f.Q.value = 1.2; const g = C.createGain(), p = C.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan + Math.random() * .8 - .4)); src.connect(f).connect(g).connect(p).connect(this.master); this.env(g, tk, .002, .06 * vol * (1 - (tk - t) / 3), .05); src.start(tk, Math.random() * 2); src.stop(tk + .08); }
+  }
   hammer(vol, pan) {
     if (!this.ctx || this.muted || vol <= 0) return;
     const C = this.ctx, t = C.currentTime, f0 = 720 + Math.random() * 60, p = C.createStereoPanner(); p.pan.value = pan; p.connect(this.master);

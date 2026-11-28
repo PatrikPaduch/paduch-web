@@ -2,6 +2,7 @@ import { CITY_WORDS } from './citydata.js';
 import { HARBOUR_WORDS } from './harbourdata.js';
 import { PALACE_WORDS } from './palacedata.js';
 import { TOWER_WORDS } from './zikkdata.js';
+import { DAY_WORDS } from './daysdata.js';
 // Kertszavak: ha a törpe a közelébe ér, felbukkan az angol neve. Az első felfedezés +5 pont, és a szó
 // bekerül a Szólétra szavai közé (saját szó, "kert" témával). [angol, magyar, példamondat, fordítás, szint]
 export const GARDEN_WORDS = {
@@ -53,4 +54,7 @@ export const PAL_IDS = Object.keys(PALACE_WORDS);
 // Bábel tornya szavai "torony" témával
 for (const [k, v] of Object.entries(TOWER_WORDS)) GARDEN_WORDS[k] = [...v, 'torony'];
 export const TOWER_IDS = Object.keys(TOWER_WORDS);
+// a változatos napok szavai (csak a saját napjukon találhatók meg) "város" témával
+for (const [k, v] of Object.entries(DAY_WORDS)) GARDEN_WORDS[k] = [...v, 'város'];
+export const DAY_IDS = Object.keys(DAY_WORDS);
 export const WORD_IDS = Object.keys(GARDEN_WORDS);

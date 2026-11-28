@@ -5,8 +5,9 @@ import { TABLETS as TABLETS0, TASKS } from './tablets.js';
 import { CONVOS, CITY_TABLETS } from './citydata.js';
 import { HARBOUR_CONVOS, HARBOUR_TABLETS, HARBOUR_WORDS, RIDE_TALK } from './harbourdata.js';
 import { PALACE_CONVOS } from './palacedata.js';
+import { DAY_CONVOS } from './daysdata.js';
 import { TOWER_CONVOS, TOWER_WAIT, TRIALS, BRICK_POOL, GAP_ITEMS, ORDER_ITEMS, FLOORS, IDIOM_ITEMS, LISTEN_ITEMS, INTERP_ITEMS, SKY_GAP, STAR_POOL } from './zikkdata.js';
-Object.assign(CONVOS, HARBOUR_CONVOS, PALACE_CONVOS, TOWER_CONVOS);
+Object.assign(CONVOS, HARBOUR_CONVOS, PALACE_CONVOS, TOWER_CONVOS, DAY_CONVOS);
 // Bábel tornya: melyik tanító hányadik emelet próbáját adja; a mázas téglák színe emeletenként
 const TOWER_NPC = { tbrick: 1, tforeman: 2, tworkers: 3, tmerchant: 4, tstory: 5, tenvoy: 6, tpriest: 7 };
 const BANDC = ['#efeae0', '#2a2a2e', '#7b2d6e', '#2c5aa8', '#d9772e', '#c7ccd4', '#d8a93a'];
@@ -406,6 +407,7 @@ export function createLearn(ctx) {
       if (next && conv.id !== 'king') setTimeout(() => ctx.toast('👑 Kihallgatás', next), 1200);
       CD._palota = P; sv('kert-beszelgetes', CD);
     }
+    ctx.onConv && ctx.onConv(conv.id);
     conv = null;
   }
 
@@ -448,6 +450,7 @@ export function createLearn(ctx) {
     labelMode: id => (MS && id === MS.id) ? 'hide' : isDue(id) ? 'quiz' : 'normal',
     mapHint: () => MS && MS.hint,
     slow() {
+      if (MS && !reachable(MS.id)) newMission();   // pl. egy tegnapi napszó: ma nem található meg
       if (!MS && performance.now() > nextMs && ctx.foundCount() >= 3) newMission();
       else if (!MS) renderMission();
       const t = taskOf();
@@ -462,6 +465,7 @@ export function createLearn(ctx) {
     },
     closeAll() { talkEl.classList.remove('on'); tabEl.classList.remove('on'); trial = null; },
     towerDone: () => (CD._torony || { done: 0 }).done,
+    cd: () => CD, saveCD: () => sv('kert-beszelgetes', CD),
     rideTick(dt) {
       if (!ride) return; ride.t += dt; const L = RIDE_TALK[ride.dir];
       const say = (en, hu, extra) => { who = { name: ride.n.name, person: { talk() { } }, ride: true }; talk(en, hu, extra); };

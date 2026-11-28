@@ -10,7 +10,8 @@ import { loadHero } from './hero.js';
 import { ShadowCache } from './shadowcache.js';
 import { makeLife } from './life.js';
 import { GardenAudio } from './audio.js';
-import { GARDEN_WORDS, WORD_IDS, CITY_IDS, HARB_IDS, PAL_IDS, TOWER_IDS } from './words.js';
+import { GARDEN_WORDS, WORD_IDS, CITY_IDS, HARB_IDS, PAL_IDS, TOWER_IDS, DAY_IDS } from './words.js';
+import { buildDays } from './days.js';
 import { buildCity, CITY_TRIG, CITY_MAP } from './city.js';
 import { buildHarbour, HARB_MAP } from './harbour.js';
 import { buildPalace, PAL_LIGHTS, PAL_BLDG } from './palace.js';
@@ -54,7 +55,7 @@ const moonDir = new THREE.Vector3(-.35, .78, -.52).normalize();
 const moon = new THREE.Mesh(new THREE.CircleGeometry(38, 32), new THREE.MeshBasicMaterial({ color: '#fff6dc', fog: false, transparent: true, opacity: 0, depthWrite: false })); moon.position.copy(moonDir).multiplyScalar(1400); moon.lookAt(0, 0, 0); scene.add(moon);
 const lampLights = Array.from({ length: q.lights }, () => { const l = new THREE.PointLight('#ffb35a', 0, 15, 2); scene.add(l); return l; });
 
-let hero = null, M = null, life = null, sc = null, blob = null, ready = false, learn = null, city = null, harbour = null, palace = null, zigg = null;
+let hero = null, M = null, life = null, sc = null, blob = null, ready = false, learn = null, city = null, harbour = null, palace = null, zigg = null, days = null;
 const audio = new GardenAudio();
 const me = { x: 0, z: 104, y: 0, ang: Math.PI, spd: 0 };
 const cam = { yaw: 0, pitch: .3, dist: 7.5 };
@@ -70,13 +71,17 @@ async function init() {
   prog('Növények...'); await tick(); scene.add(await buildFlora(M, q, () => prog()));
   prog('Babilon utcái...'); await tick(); city = buildCity(M, q); scene.add(city.root); harbour = buildHarbour(M, q); scene.add(harbour.root); palace = buildPalace(M, q); scene.add(palace.root);
   zigg = buildZiggurat(M, q, towerDone()); scene.add(zigg.root); TRIG.push(...CITY_TRIG);
+  // a mai nap a városban (eső, karaván, esküvő...): a dátumból jön
+  days = buildDays(M, q, { TRIG, cityPeople: city.people, audio, pan: (x, z) => panTo(x, z), addPts, toast: toastK }); scene.add(days.root); days.set(days.todayType()); days.instantWeather();
   prog('A törpe...'); hero = await loadHero(q.rigged); scene.add(hero.object); hero.object.traverse(o => { if (o.isMesh && !o.material.blending) o.castShadow = true; });
   prog('Élet a kertben...'); life = makeLife(scene, q);
   learn = createLearn({ scene, me, TRIG, isFound: id => found.has(id), foundCount: () => found.size, say, addPts, maxH: () => LV[maxI].h, zoneAt, toast: toastK,
     rank: () => ({ tier: rk ? rk.t : 0, need: rk ? Math.max(0, T[5] - rk.p) : 0 }),
     onSeal: () => showSeal(),
     onFloor: f => floorDone(f),
+    onConv: id => days && days.onConv(id),
     startRide: dir => { if (sitting) toggleSit(); if (autoWalk) setAuto(false); harbour.rideStart(dir); cam.yaw = (dir > 0 ? 0 : Math.PI) + Math.PI; cam.dist = 9; cam.pitch = .32; zoneShow('Átkelés az Eufráteszen', 'Szóköz: átugrás'); } });
+  days.bindLearn(learn);
   { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })); blob.renderOrder = 3; scene.add(blob); }
   if (q.shadow) { sc = new ShadowCache(renderer, sun); sc.collect(scene, [hero.object]); const hp = new THREE.Vector3(); sc.dynPoint = () => hp.set(me.x, me.y + 1.1, me.z); }
@@ -86,12 +91,13 @@ async function init() {
   drawMapBase(); refreshUI(); updWordCount(); showSeal();
   ready = true; document.getElementById('load').classList.add('off');
   if (resumed) { zoneShow('Folytatod, ahol abbahagytad', resumed.zone || ''); zoneNow = zoneOf()[0]; } else zoneShow('Szemiramisz függőkertje', 'Üdv a kertben');
+  setTimeout(dayBanner, 3600);
   loop();
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 /* ---------- napszak: valós idő vagy kiválasztott ---------- */
-let tod = localStorage.getItem('kert-tod') || 'real', dayF = 1, lastSun = new THREE.Vector3(), sunT = 0;
+let tod = localStorage.getItem('kert-tod') || 'real', dayF = 1, lastSun = new THREE.Vector3(), sunT = 0, hemiBase = .3;
 let hourOverride = null, camLift = 0;   // csak teszteléshez (__kert.hour)
 const hourNow = () => hourOverride ?? (tod === 'dawn' ? 6.2 : tod === 'day' ? 15.5 : tod === 'dusk' ? 17.55 : tod === 'eve' ? 19.4 : tod === 'night' ? 22.3 : tod === 'late' ? 2.5 : (d => d.getHours() + d.getMinutes() / 60)(new Date()));
 const sunDir = new THREE.Vector3(), lightDir = new THREE.Vector3();
@@ -111,6 +117,18 @@ function updateSky(force) {
   scene.fog.color.copy(FOG_D).lerp(FOG_S, low * dayF * .6).lerp(FOG_N, 1 - dayF);
   stars.material.opacity = Math.pow(1 - dayF, 2); moon.material.opacity = 1 - dayF;
   lampLights.forEach(l => l.visible = dayF < .85);   // nappal ki vannak véve a számításból (különben minden pixel fizet értük)
+  // időjárás a mai napból: felhős vagy poros ég, sűrűbb köd, gyengébb napfény
+  const W = days ? days.weather : null, wk = W && W.kind ? W.k : 0;
+  scene.fog.density = .0016;
+  if (wk > 0) {
+    const dust = W.kind === 'dust';
+    C1.set(dust ? '#bf8f5c' : '#8c96a1').lerp(FOG_N, 1 - dayF); scene.fog.color.lerp(C1, wk);
+    scene.fog.density = .0016 + wk * (dust ? .019 : .0075);
+    sun.intensity *= 1 - wk * (dust ? .5 : .68); if (dust && useSun) sun.color.lerp(C1.set('#ff9a50'), wk * .5);
+    hemi.intensity *= 1 + wk * .25; scene.environmentIntensity *= 1 - wk * .3;
+    stars.material.opacity *= 1 - wk; moon.material.opacity *= 1 - wk;
+  }
+  hemiBase = hemi.intensity;
   if (M) {
     M.lamp.emissiveIntensity = .15 + 3.6 * (1 - dayF);
     M.water.emissive.set('#0a3a55'); M.water.emissiveIntensity = .35 * (1 - dayF);
@@ -157,7 +175,7 @@ function togglePause(on = !paused) {
   if (!ready) return;
   paused = on; const el = document.getElementById('pause'); el.classList.toggle('on', on);
   for (const k in keys) keys[k] = false;
-  if (on) { pauseInfo(); travelList(); audio.pause(true); learn && learn.closeAll(); } else { audio.pause(document.hidden); clock.getDelta(); }
+  if (on) { pauseInfo(); travelList(); dayPanel(); audio.pause(true); learn && learn.closeAll(); } else { audio.pause(document.hidden); clock.getDelta(); }
 }
 document.getElementById('pause').addEventListener('click', e => {
   const b = e.target.closest('[data-p]'); if (!b) return;
@@ -167,6 +185,8 @@ document.getElementById('pause').addEventListener('click', e => {
   if (a === 'quit') { saveGame(true); SYNC.flush ? SYNC.flush(true).finally(() => { location.href = '../index.html'; }) : setTimeout(() => { location.href = '../index.html'; }, 400); }
   if (a === 'home') travel(0);
   if (a === 'tp') travel(+b.dataset.i);
+  if (a === 'dgo') { const D = days.day; travelTo(D.go[0], D.go[1], D.go[2], D.name, D.where); }
+  if (a === 'dday' && DEV) { if (days.force(b.dataset.id) && sc) sc.collect(scene, [hero.object]); if (sc) sc.invalidate(); updateSky(true); dayPanel(); }
 });
 /* ---------- gyors utazás a menüből ---------- */
 // [felirat, x, z, nézési irány, helyszín, alcím, feltétel]
@@ -193,11 +213,17 @@ function travelList() {
 }
 function travel(i) {
   const t = TRAVEL[i]; if (t[6] && t[6]()) return;
-  const x = tv(t[1]), z = tv(t[2]), ang = tv(t[3]);
+  travelTo(tv(t[1]), tv(t[2]), tv(t[3]), tv(t[4]), tv(t[5]));
+}
+function travelTo(x, z, ang, zone, sub) {
   Object.assign(me, { x, z, y: heightAt(x, z), ang, spd: 0 }); cam.yaw = ang + Math.PI; sitting = null; pose = null;
   if (z > PLAZA.z1 && autoWalk) setAuto(false); else if (autoWalk) nearestWp();
-  learn && learn.closeAll(); togglePause(false); zoneNow = tv(t[4]); zoneShow(tv(t[4]), tv(t[5]));
+  learn && learn.closeAll(); togglePause(false); zoneNow = zone; zoneShow(zone, sub);
 }
+/* ---------- változatos napok: a mai nap a menüben és felirattal ---------- */
+let cityBanner = false, bannerT = -1e9;
+function dayPanel() { const el = document.getElementById('pday'); if (el && days) el.innerHTML = days.pauseHTML(DEV); }
+function dayBanner() { if (!days || !days.day || paused) return; const D = days.day; bannerT = performance.now(); if (me.z > PLAZA.z1) cityBanner = true; zoneShow(`${D.icon} Ma Babilonban: ${D.name}`, D.sub); }
 document.getElementById('menu').addEventListener('click', () => togglePause());
 setInterval(() => { if (ready && !paused) saveGame(false); }, 30000);
 addEventListener('pagehide', () => { saveGame(false); SYNC.flush && SYNC.flush(true); });
@@ -215,7 +241,7 @@ canvas.addEventListener('wheel', e => { cam.dist = Math.min(40, Math.max(2.5, ca
   const up = () => { joy.on = false; joy.x = joy.y = 0; knob.style.transform = ''; }; j.addEventListener('pointerup', up); j.addEventListener('pointercancel', up); }
 
 let maxI = 0;
-const canStand = (x, z, h0) => !blocked(x, z) && !(x < -80.4 && z > PLAZA.z1 && z < 232 && palaceLocked()) && !(x > 84 && z > PLAZA.z1 && z < 232 && heightAt(x, z) > zigH + .45) && Math.abs(heightAt(x, z) - h0) < .7 && (z > PLAZA.z1 || x < PLAZA.x0 || heightAt(x, z) <= LV[maxI].h + .45);   // a teraszok rangzára csak a kertben
+const canStand = (x, z, h0) => !blocked(x, z) && !(days && days.blocked(x, z)) && !(x < -80.4 && z > PLAZA.z1 && z < 232 && palaceLocked()) && !(x > 84 && z > PLAZA.z1 && z < 232 && heightAt(x, z) > zigH + .45) && Math.abs(heightAt(x, z) - h0) < .7 && (z > PLAZA.z1 || x < PLAZA.x0 || heightAt(x, z) <= LV[maxI].h + .45);   // a teraszok rangzára csak a kertben
 let stepDist = 0;
 // tempó: séta / futás (Shift) m/s-ban; a választás megmarad
 const PACE = { slow: [2.9, 6.2], norm: [4.4, 8.5], fast: [6.5, 12] };
@@ -345,7 +371,7 @@ function placePlate() {
 
 /* ---------- kertszavak ---------- */
 let found = new Set(JSON.parse(localStorage.getItem('kert-szavak') || '[]')), wordNow = null, wordHide = 0;
-const cool = {}, CITY_SET = new Set(CITY_IDS), HARB_SET = new Set(HARB_IDS), PAL_SET = new Set(PAL_IDS), TOWER_SET = new Set(TOWER_IDS);
+const cool = {}, CITY_SET = new Set(CITY_IDS), HARB_SET = new Set(HARB_IDS), PAL_SET = new Set(PAL_IDS), TOWER_SET = new Set(TOWER_IDS), DAY_SET = new Set(DAY_IDS);
 let VOICE = null; const pickVoice = () => { const vs = speechSynthesis.getVoices(); VOICE = vs.find(v => /en-GB/i.test(v.lang) && /natural|neural|online/i.test(v.name)) || vs.find(v => /en-US/i.test(v.lang) && /natural|neural|online/i.test(v.name)) || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null; };
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(t, rate = .88) { if (!('speechSynthesis' in window)) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = VOICE ? VOICE.lang : 'en-GB'; if (VOICE) u.voice = VOICE; u.rate = rate; speechSynthesis.speak(u); }
@@ -360,11 +386,11 @@ function addPts(n, title, sub, word) {
 }
 function discover(id) {
   const w = GARDEN_WORDS[id]; found.add(id); localStorage.setItem('kert-szavak', JSON.stringify([...found]));
-  addPts(5, `Új ${TOWER_SET.has(id) ? 'torony' : PAL_SET.has(id) ? 'palota' : HARB_SET.has(id) ? 'kikötői ' : CITY_SET.has(id) ? 'város' : 'kert'}szó: ${w[0]}`, '+5 pont · bekerült a Szólétrába', w); updWordCount(); learn && learn.onDiscover(id);
+  addPts(5, `Új ${DAY_SET.has(id) ? 'napi ' : TOWER_SET.has(id) ? 'torony' : PAL_SET.has(id) ? 'palota' : HARB_SET.has(id) ? 'kikötői ' : CITY_SET.has(id) ? 'város' : 'kert'}szó: ${w[0]}`, '+5 pont · bekerült a Szólétrába', w); updWordCount(); learn && learn.onDiscover(id);
   if (!sitting && pose !== 'dance') { pose = 'interact'; poseT = 1.3; }
 }
 /* ---------- lebegő szócímkék: a szó ott marad a tárgy fölött, amíg a közelben vagy ---------- */
-const LABEL_H = { idiom: 1.6, storyteller: 2.6, tale: 1.2, envoy: 2.8, interpreter: 2.6, treaty: 1.3, astronomer: 2.8, zodiac: 2.6, comet: 5.2, constellation: 5.2, eclipse: 5.2, planet: 5.4, horizon: 1.8, omen: 1.4, fate: 2.7, ziggurat: 9, priest: 2.6, clay: 1.2, straw: 2, mould: 1.7, brick: 2.2, bucket: 1.5, kiln: 4.6, sledge: 1.9, worker: 3, scaffolding: 14, shrine: 10, foreman: 2.8, language: 2.8, audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
+const LABEL_H = { umbrella: 3.2, puddle: 1.1, thunder: 7, soaked: 2.5, camel: 3.2, caravan: 3.6, saddle: 3, traveller: 2, wedding: 6, bride: 2.6, groom: 2.6, guest: 2.5, sandstorm: 6.5, dust: 1.6, scarf: 2.5, shutter: 3.2, porter: 2.6, gangplank: 1.5, pearl: 1.6, ivory: 1.3, crier: 2.8, decree: 2, crowd: 2.7, trumpet: 2.6, juggler: 2.7, acrobat: 2.7, bunting: 4.4, applause: 2.6, wheat: 1.6, sickle: 2.3, sheaf: 1.5, grain: 1.5, idiom: 1.6, storyteller: 2.6, tale: 1.2, envoy: 2.8, interpreter: 2.6, treaty: 1.3, astronomer: 2.8, zodiac: 2.6, comet: 5.2, constellation: 5.2, eclipse: 5.2, planet: 5.4, horizon: 1.8, omen: 1.4, fate: 2.7, ziggurat: 9, priest: 2.6, clay: 1.2, straw: 2, mould: 1.7, brick: 2.2, bucket: 1.5, kiln: 4.6, sledge: 1.9, worker: 3, scaffolding: 14, shrine: 10, foreman: 2.8, language: 2.8, audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
 const labelTex = {};
 function getLabelTex(id, quiz) {
   const key = id + (quiz ? '?' : ''); if (labelTex[key]) return labelTex[key];
@@ -426,12 +452,12 @@ function wordCheck() {
   }
   const el = document.getElementById('word');
   if (!best) { if (wordNow && performance.now() > wordHide) { cool[wordNow] = performance.now() + 25000; wordNow = null; el.classList.remove('on'); learn.cardHidden(); } return; }
-  wordHide = performance.now() + 1500;
+  wordHide = performance.now() + 1500; days.seen(best);
   if (best === wordNow && !learn.needsQuiz(best)) return;
   if (wordNow) cool[wordNow] = performance.now() + 25000;
   if (learn.takeWord(best)) { wordNow = best; return; }
   wordNow = best; const w = GARDEN_WORDS[best], isNew = !found.has(best);
-  el.innerHTML = `<span class="tag">${TOWER_SET.has(best) ? (isNew ? '✨ Új toronyszó' : 'Toronyszó') : PAL_SET.has(best) ? (isNew ? '✨ Új palotaszó' : 'Palotaszó') : HARB_SET.has(best) ? (isNew ? '✨ Új kikötői szó' : 'Kikötői szó') : CITY_SET.has(best) ? (isNew ? '✨ Új városszó' : 'Városszó') : (isNew ? '✨ Új kertszó' : 'Kertszó')}</span><div class="en">${w[0]}<button data-say="${w[0]}">🔊</button></div><div class="hu">${w[1]}</div><div class="ex">${w[2]} <button data-say="${w[2].replace(/"/g, '&quot;')}" style="background:none;border:0;cursor:pointer">🔊</button><i>${w[3]}</i></div>`;
+  el.innerHTML = `<span class="tag">${DAY_SET.has(best) ? (isNew ? '✨ Új napi szó' : 'Napi szó') : TOWER_SET.has(best) ? (isNew ? '✨ Új toronyszó' : 'Toronyszó') : PAL_SET.has(best) ? (isNew ? '✨ Új palotaszó' : 'Palotaszó') : HARB_SET.has(best) ? (isNew ? '✨ Új kikötői szó' : 'Kikötői szó') : CITY_SET.has(best) ? (isNew ? '✨ Új városszó' : 'Városszó') : (isNew ? '✨ Új kertszó' : 'Kertszó')}</span><div class="en">${w[0]}<button data-say="${w[0]}">🔊</button></div><div class="hu">${w[1]}</div><div class="ex">${w[2]} <button data-say="${w[2].replace(/"/g, '&quot;')}" style="background:none;border:0;cursor:pointer">🔊</button><i>${w[3]}</i></div>`;
   el.classList.add('on'); say(w[0]);
   if (isNew) discover(best);
 }
@@ -439,7 +465,7 @@ document.getElementById('word').addEventListener('click', e => { const b = e.tar
 function updWordCount() { document.getElementById('wcount').textContent = `${found.size} / ${WORD_IDS.length} · lista`; }
 document.getElementById('wcount').addEventListener('click', () => {
   const el = document.getElementById('wlist');
-  el.innerHTML = `<button class="x">✕</button><h2>Szavaid · ${found.size} / ${WORD_IDS.length}</h2><p style="color:#8fa3c8;font-size:13px;margin:0 0 10px">Sétálj oda a növényekhez, épületekhez, árusokhoz: az angol nevük felbukkan, és az új szavak bekerülnek a Szólétrába.</p>${[['🌿 A kert', WORD_IDS.filter(i => !CITY_SET.has(i) && !HARB_SET.has(i) && !PAL_SET.has(i) && !TOWER_SET.has(i))], ['🏛️ Babilon utcái (az Istár-kapun túl)', CITY_IDS], ['⚓ A túlparti kikötő (Ezüst csillagtól)', HARB_IDS], ['👑 A királyi palota (a nyugati kapun túl)', PAL_IDS], ['🏛 Bábel tornya (a keleti kapun túl)', TOWER_IDS]].map(([h, ids]) => `<h3 style="font-size:14px;margin:12px 0 6px;color:#ffd54a">${h} · ${ids.filter(i => found.has(i)).length} / ${ids.length}</h3><div class="g">${ids.map(id => found.has(id) ? `<div class="w"><b>${GARDEN_WORDS[id][0]}</b> · <span>${GARDEN_WORDS[id][1]}</span></div>` : `<div class="w no"><b>???</b> · <span>még nem találtad meg</span></div>`).join('')}</div>`).join('')}`;
+  el.innerHTML = `<button class="x">✕</button><h2>Szavaid · ${found.size} / ${WORD_IDS.length}</h2><p style="color:#8fa3c8;font-size:13px;margin:0 0 10px">Sétálj oda a növényekhez, épületekhez, árusokhoz: az angol nevük felbukkan, és az új szavak bekerülnek a Szólétrába.</p>${[['🌿 A kert', WORD_IDS.filter(i => !CITY_SET.has(i) && !HARB_SET.has(i) && !PAL_SET.has(i) && !TOWER_SET.has(i) && !DAY_SET.has(i))], ['🏛️ Babilon utcái (az Istár-kapun túl)', CITY_IDS], ['⚓ A túlparti kikötő (Ezüst csillagtól)', HARB_IDS], ['👑 A királyi palota (a nyugati kapun túl)', PAL_IDS], ['🏛 Bábel tornya (a keleti kapun túl)', TOWER_IDS], ['📅 Babiloni napok (mindegyik csak a maga napján)', DAY_IDS]].map(([h, ids]) => `<h3 style="font-size:14px;margin:12px 0 6px;color:#ffd54a">${h} · ${ids.filter(i => found.has(i)).length} / ${ids.length}</h3><div class="g">${ids.map(id => found.has(id) ? `<div class="w"><b>${GARDEN_WORDS[id][0]}</b> · <span>${GARDEN_WORDS[id][1]}</span></div>` : `<div class="w no"><b>???</b> · <span>még nem találtad meg</span></div>`).join('')}</div>`).join('')}`;
   el.classList.add('on'); el.querySelector('.x').onclick = () => el.classList.remove('on');
 });
 let toastT = null;
@@ -600,6 +626,7 @@ function drawMap() {
   // zárt teraszok: sötétítés
   if (!inCity && !inHarb && !inPal && !inZig) for (let i = maxI + 1; i < LV.length; i++) { const r = LV[i].r; mg.fillStyle = 'rgba(10,15,30,.28)'; mg.fillRect(mx2(-r), mz2(-r), mx2(r) - mx2(-r), mz2(r) - mz2(-r)); }
   mg.fillStyle = '#7fe0a0'; for (const t of TRIG) if (!found.has(t.w) && Math.hypot(t.x - me.x, t.z - me.z) < 24) { mg.beginPath(); mg.arc(mx2(t.x), mz2(t.z), 2.5, 0, 6.3); mg.fill(); }
+  { const dm = days && days.mapMark(); if (dm && inCity) { const X = mx2(dm.x), Y = mz2(dm.z); if (dm.ring) { const pr = 12 + 3 * Math.sin(performance.now() / 260); mg.strokeStyle = '#7fe0a0'; mg.lineWidth = 3; mg.beginPath(); mg.arc(X, Y, pr + 8, 0, 6.3); mg.stroke(); } mg.font = '20px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText(dm.icon, X, Y); mg.textBaseline = 'alphabetic'; } }
   const mh = learn && learn.mapHint(); if (mh) { const pr = 10 + 3 * Math.sin(performance.now() / 300); mg.strokeStyle = '#ffd54a'; mg.lineWidth = 3; mg.beginPath(); mg.arc(mx2(mh.x), mz2(mh.z), pr + 12, 0, 6.3); mg.stroke(); }
   const x = mx2(me.x), y = mz2(me.z);
   mg.save(); mg.translate(x, y); mg.rotate(-me.ang + Math.PI); mg.fillStyle = '#ffd54a'; mg.strokeStyle = '#000'; mg.lineWidth = 2;
@@ -628,7 +655,8 @@ function audioState() {
 const panTo = (x, z) => { const dx = x - me.x, dz = z - me.z, l = Math.hypot(dx, dz); if (l < .5) return 0; return Math.max(-1, Math.min(1, (dx * Math.cos(cam.yaw) - dz * Math.sin(cam.yaw)) / l)); };
 function cityAudio() {
   const st = audioState().city; if (!st) return;
-  audio.cityUpdate({ market: st.market, marketPan: panTo(...st.marketSrc) * .6, haggle: st.haggle, river: st.river, music: st.music, musicPan: panTo(...st.musicSrc), fire: st.fire, dogs: st.dogs });
+  const ds = days && days.sound(me), dm = ds && ds.music > st.music;
+  audio.cityUpdate({ market: st.market, marketPan: panTo(...st.marketSrc) * .6, haggle: st.haggle, river: st.river, music: dm ? ds.music : st.music, musicPan: dm ? panTo(ds.x, ds.z) : panTo(...st.musicSrc), fire: st.fire, dogs: st.dogs });
 }
 
 /* ---------- fő ciklus ---------- */
@@ -657,14 +685,17 @@ function frame(fixedDt) {
   sc && sc.before(dt);
   if (M.water.normalMap) M.water.normalMap.offset.set(t * .015, t * .01);
   M.fall.map.offset.y = t * 1.2;
-  life.update(t, dt, me, dayF); if (city.update(t, dt, me, hourNow()) && sc) sc.invalidate(); harbour.update(t, dt, me, hourNow()); palace.update(t, dt, me); zigg.update(t, dt, me, dayF);
+  life.update(t, dt, me, dayF); if (city.update(t, dt, me, hourNow()) && sc) sc.invalidate();
+  if (days.update(t, dt, me, hourNow(), dayF, camera, palace.inHall(me)) && sc) sc.invalidate();
+  { const W = days.weather; if (W.k > 0 && W.k < 1) updateSky(); hemi.intensity = hemiBase + days.flash * 1.8; } harbour.update(t, dt, me, hourNow()); palace.update(t, dt, me); zigg.update(t, dt, me, dayF);
   for (const [kind, x, z] of [...city.events.splice(0), ...harbour.events.splice(0)]) if (kind === 'hammer') { const d = Math.hypot(x - me.x, z - me.z); if (d < 45) audio.hammer(Math.pow(1 - d / 45, 1.6), panTo(x, z)); } labelsTick(dt, t); learn.update(dt, t);
   renderer.render(scene, camera);
   sc && sc.after();
   placePlate();
   if ((slowT += dt) > .25) {
     slowT = 0; drawMap(); cullSmall(); wordCheck(); labelsPick(); learn.slow(); zigRefresh(); lockPrompt(); assignLamps(); audio.update(audioState()); cityAudio();
-    const [a, b] = zoneOf(); if (a !== zoneNow) { if (zoneNow) zoneShow(a, b); zoneNow = a; }
+    { const W = days.weather, k = W.kind ? W.k : 0; audio.weather(W.kind === 'rain' && !palace.inHall(me) ? k : 0, W.kind === 'dust' ? k : W.kind === 'rain' ? k * .3 : 0); if (days.slow() === 'new') { if (sc) { sc.collect(scene, [hero.object]); sc.invalidate(); } setTimeout(dayBanner, 500); } }
+    const [a, b] = zoneOf(); if (a !== zoneNow) { if (zoneNow) zoneShow(a, b); zoneNow = a; if (me.z > PLAZA.z1 && !cityBanner && performance.now() - bannerT > 60000) { cityBanner = true; setTimeout(dayBanner, 3400); } }
     const lh = !sitting && learn.hint(), bn = !sitting && !lh && !autoWalk && nearBench(); const h = document.getElementById('hint'); h.textContent = sitting ? 'E vagy mozgás: felállsz' : lh || 'E: leülsz a padra'; h.classList.toggle('on', !!(lh || bn || sitting));
   }
   fN++; fT += dt;
@@ -703,5 +734,5 @@ try {
   else { const m = JSON.parse(localStorage.getItem('kert-mentes')); if (m && isFinite(m.x) && isFinite(m.z) && !blocked(m.x, m.z)) { Object.assign(me, { x: m.x, z: m.z, y: m.y || 0, ang: m.ang || 0 }); cam.yaw = m.yaw ?? cam.yaw; cam.pitch = m.pitch ?? cam.pitch; cam.dist = m.dist ?? cam.dist; resumed = m; } }
 } catch (e) { }
 if (autoWalk) nearestWp();
-window.__kert = { set lift(v) { camLift = v; }, zigg: n => { zigg.setLit(n); if (sc) sc.invalidate(); }, get learnT() { return learn; }, get hero() { return hero; }, get city() { return city; }, get harbour() { return harbour; }, get learn() { return learn; }, set hour(v) { hourOverride = v; updateSky(true); }, me, cam, get auto() { return autoWalk; }, set auto(v) { autoWalk = v; }, renderer, scene, get sc() { return sc; }, CULL, setTod: v => { tod = v; updateSky(true); }, frames: (n, d = 1 / 60) => { for (let i = 0; i < n; i++) { clock.elapsedTime += d; frame(d); } }, get dayF() { return dayF; } };
+window.__kert = { camera, set lift(v) { camLift = v; }, zigg: n => { zigg.setLit(n); if (sc) sc.invalidate(); }, get learnT() { return learn; }, get hero() { return hero; }, get city() { return city; }, get harbour() { return harbour; }, get learn() { return learn; }, set hour(v) { hourOverride = v; updateSky(true); }, me, cam, get auto() { return autoWalk; }, set auto(v) { autoWalk = v; }, renderer, scene, get sc() { return sc; }, CULL, setTod: v => { tod = v; updateSky(true); }, frames: (n, d = 1 / 60) => { for (let i = 0; i < n; i++) { clock.elapsedTime += d; frame(d); } }, get dayF() { return dayF; }, get days() { return days; }, setDay: id => { const f = days.force(id); if (f && sc) sc.collect(scene, [hero.object]); if (sc) sc.invalidate(); updateSky(true); return days.cur; } };
 init().catch(e => { document.getElementById('ltxt').textContent = 'Hiba: ' + e.message; console.error(e); });

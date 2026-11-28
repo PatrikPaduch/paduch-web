@@ -246,7 +246,7 @@ const PEOPLE_LOOKS = [
 ];
 const PERSON_MAT = {};
 export function makePerson(i, scale = 1) {
-  const L = PEOPLE_LOOKS[i % PEOPLE_LOOKS.length], g = new THREE.Group(), P = {};
+  const L = typeof i === 'object' ? i : PEOPLE_LOOKS[i % PEOPLE_LOOKS.length], g = new THREE.Group(), P = {};   // i: sorszám vagy saját kinézet
   // a darabokat csuklónként (test, fej, 2 kar, 2 láb) EGY hálóba vonjuk össze csúcsszínekkel: 16 helyett 6 rajzolás/fő
   const parts = [];
   const mesh = (geo, c, x, y, z, parent) => { const o = new THREE.Object3D(); o.position.set(x, y, z); o.material = { side: THREE.FrontSide }; parts.push({ o, geo, c, parent }); return o; };
@@ -277,7 +277,7 @@ export function makePerson(i, scale = 1) {
   g.scale.setScalar(scale);
   let ph = Math.random() * 6, t = Math.random() * 9, talk = 0;
   return {
-    object: g, arm: null,
+    object: g, arm: null, parts: P,
     talk(sec) { talk = sec; },
     update(dt, speed = 0) {
       t += dt; talk = Math.max(0, talk - dt); const k = Math.min(1, speed / 1.2); ph += dt * (5 + speed * 2) * k; const s = Math.sin(ph);
