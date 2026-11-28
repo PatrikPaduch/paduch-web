@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { emblem, TIERS, STEPS } from '../../emblems.js';
-import { PLAZA, CITY, PIER, PAL, LV, LAKE, ISLAND, CANALS, FOUNTAINS, BASIN, STAIRS, P, heightAt, blocked, layout, makeTour, wordTriggers, LOCK_TIER, maxLevelFor } from './world.js';
+import { PLAZA, CITY, PIER, PAL, ZG, ZGATE, ZIG_TIERS, ZIG_FLOOR_Y, ZIG_STAIRS, LV, LAKE, ISLAND, CANALS, FOUNTAINS, BASIN, STAIRS, P, heightAt, blocked, layout, makeTour, wordTriggers, LOCK_TIER, maxLevelFor } from './world.js';
 import { loadTextures, makeMats, TEX, U } from './mats.js';
 import { buildWorld, LANTERNS } from './build.js';
 import { buildFlora, CULL } from './flora.js';
@@ -10,10 +10,12 @@ import { loadHero } from './hero.js';
 import { ShadowCache } from './shadowcache.js';
 import { makeLife } from './life.js';
 import { GardenAudio } from './audio.js';
-import { GARDEN_WORDS, WORD_IDS, CITY_IDS, HARB_IDS, PAL_IDS } from './words.js';
+import { GARDEN_WORDS, WORD_IDS, CITY_IDS, HARB_IDS, PAL_IDS, TOWER_IDS } from './words.js';
 import { buildCity, CITY_TRIG, CITY_MAP } from './city.js';
 import { buildHarbour, HARB_MAP } from './harbour.js';
 import { buildPalace, PAL_LIGHTS, PAL_BLDG } from './palace.js';
+import { buildZiggurat, ZIG_BLDG, BAND } from './zigg.js';
+import { FLOORS } from './zikkdata.js';
 import { createLearn } from './learn.js';
 import { initSync } from '../../sync.js';
 // a paduch.hu-n előbb lehúzzuk a legfrissebb mentést, hogy a kert már azzal induljon
@@ -52,7 +54,7 @@ const moonDir = new THREE.Vector3(-.35, .78, -.52).normalize();
 const moon = new THREE.Mesh(new THREE.CircleGeometry(38, 32), new THREE.MeshBasicMaterial({ color: '#fff6dc', fog: false, transparent: true, opacity: 0, depthWrite: false })); moon.position.copy(moonDir).multiplyScalar(1400); moon.lookAt(0, 0, 0); scene.add(moon);
 const lampLights = Array.from({ length: q.lights }, () => { const l = new THREE.PointLight('#ffb35a', 0, 15, 2); scene.add(l); return l; });
 
-let hero = null, M = null, life = null, sc = null, blob = null, ready = false, learn = null, city = null, harbour = null, palace = null;
+let hero = null, M = null, life = null, sc = null, blob = null, ready = false, learn = null, city = null, harbour = null, palace = null, zigg = null;
 const audio = new GardenAudio();
 const me = { x: 0, z: 104, y: 0, ang: Math.PI, spd: 0 };
 const cam = { yaw: 0, pitch: .3, dist: 7.5 };
@@ -66,12 +68,14 @@ async function init() {
   prog('A kert alaprajza...'); layout(q.dens); TRIG = wordTriggers();
   prog('Teraszok, falak, kapuk...'); await tick(); scene.add(buildWorld(M, q));
   prog('Növények...'); await tick(); scene.add(await buildFlora(M, q, () => prog()));
-  prog('Babilon utcái...'); await tick(); city = buildCity(M, q); scene.add(city.root); harbour = buildHarbour(M, q); scene.add(harbour.root); palace = buildPalace(M, q); scene.add(palace.root); TRIG.push(...CITY_TRIG);
+  prog('Babilon utcái...'); await tick(); city = buildCity(M, q); scene.add(city.root); harbour = buildHarbour(M, q); scene.add(harbour.root); palace = buildPalace(M, q); scene.add(palace.root);
+  zigg = buildZiggurat(M, q, towerDone()); scene.add(zigg.root); TRIG.push(...CITY_TRIG);
   prog('A törpe...'); hero = await loadHero(q.rigged); scene.add(hero.object); hero.object.traverse(o => { if (o.isMesh && !o.material.blending) o.castShadow = true; });
   prog('Élet a kertben...'); life = makeLife(scene, q);
   learn = createLearn({ scene, me, TRIG, isFound: id => found.has(id), foundCount: () => found.size, say, addPts, maxH: () => LV[maxI].h, zoneAt, toast: toastK,
     rank: () => ({ tier: rk ? rk.t : 0, need: rk ? Math.max(0, T[5] - rk.p) : 0 }),
     onSeal: () => showSeal(),
+    onFloor: f => floorDone(f),
     startRide: dir => { if (sitting) toggleSit(); if (autoWalk) setAuto(false); harbour.rideStart(dir); cam.yaw = (dir > 0 ? 0 : Math.PI) + Math.PI; cam.dist = 9; cam.pitch = .32; zoneShow('Átkelés az Eufráteszen', 'Szóköz: átugrás'); } });
   { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })); blob.renderOrder = 3; scene.add(blob); }
@@ -88,7 +92,7 @@ const tick = () => new Promise(r => setTimeout(r, 0));
 
 /* ---------- napszak: valós idő vagy kiválasztott ---------- */
 let tod = localStorage.getItem('kert-tod') || 'real', dayF = 1, lastSun = new THREE.Vector3(), sunT = 0;
-let hourOverride = null;   // csak teszteléshez (__kert.hour)
+let hourOverride = null, camLift = 0;   // csak teszteléshez (__kert.hour)
 const hourNow = () => hourOverride ?? (tod === 'dawn' ? 6.2 : tod === 'day' ? 15.5 : tod === 'dusk' ? 17.55 : tod === 'eve' ? 19.4 : tod === 'night' ? 22.3 : tod === 'late' ? 2.5 : (d => d.getHours() + d.getMinutes() / 60)(new Date()));
 const sunDir = new THREE.Vector3(), lightDir = new THREE.Vector3();
 const C1 = new THREE.Color(), FOG_D = new THREE.Color('#cdd8e2'), FOG_N = new THREE.Color('#0d1730'), FOG_S = new THREE.Color('#e8b48a');
@@ -153,7 +157,7 @@ function togglePause(on = !paused) {
   if (!ready) return;
   paused = on; const el = document.getElementById('pause'); el.classList.toggle('on', on);
   for (const k in keys) keys[k] = false;
-  if (on) { pauseInfo(); audio.pause(true); learn && learn.closeAll(); } else { audio.pause(document.hidden); clock.getDelta(); }
+  if (on) { pauseInfo(); travelList(); audio.pause(true); learn && learn.closeAll(); } else { audio.pause(document.hidden); clock.getDelta(); }
 }
 document.getElementById('pause').addEventListener('click', e => {
   const b = e.target.closest('[data-p]'); if (!b) return;
@@ -161,8 +165,34 @@ document.getElementById('pause').addEventListener('click', e => {
   if (a === 'go') togglePause(false);
   if (a === 'save') saveGame(true);
   if (a === 'quit') { saveGame(true); SYNC.flush ? SYNC.flush(true).finally(() => { location.href = '../index.html'; }) : setTimeout(() => { location.href = '../index.html'; }, 400); }
-  if (a === 'home') { Object.assign(me, { x: 0, z: 104, y: 0, ang: Math.PI }); cam.yaw = 0; sitting = null; pose = null; if (autoWalk) nearestWp(); togglePause(false); zoneShow('Az Istár-kapu előtt', 'a kert bejárata'); }
+  if (a === 'home') travel(0);
+  if (a === 'tp') travel(+b.dataset.i);
 });
+/* ---------- gyors utazás a menüből ---------- */
+// [felirat, x, z, nézési irány, helyszín, alcím, feltétel]
+const TRAVEL = [
+  ['⛩ A kert bejárata', 0, 104, Math.PI, 'Az Istár-kapu előtt', 'a kert bejárata'],
+  ['🦁 Az Istár-kapu (város)', 0, 119, 0, 'Babilon utcái', 'az Istár-kapun túl'],
+  ['🧺 A Nagy Piac', 0, 153, 0, 'A Nagy Piac', 'árusok, fűszerek, alku'],
+  ['📜 A Táblaház', () => CITY_MAP.lib[2] + 3, 171, -Math.PI / 2, 'A Táblaház', 'Babilon könyvtára'],
+  ['🥬 A konyhakert', () => CITY_MAP.garden[0] - 2.5, 177, Math.PI / 2, 'A konyhakert', 'ágyások, méhkasok'],
+  ['⛵ A rakpart, a hajós', 20, 231, 0, 'Az Eufrátesz partja', 'rakpart, csónakok, móló'],
+  ['⚓ A túlparti kikötő', 20, 325, 0, 'A túlparti kikötő', 'uszályok, daru, matrózok', () => DEV || (rk && rk.t >= 1) ? '' : 'Ezüst csillagtól'],
+  ['👑 A palotakapu', -75, 149.5, -Math.PI / 2, 'A palotakapu', 'Nabukodonozor palotája'],
+  ['🏛 Bábel tornya, kapu', 75, 200.5, Math.PI / 2, 'A torony kapuja', 'a szent körzet bejárata'],
+  ['🧱 A téglavetők udvara', 121, 184.6, Math.PI, 'Téglavetők udvara', 'Bábel tornya · 1. emelet'],
+];
+function travelList() {
+  const el = document.getElementById('tgrid'); if (!el) return;
+  el.innerHTML = TRAVEL.map((t, i) => { const lock = t[6] ? t[6]() : ''; return `<button data-p="tp" data-i="${i}" ${lock ? 'disabled' : ''}>${t[0]}${lock ? `<small>🔒 ${lock}</small>` : ''}</button>`; }).join('');
+}
+function travel(i) {
+  const t = TRAVEL[i]; if (t[6] && t[6]()) return;
+  const x = typeof t[1] === 'function' ? t[1]() : t[1], z = t[2];
+  Object.assign(me, { x, z, y: heightAt(x, z), ang: t[3], spd: 0 }); cam.yaw = t[3] + Math.PI; sitting = null; pose = null;
+  if (z > PLAZA.z1 && autoWalk) setAuto(false); else if (autoWalk) nearestWp();
+  learn && learn.closeAll(); togglePause(false); zoneNow = t[4]; zoneShow(t[4], t[5]);
+}
 document.getElementById('menu').addEventListener('click', () => togglePause());
 setInterval(() => { if (ready && !paused) saveGame(false); }, 30000);
 addEventListener('pagehide', () => { saveGame(false); SYNC.flush && SYNC.flush(true); });
@@ -180,8 +210,11 @@ canvas.addEventListener('wheel', e => { cam.dist = Math.min(40, Math.max(2.5, ca
   const up = () => { joy.on = false; joy.x = joy.y = 0; knob.style.transform = ''; }; j.addEventListener('pointerup', up); j.addEventListener('pointercancel', up); }
 
 let maxI = 0;
-const canStand = (x, z, h0) => !blocked(x, z) && !(x < -80.4 && z > PLAZA.z1 && z < 232 && palaceLocked()) && Math.abs(heightAt(x, z) - h0) < .7 && (z > PLAZA.z1 || x < PLAZA.x0 || heightAt(x, z) <= LV[maxI].h + .45);   // a teraszok rangzára csak a kertben
+const canStand = (x, z, h0) => !blocked(x, z) && !(x < -80.4 && z > PLAZA.z1 && z < 232 && palaceLocked()) && !(x > 84 && z > PLAZA.z1 && z < 232 && heightAt(x, z) > zigH + .45) && Math.abs(heightAt(x, z) - h0) < .7 && (z > PLAZA.z1 || x < PLAZA.x0 || heightAt(x, z) <= LV[maxI].h + .45);   // a teraszok rangzára csak a kertben
 let stepDist = 0;
+// tempó: séta / futás (Shift) m/s-ban; a választás megmarad
+const PACE = { slow: [2.9, 6.2], norm: [4.4, 8.5], fast: [6.5, 12] };
+let pace = PACE[localStorage.getItem('kert-tempo')] ? localStorage.getItem('kert-tempo') : 'norm';
 function stepMe(dt) {
   let ix = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), iz = (keys.s || keys.arrowdown ? 1 : 0) - (keys.w || keys.arrowup ? 1 : 0);
   if (joy.on) { ix = joy.x; iz = joy.y; }
@@ -191,7 +224,7 @@ function stepMe(dt) {
   if (manual) {
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     mx = fx * -iz + rx * ix; mz = fz * -iz + rz * ix; const l = Math.hypot(mx, mz); mx /= l; mz /= l;
-    speed = (keys.shift ? 6.2 : 2.9) * Math.min(1, Math.hypot(ix, iz) * (joy.on ? 1.6 : 1));
+    speed = PACE[pace][keys.shift ? 1 : 0] * Math.min(1, Math.hypot(ix, iz) * (joy.on ? 1.6 : 1));
   } else if (autoWalk) {
     const [tx, tz] = TOURP[wp], dx = tx - me.x, dz = tz - me.z, d = Math.hypot(dx, dz);
     if (d < .6) wp = (wp + 1) % TOURP.length; else { mx = dx / d; mz = dz / d; speed = 2.4; }
@@ -234,6 +267,27 @@ function showSeal() { let P = null; try { P = JSON.parse(localStorage.getItem('k
 // a palota Arany csillagtól nyílik; helyben (localhost) nyitva, hogy fejlesztés közben bejárható legyen
 const DEV = /^(localhost|127\.)/.test(location.hostname), PAL_TIER = 2;
 const palaceLocked = () => !DEV && (!rk || rk.t < PAL_TIER);
+// Bábel tornya: emeletenként nyílik (az előző emelet próbája + a rang kell); helyben a rang nem számít
+const towerDone = () => { try { return (JSON.parse(localStorage.getItem('kert-beszelgetes') || '{}')._torony || {}).done || 0; } catch (e) { return 0; } };
+function zigFloorMax() { let F = Math.min(7, towerDone() + 1); while (F > 1 && !DEV && (!rk || rk.t < FLOORS[F - 1][3])) F--; return F; }
+let zigH = 0, ZLOCKS = [], zlocks = null;
+function zigRefresh() {
+  const d = towerDone(); if (zigg && zigg.lit !== d) { zigg.setLit(d); if (sc) sc.invalidate(); mapZig = null; }
+  const h = ZIG_FLOOR_Y[zigFloorMax() - 1]; if (h === zigH && zlocks) return; zigH = h;
+  if (zlocks) { scene.remove(zlocks); zlocks.traverse(o => o.geometry && o.geometry.dispose()); }
+  zlocks = new THREE.Group(); ZLOCKS = [];
+  for (const s of ZIG_STAIRS) {
+    if (s.k === 'land' || !(s.h0 <= zigH + .01 && s.h1 > zigH + .01)) continue;
+    const a = s.a0 + (zigH - s.h0) / (s.h1 - s.h0) * (s.a1 - s.a0) + Math.sign(s.a1 - s.a0) * .6, w = s.ax === 'x' ? s.z1 - s.z0 : s.x1 - s.x0;
+    const g = new THREE.PlaneGeometry(w, 3.4); g.attributes.uv.array.forEach((v, i, arr) => { arr[i] = v * (i % 2 ? 1.6 : w / 2); });
+    const m = new THREE.Mesh(g, lockMat);
+    if (s.ax === 'x') { m.position.set(a, zigH + 1.7, (s.z0 + s.z1) / 2); m.rotation.y = Math.PI / 2; } else m.position.set((s.x0 + s.x1) / 2, zigH + 1.7, a);
+    zlocks.add(m); ZLOCKS.push({ x: m.position.x, z: m.position.z, y: zigH });
+  }
+  scene.add(zlocks);
+}
+function floorDone(f) { zigRefresh(); const c = ['fehér', 'fekete', 'bíbor', 'kék', 'narancs', 'ezüst', 'arany'][f - 1]; setTimeout(() => zoneShow(`Kigyúlt a ${c} sáv`, `Bábel tornya · ${f}. emelet teljesítve`), 2200); }
+const azNum = n => (n === 1 || n === 5 ? 'az ' : 'a ') + n + '.';
 function applyRank(first) {
   const r = myRank(), changed = !rk || r.n !== rk.n;
   if (!changed) return;
@@ -241,6 +295,7 @@ function applyRank(first) {
   document.getElementById('emb').innerHTML = emblem(TIERS[r.t], r.d, 74); document.getElementById('rname').textContent = `${TIERS[r.t].name} ${r.d}`;
   hero.setRank(TIERS[r.t]);
   const newMax = maxLevelFor(r.t); if (newMax !== maxI || first) { const opened = !first && newMax > maxI; maxI = newMax; TOURP = makeTour(maxI); if (autoWalk) nearestWp(); buildLocks(); if (opened) toastK(`Megnyílt: ${maxI + 1}. terasz`, 'a rangod nyitotta meg'); }
+  zigRefresh();
   if (up) { pose = 'dance'; poseT = 4; toastK(`Új rang: ${TIERS[r.t].name} ${r.d}`, 'gratulálok!'); }
 }
 addEventListener('storage', e => { if (e.key === 'szoletra-v1' && hero) applyRank(); });
@@ -263,6 +318,13 @@ function lockPrompt() {
   const el = document.getElementById('lock'); let near = null;
   for (const L of LOCKS) if (Math.hypot(L.x - me.x, L.z - me.z) < 7 && Math.abs(L.y - me.y) < 2) near = L;
   if (!near && palaceLocked() && Math.hypot(me.x + 78, me.z - 149.5) < 7) { const tr = TIERS[PAL_TIER], left = Math.max(0, T[PAL_TIER * 5] - rk.p); el.innerHTML = `${emblem(tr, 1, 46)}<div>🔒 A <b>királyi palota</b> ${tr.name.toLowerCase()}tól nyílik.<br><small style="color:#8fa3c8">Még ${left.toLocaleString('hu-HU')} pont a Szólétrában.</small></div>`; el.classList.add('on'); return; }
+  const zl = ZLOCKS.find(L => Math.hypot(L.x - me.x, L.z - me.z) < 6 && Math.abs(L.y - me.y) < 2.5);
+  if (!near && zl) {
+    const F = zigFloorMax(), N = F + 1, d = towerDone();
+    if (d < F) { const fl = FLOORS[F - 1]; el.innerHTML = `<div style="font-size:30px">🧱</div><div>🔒 ${azNum(N).replace(/^./, c => c.toUpperCase())} emelet ${azNum(F)} emelet próbája után nyílik.<br><small style="color:#8fa3c8">${fl[2]} vár${/ és /.test(fl[2]) ? 'nak' : ''} ${fl[1]}.</small></div>`; }
+    else { const tr = TIERS[FLOORS[N - 1][3]], left = Math.max(0, T[FLOORS[N - 1][3] * 5] - rk.p); el.innerHTML = `${emblem(tr, 1, 46)}<div>🔒 ${azNum(N).replace(/^./, c => c.toUpperCase())} emelet ${tol(tr.name).replace(/^./, c => c.toLowerCase())} nyílik.<br><small style="color:#8fa3c8">Még ${left.toLocaleString('hu-HU')} pont a Szólétrában.</small></div>`; }
+    el.classList.add('on'); return;
+  }
   if (!near) { el.classList.remove('on'); return; }
   const need = LOCK_TIER[near.s.i], tr = TIERS[need], left = Math.max(0, T[need * 5] - rk.p);
   el.innerHTML = `${emblem(tr, 1, 46)}<div>🔒 A <b>${near.s.i + 1}. terasz</b> ${tol(tr.name).replace(/^./, c => c.toLowerCase())} nyílik.<br><small style="color:#8fa3c8">Még ${left.toLocaleString('hu-HU')} pont a Szólétrában.</small></div>`;
@@ -278,7 +340,7 @@ function placePlate() {
 
 /* ---------- kertszavak ---------- */
 let found = new Set(JSON.parse(localStorage.getItem('kert-szavak') || '[]')), wordNow = null, wordHide = 0;
-const cool = {}, CITY_SET = new Set(CITY_IDS), HARB_SET = new Set(HARB_IDS), PAL_SET = new Set(PAL_IDS);
+const cool = {}, CITY_SET = new Set(CITY_IDS), HARB_SET = new Set(HARB_IDS), PAL_SET = new Set(PAL_IDS), TOWER_SET = new Set(TOWER_IDS);
 let VOICE = null; const pickVoice = () => { const vs = speechSynthesis.getVoices(); VOICE = vs.find(v => /en-GB/i.test(v.lang) && /natural|neural|online/i.test(v.name)) || vs.find(v => /en-US/i.test(v.lang) && /natural|neural|online/i.test(v.name)) || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null; };
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(t, rate = .88) { if (!('speechSynthesis' in window)) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = VOICE ? VOICE.lang : 'en-GB'; if (VOICE) u.voice = VOICE; u.rate = rate; speechSynthesis.speak(u); }
@@ -293,11 +355,11 @@ function addPts(n, title, sub, word) {
 }
 function discover(id) {
   const w = GARDEN_WORDS[id]; found.add(id); localStorage.setItem('kert-szavak', JSON.stringify([...found]));
-  addPts(5, `Új ${PAL_SET.has(id) ? 'palota' : HARB_SET.has(id) ? 'kikötői ' : CITY_SET.has(id) ? 'város' : 'kert'}szó: ${w[0]}`, '+5 pont · bekerült a Szólétrába', w); updWordCount(); learn && learn.onDiscover(id);
+  addPts(5, `Új ${TOWER_SET.has(id) ? 'torony' : PAL_SET.has(id) ? 'palota' : HARB_SET.has(id) ? 'kikötői ' : CITY_SET.has(id) ? 'város' : 'kert'}szó: ${w[0]}`, '+5 pont · bekerült a Szólétrába', w); updWordCount(); learn && learn.onDiscover(id);
   if (!sitting && pose !== 'dance') { pose = 'interact'; poseT = 1.3; }
 }
 /* ---------- lebegő szócímkék: a szó ott marad a tárgy fölött, amíg a közelben vagy ---------- */
-const LABEL_H = { audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
+const LABEL_H = { ziggurat: 9, priest: 2.6, clay: 1.2, straw: 2, mould: 1.7, brick: 2.2, bucket: 1.5, kiln: 4.6, sledge: 1.9, worker: 3, scaffolding: 14, shrine: 10, foreman: 2.8, language: 2.8, audience: 6.5, petition: 2, chamberlain: 2.8, herald: 2.8, garden: 2.2, pool: 1.6, residence: 7.5, tower: 18, treasury: 5.5, gazelle: 1.9, palace: 6, throne: 4.2, crown: 2.9, courtier: 2.6, guard: 2.7, banner: 9, brazier: 2.4, crane: 7.2, warehouse: 8.6, ship: 9.6, mast: 9, barge: 2.6, hull: 4.2, keel: 1.9, customs: 5.6, pier: 1.6, ferry: 2.2, dock: 1.8, pulley: 6.6, cedar: 2.2, timber: 2.2, log: 2, amphora: 1.9, bitumen: 1.5, deck: 2.2, sailor: 2.6, shipwright: 2.6, voyage: 3.2, unload: 2.4, tax: 2, saw: 1.6, reed: 3.2, anchor: 1.6, oar: 1.4, cargo: 2.4, anvil: 1.6, hammer: 1.8, copper: 1.9, lantern: 2.9, rug: 2.4, pattern: 2.2, wool: 1.9, ring: 1.6, necklace: 1.8, bracelet: 1.6, bargain: 2.2, bouquet: 1.9, petal: 1.6, bunch: 1.7, ripe: 1.9, oven: 2.2, donkey: 2.4, cart: 2.2, sack: 1.8, crate: 1.8, pigeon: 1.3, hen: 1.3, stall: 3.9, awning: 4.4, library: 7.6, boat: 3.2, sail: 8.4, rooftop: 8.2, ladder: 4.2, scarecrow: 3, beehive: 1.9, merchant: 2.6, librarian: 2.6, scribe: 2.6, fisherman: 2.6, harbour: 3, alley: 4, 'clay tablet': 2.6, bookshelf: 3.3, palm: 8.7, date: 6.2, olive: 5.4, fig: 5.8, pomegranate: 4.4, cypress: 10.8, cedar: 11, willow: 8.2, rose: 2, lavender: 1.7, shrub: 1.8, reed: 3, lily: 1.2, flowerpot: 2.4, bench: 1.8, hedge: 1.9, flowerbed: 1.7, fountain: 4.2, canal: 1.7, gate: 18.6, lion: 4.9, tile: 2.7, well: 4, orchard: 5.8, meadow: 1.7, vine: 2.5, terrace: 3.3, staircase: 3.2, waterfall: 4.6, shore: 2.1, bridge: 2.9, island: 7.2, dome: 10.2, column: 5.6, temple: 10.4, arbour: 4.3 };
 const labelTex = {};
 function getLabelTex(id, quiz) {
   const key = id + (quiz ? '?' : ''); if (labelTex[key]) return labelTex[key];
@@ -364,7 +426,7 @@ function wordCheck() {
   if (wordNow) cool[wordNow] = performance.now() + 25000;
   if (learn.takeWord(best)) { wordNow = best; return; }
   wordNow = best; const w = GARDEN_WORDS[best], isNew = !found.has(best);
-  el.innerHTML = `<span class="tag">${PAL_SET.has(best) ? (isNew ? '✨ Új palotaszó' : 'Palotaszó') : HARB_SET.has(best) ? (isNew ? '✨ Új kikötői szó' : 'Kikötői szó') : CITY_SET.has(best) ? (isNew ? '✨ Új városszó' : 'Városszó') : (isNew ? '✨ Új kertszó' : 'Kertszó')}</span><div class="en">${w[0]}<button data-say="${w[0]}">🔊</button></div><div class="hu">${w[1]}</div><div class="ex">${w[2]} <button data-say="${w[2].replace(/"/g, '&quot;')}" style="background:none;border:0;cursor:pointer">🔊</button><i>${w[3]}</i></div>`;
+  el.innerHTML = `<span class="tag">${TOWER_SET.has(best) ? (isNew ? '✨ Új toronyszó' : 'Toronyszó') : PAL_SET.has(best) ? (isNew ? '✨ Új palotaszó' : 'Palotaszó') : HARB_SET.has(best) ? (isNew ? '✨ Új kikötői szó' : 'Kikötői szó') : CITY_SET.has(best) ? (isNew ? '✨ Új városszó' : 'Városszó') : (isNew ? '✨ Új kertszó' : 'Kertszó')}</span><div class="en">${w[0]}<button data-say="${w[0]}">🔊</button></div><div class="hu">${w[1]}</div><div class="ex">${w[2]} <button data-say="${w[2].replace(/"/g, '&quot;')}" style="background:none;border:0;cursor:pointer">🔊</button><i>${w[3]}</i></div>`;
   el.classList.add('on'); say(w[0]);
   if (isNew) discover(best);
 }
@@ -372,7 +434,7 @@ document.getElementById('word').addEventListener('click', e => { const b = e.tar
 function updWordCount() { document.getElementById('wcount').textContent = `${found.size} / ${WORD_IDS.length} · lista`; }
 document.getElementById('wcount').addEventListener('click', () => {
   const el = document.getElementById('wlist');
-  el.innerHTML = `<button class="x">✕</button><h2>Szavaid · ${found.size} / ${WORD_IDS.length}</h2><p style="color:#8fa3c8;font-size:13px;margin:0 0 10px">Sétálj oda a növényekhez, épületekhez, árusokhoz: az angol nevük felbukkan, és az új szavak bekerülnek a Szólétrába.</p>${[['🌿 A kert', WORD_IDS.filter(i => !CITY_SET.has(i) && !HARB_SET.has(i) && !PAL_SET.has(i))], ['🏛️ Babilon utcái (az Istár-kapun túl)', CITY_IDS], ['⚓ A túlparti kikötő (Ezüst csillagtól)', HARB_IDS], ['👑 A királyi palota (a nyugati kapun túl)', PAL_IDS]].map(([h, ids]) => `<h3 style="font-size:14px;margin:12px 0 6px;color:#ffd54a">${h} · ${ids.filter(i => found.has(i)).length} / ${ids.length}</h3><div class="g">${ids.map(id => found.has(id) ? `<div class="w"><b>${GARDEN_WORDS[id][0]}</b> · <span>${GARDEN_WORDS[id][1]}</span></div>` : `<div class="w no"><b>???</b> · <span>még nem találtad meg</span></div>`).join('')}</div>`).join('')}`;
+  el.innerHTML = `<button class="x">✕</button><h2>Szavaid · ${found.size} / ${WORD_IDS.length}</h2><p style="color:#8fa3c8;font-size:13px;margin:0 0 10px">Sétálj oda a növényekhez, épületekhez, árusokhoz: az angol nevük felbukkan, és az új szavak bekerülnek a Szólétrába.</p>${[['🌿 A kert', WORD_IDS.filter(i => !CITY_SET.has(i) && !HARB_SET.has(i) && !PAL_SET.has(i) && !TOWER_SET.has(i))], ['🏛️ Babilon utcái (az Istár-kapun túl)', CITY_IDS], ['⚓ A túlparti kikötő (Ezüst csillagtól)', HARB_IDS], ['👑 A királyi palota (a nyugati kapun túl)', PAL_IDS], ['🏛 Bábel tornya (a keleti kapun túl)', TOWER_IDS]].map(([h, ids]) => `<h3 style="font-size:14px;margin:12px 0 6px;color:#ffd54a">${h} · ${ids.filter(i => found.has(i)).length} / ${ids.length}</h3><div class="g">${ids.map(id => found.has(id) ? `<div class="w"><b>${GARDEN_WORDS[id][0]}</b> · <span>${GARDEN_WORDS[id][1]}</span></div>` : `<div class="w no"><b>???</b> · <span>még nem találtad meg</span></div>`).join('')}</div>`).join('')}`;
   el.classList.add('on'); el.querySelector('.x').onclick = () => el.classList.remove('on');
 });
 let toastT = null;
@@ -381,6 +443,15 @@ function toastK(a, b) { const z = document.getElementById('toastk'); z.innerHTML
 /* ---------- helyszín-felirat ---------- */
 function zoneAt(x, z, y) { const s = { x: me.x, z: me.z, y: me.y }; me.x = x; me.z = z; me.y = y; const r = zoneOf(); Object.assign(me, s); return r[0] + (r[1] ? ' (' + r[1] + ')' : ''); }
 function zoneOf() {
+  if (me.x > 78.2 && me.z > PLAZA.z1 && me.z < 230) {
+    if (me.x < 86) return ['A torony kapuja', 'a szent körzet bejárata'];
+    if (me.y > 1) { const F = ZIG_FLOOR_Y.findIndex(y => Math.abs(y - me.y) < 1.2); if (F > 0) return [`Bábel tornya · ${F + 1}. emelet`, FLOORS[F][0]]; return ['A torony lépcsője', `${Math.round(me.y)} méter magasan`]; }
+    if (me.x > 250) return ['A téglavetők műhelye', 'kemencék és téglarakások'];
+    if (me.x < 140 && me.z < 160) return ['Esagila előtt', 'Marduk temploma'];
+    if (me.x < 140 && me.z > 174 && me.z < 190) return ['Téglavetők udvara', 'Bábel tornya · 1. emelet'];
+    if (me.x < 140 && me.z > 189) return ['A papok házai', 'Esagila papjai laknak itt'];
+    return ['A szent körzet', 'Bábel tornya lábánál'];
+  }
   if (me.x < -78.2 && me.z > PLAZA.z1) {
     if (me.x > -92) return ['A palotakapu', 'Nabukodonozor palotája'];
     if (me.x > -104 && me.y < 3.4) return ['A díszlépcső', 'fel a palota teraszára'];
@@ -421,8 +492,8 @@ function zoneShow(a, b) { const z = document.getElementById('zone'); z.innerHTML
 
 /* ---------- térkép ---------- */
 const mc = document.getElementById('mapc'), mg = mc.getContext('2d'); let mapBase = null;
-const MB_G = { x0: PLAZA.x0, x1: PLAZA.x1, z0: PLAZA.z0, z1: PLAZA.z1 }, MB_C = { x0: -84, x1: 84, z0: 104, z1: 248 }, MB_H = { x0: -84, x1: 104, z0: 292, z1: 398 }, MB_P = { x0: -270, x1: -70, z0: 104, z1: 240 };
-let MB = MB_G, mapCity = null, mapHarb = null, mapPal = null;
+const MB_G = { x0: PLAZA.x0, x1: PLAZA.x1, z0: PLAZA.z0, z1: PLAZA.z1 }, MB_C = { x0: -84, x1: 84, z0: 104, z1: 248 }, MB_H = { x0: -84, x1: 104, z0: 292, z1: 398 }, MB_P = { x0: -270, x1: -70, z0: 104, z1: 240 }, MB_Z = { x0: 74, x1: 304, z0: 104, z1: 240 };
+let MB = MB_G, mapCity = null, mapHarb = null, mapPal = null, mapZig = null;
 const mx2 = x => (x - MB.x0) / (MB.x1 - MB.x0) * mc.width, mz2 = z => (z - MB.z0) / (MB.z1 - MB.z0) * mc.height;
 function drawCityBase() {
   MB = MB_C; const g = mg, pv = (x0, z0, x1, z1) => g.fillRect(mx2(Math.min(x0, x1)), mz2(Math.min(z0, z1)), Math.abs(mx2(x1) - mx2(x0)), Math.abs(mz2(z1) - mz2(z0)));
@@ -443,6 +514,7 @@ function drawCityBase() {
   g.font = 'bold 15px system-ui'; g.textAlign = 'center'; g.fillStyle = '#2a1a08';
   g.fillText('Piac', mx2(0), mz2(160)); g.fillText('Táblaház', mx2(-57), mz2(152)); g.fillText('Konyhakert', mx2(61), mz2(152)); g.fillText('Eufrátesz', mx2(-50), mz2(240));
   { const y = mz2(149.5); g.fillStyle = '#2a62c2'; g.fillRect(mx2(-84), mz2(146.6), mx2(-79) - mx2(-84), mz2(152.4) - mz2(146.6)); g.fillStyle = '#b8871c'; g.beginPath(); g.moveTo(6, y); g.lineTo(18, y - 9); g.lineTo(18, y + 9); g.closePath(); g.fill(); g.font = 'bold 13px system-ui'; g.textAlign = 'left'; g.fillStyle = '#7a5a10'; g.fillText('Palota', 22, y - 10); g.textAlign = 'center'; }
+  { const y = mz2(200.5), W = mc.width; g.fillStyle = '#2a62c2'; g.fillRect(mx2(79), mz2(ZGATE.z0), mx2(84) - mx2(79), mz2(ZGATE.z1) - mz2(ZGATE.z0)); g.fillStyle = '#b8871c'; g.beginPath(); g.moveTo(W - 6, y); g.lineTo(W - 18, y - 9); g.lineTo(W - 18, y + 9); g.closePath(); g.fill(); g.font = 'bold 13px system-ui'; g.textAlign = 'right'; g.fillStyle = '#7a5a10'; g.fillText('Torony', W - 22, y - 10); g.textAlign = 'center'; }
   g.strokeStyle = '#8a6a48'; g.lineWidth = 5; g.strokeRect(2, 2, mc.width - 4, mc.height - 4);
   mapCity = g.getImageData(0, 0, mc.width, mc.height); MB = MB_G;
 }
@@ -481,6 +553,25 @@ function drawPalBase() {
   g.strokeStyle = '#8a6a48'; g.lineWidth = 5; g.strokeRect(2, 2, mc.width - 4, mc.height - 4);
   mapPal = g.getImageData(0, 0, mc.width, mc.height); MB = MB_G;
 }
+function drawZigBase() {
+  const sv = MB; MB = MB_Z; const g = mg, pv = (x0, z0, x1, z1) => g.fillRect(mx2(Math.min(x0, x1)), mz2(Math.min(z0, z1)), Math.abs(mx2(x1) - mx2(x0)), Math.abs(mz2(z1) - mz2(z0)));
+  const d = towerDone(), { cx, cz } = ZG;
+  g.fillStyle = '#c8a878'; g.fillRect(0, 0, mc.width, mc.height);
+  g.fillStyle = '#3d6f8a'; pv(MB.x0, 229, MB.x1, MB.z1);
+  g.fillStyle = '#d9c49a'; pv(MB.x0, 113.5, 80, 229); g.fillStyle = '#a07650'; pv(80, 113.5, 81.5, ZGATE.z0); pv(80, ZGATE.z1, 81.5, 229);
+  g.fillStyle = '#e8d8b0'; pv(ZG.x0, ZG.z0, ZG.x1, ZG.z1); g.fillStyle = '#8a6a48'; pv(ZG.x0, ZG.z0 - 1.5, ZG.x1 + 1.5, ZG.z0); pv(ZG.x0, ZG.z1, ZG.x1 + 1.5, ZG.z1 + 1.5); pv(ZG.x1, ZG.z0, ZG.x1 + 1.5, ZG.z1);
+  g.fillStyle = '#d0c0a0'; pv(ZG.x0, 197.6, 92, 203.4); pv(88, cz + 4, 92, 197.6); pv(88, cz - 4, 134, cz + 4);
+  for (const [a, b, c, e, cl] of ZIG_BLDG) { g.fillStyle = cl; pv(a, b, c, e); }
+  ZIG_TIERS.forEach(([h], i) => { g.fillStyle = i < d ? '#26315c' : i < 2 ? '#2a62c2' : ['#b89a6a', '#c4a676', '#d0b282', '#dcbe8e'][i - 2]; pv(cx - h, cz - h, cx + h, cz + h); g.strokeStyle = i < d ? BAND[i] : '#8d8478'; g.lineWidth = 2; g.strokeRect(mx2(cx - h), mz2(cz - h), mx2(cx + h) - mx2(cx - h), mz2(cz + h) - mz2(cz - h)); });
+  g.fillStyle = d >= 7 ? '#d8a93a' : '#2a62c2'; pv(cx - 11, cz - 11, cx + 11, cz + 11);
+  g.fillStyle = '#efe3c4'; pv(135, cz - 4.5, 167, cz + 4.5); pv(153.5, cz - 41.5, 159.5, cz - 4.5); pv(153.5, cz + 4.5, 159.5, cz + 41.5);
+  g.fillStyle = '#5a3c22'; for (const [x, z] of [[272, 150], [284, 150], [278, 162]]) { g.beginPath(); g.arc(mx2(x), mz2(z), 4, 0, 6.3); g.fill(); }
+  g.font = 'bold 14px system-ui'; g.textAlign = 'center'; g.fillStyle = '#2a1a08';
+  g.fillText('Esagila', mx2(114), mz2(140)); g.fillText('Téglavetők', mx2(118), mz2(176)); g.fillText('Műhely', mx2(278), mz2(140)); g.fillStyle = '#fff'; g.fillText('Bábel tornya', mx2(cx), mz2(cz - 30)); g.fillText(`${d} / 7 emelet`, mx2(cx), mz2(cz + 34));
+  g.fillStyle = '#2a1a08'; g.textAlign = 'left'; g.fillText('← a város', 4, mz2(209)); g.textAlign = 'center'; g.fillStyle = '#e8f2ff'; g.fillText('Eufrátesz', mx2(150), mz2(235));
+  g.strokeStyle = '#8a6a48'; g.lineWidth = 5; g.strokeRect(2, 2, mc.width - 4, mc.height - 4);
+  mapZig = g.getImageData(0, 0, mc.width, mc.height); MB = sv;
+}
 function drawMapBase() {
   drawPalBase();
   drawHarbBase();
@@ -497,10 +588,12 @@ function drawMapBase() {
   mapBase = g.getImageData(0, 0, mc.width, mc.height);
 }
 function drawMap() {
-  const inPal = me.x < -78.4 && me.z > PLAZA.z1 && me.z < 240, inHarb = !inPal && me.z > 288, inCity = !inPal && !inHarb && me.z > PLAZA.z1 - 2; MB = inPal ? MB_P : inHarb ? MB_H : inCity ? MB_C : MB_G;
-  mg.putImageData(inPal ? mapPal : inHarb ? mapHarb : inCity ? mapCity : mapBase, 0, 0);
+  const inZig = me.x > 78.4 && me.z > PLAZA.z1 && me.z < 240, inPal = me.x < -78.4 && me.z > PLAZA.z1 && me.z < 240, inHarb = !inPal && !inZig && me.z > 288, inCity = !inPal && !inHarb && !inZig && me.z > PLAZA.z1 - 2;
+  if (inZig && !mapZig) drawZigBase();
+  MB = inZig ? MB_Z : inPal ? MB_P : inHarb ? MB_H : inCity ? MB_C : MB_G;
+  mg.putImageData(inZig ? mapZig : inPal ? mapPal : inHarb ? mapHarb : inCity ? mapCity : mapBase, 0, 0);
   // zárt teraszok: sötétítés
-  if (!inCity && !inHarb && !inPal) for (let i = maxI + 1; i < LV.length; i++) { const r = LV[i].r; mg.fillStyle = 'rgba(10,15,30,.28)'; mg.fillRect(mx2(-r), mz2(-r), mx2(r) - mx2(-r), mz2(r) - mz2(-r)); }
+  if (!inCity && !inHarb && !inPal && !inZig) for (let i = maxI + 1; i < LV.length; i++) { const r = LV[i].r; mg.fillStyle = 'rgba(10,15,30,.28)'; mg.fillRect(mx2(-r), mz2(-r), mx2(r) - mx2(-r), mz2(r) - mz2(-r)); }
   mg.fillStyle = '#7fe0a0'; for (const t of TRIG) if (!found.has(t.w) && Math.hypot(t.x - me.x, t.z - me.z) < 24) { mg.beginPath(); mg.arc(mx2(t.x), mz2(t.z), 2.5, 0, 6.3); mg.fill(); }
   const mh = learn && learn.mapHint(); if (mh) { const pr = 10 + 3 * Math.sin(performance.now() / 300); mg.strokeStyle = '#ffd54a'; mg.lineWidth = 3; mg.beginPath(); mg.arc(mx2(mh.x), mz2(mh.z), pr + 12, 0, 6.3); mg.stroke(); }
   const x = mx2(me.x), y = mz2(me.z);
@@ -546,7 +639,7 @@ function frame(fixedDt) {
   if (poseT > 0) { poseT -= dt; if (poseT <= 0 && pose !== 'sit') pose = null; }
   hero.object.position.set(me.x, me.y, me.z); hero.object.rotation.y = me.ang; hero.update(dt, me.spd, pose);
   blob.position.set(me.x, me.y + .03, me.z); blob.visible = !q.shadow || dayF < .12;
-  const ty = me.y + 1.25;
+  const ty = me.y + 1.25 + camLift;
   let cx = me.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * cam.dist, cz = me.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * cam.dist, cy = ty + Math.sin(cam.pitch) * cam.dist;
   const gh = heightAt(cx, cz) + .6; if (cy < gh) cy = gh;
   if (Math.abs(cz + 66) < 3 && Math.abs(cx) > 6 && Math.abs(cx) < 47 && me.y < 1) cy = Math.min(cy, 2.7);
@@ -559,13 +652,13 @@ function frame(fixedDt) {
   sc && sc.before(dt);
   if (M.water.normalMap) M.water.normalMap.offset.set(t * .015, t * .01);
   M.fall.map.offset.y = t * 1.2;
-  life.update(t, dt, me, dayF); if (city.update(t, dt, me, hourNow()) && sc) sc.invalidate(); harbour.update(t, dt, me, hourNow()); palace.update(t, dt, me);
+  life.update(t, dt, me, dayF); if (city.update(t, dt, me, hourNow()) && sc) sc.invalidate(); harbour.update(t, dt, me, hourNow()); palace.update(t, dt, me); zigg.update(t, dt, me, dayF);
   for (const [kind, x, z] of [...city.events.splice(0), ...harbour.events.splice(0)]) if (kind === 'hammer') { const d = Math.hypot(x - me.x, z - me.z); if (d < 45) audio.hammer(Math.pow(1 - d / 45, 1.6), panTo(x, z)); } labelsTick(dt, t); learn.update(dt, t);
   renderer.render(scene, camera);
   sc && sc.after();
   placePlate();
   if ((slowT += dt) > .25) {
-    slowT = 0; drawMap(); cullSmall(); wordCheck(); labelsPick(); learn.slow(); lockPrompt(); assignLamps(); audio.update(audioState()); cityAudio();
+    slowT = 0; drawMap(); cullSmall(); wordCheck(); labelsPick(); learn.slow(); zigRefresh(); lockPrompt(); assignLamps(); audio.update(audioState()); cityAudio();
     const [a, b] = zoneOf(); if (a !== zoneNow) { if (zoneNow) zoneShow(a, b); zoneNow = a; }
     const lh = !sitting && learn.hint(), bn = !sitting && !lh && !autoWalk && nearBench(); const h = document.getElementById('hint'); h.textContent = sitting ? 'E vagy mozgás: felállsz' : lh || 'E: leülsz a padra'; h.classList.toggle('on', !!(lh || bn || sitting));
   }
@@ -586,6 +679,7 @@ document.addEventListener('visibilitychange', () => audio.pause(document.hidden)
 
 /* ---------- panel ---------- */
 function refreshUI() {
+  document.querySelectorAll('#pace button').forEach(b => b.classList.toggle('on', b.dataset.v === pace));
   document.querySelectorAll('#qual button').forEach(b => b.classList.toggle('on', b.dataset.q === qual));
   document.querySelectorAll('#auto button').forEach(b => b.classList.toggle('on', (b.dataset.a === '1') === autoWalk));
   document.querySelectorAll('#snd button').forEach(b => b.classList.toggle('on', (b.dataset.s === '1') === !audio.muted));
@@ -593,6 +687,7 @@ function refreshUI() {
 }
 document.getElementById('qual').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (!b || b.dataset.q === qual) return; localStorage.setItem('kert-q', b.dataset.q); localStorage.setItem('kert-pos', JSON.stringify(me)); location.reload(); });
 document.getElementById('auto').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) setAuto(b.dataset.a === '1'); });
+document.getElementById('pace').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; pace = b.dataset.v; localStorage.setItem('kert-tempo', pace); refreshUI(); toastK('Tempó: ' + b.textContent, `séta ${PACE[pace][0]} m/s · futás (Shift) ${PACE[pace][1]} m/s`); });
 document.getElementById('snd').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; audio.start(); audio.setMuted(b.dataset.s === '0'); refreshUI(); });
 document.getElementById('tod').addEventListener('change', e => { tod = e.target.value; localStorage.setItem('kert-tod', tod); updateSky(true); });
 document.getElementById('hide').addEventListener('click', () => { const u = document.getElementById('ui'); u.classList.toggle('min'); document.getElementById('hide').textContent = u.classList.contains('min') ? '▸' : '▾'; });
@@ -603,5 +698,5 @@ try {
   else { const m = JSON.parse(localStorage.getItem('kert-mentes')); if (m && isFinite(m.x) && isFinite(m.z) && !blocked(m.x, m.z)) { Object.assign(me, { x: m.x, z: m.z, y: m.y || 0, ang: m.ang || 0 }); cam.yaw = m.yaw ?? cam.yaw; cam.pitch = m.pitch ?? cam.pitch; cam.dist = m.dist ?? cam.dist; resumed = m; } }
 } catch (e) { }
 if (autoWalk) nearestWp();
-window.__kert = { get city() { return city; }, get harbour() { return harbour; }, get learn() { return learn; }, set hour(v) { hourOverride = v; updateSky(true); }, me, cam, get auto() { return autoWalk; }, set auto(v) { autoWalk = v; }, renderer, scene, get sc() { return sc; }, CULL, setTod: v => { tod = v; updateSky(true); }, frames: (n, d = 1 / 60) => { for (let i = 0; i < n; i++) { clock.elapsedTime += d; frame(d); } }, get dayF() { return dayF; } };
+window.__kert = { set lift(v) { camLift = v; }, zigg: n => { zigg.setLit(n); if (sc) sc.invalidate(); }, get learnT() { return learn; }, get hero() { return hero; }, get city() { return city; }, get harbour() { return harbour; }, get learn() { return learn; }, set hour(v) { hourOverride = v; updateSky(true); }, me, cam, get auto() { return autoWalk; }, set auto(v) { autoWalk = v; }, renderer, scene, get sc() { return sc; }, CULL, setTod: v => { tod = v; updateSky(true); }, frames: (n, d = 1 / 60) => { for (let i = 0; i < n; i++) { clock.elapsedTime += d; frame(d); } }, get dayF() { return dayF; } };
 init().catch(e => { document.getElementById('ltxt').textContent = 'Hiba: ' + e.message; console.error(e); });

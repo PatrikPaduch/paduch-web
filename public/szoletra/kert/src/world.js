@@ -19,6 +19,31 @@ export const PAL = {
   l2: { x0: -232, x1: -118, z0: 186, z1: 228.5, h: 7 },
   hall: { x0: -200, x1: -150, z0: 205, z1: 222 },
 };
+// Bábel tornya (Etemenanki) a keleti városfalon túl: kapu a falban (a folyó felőli keresztutca végén, z 200.5),
+// szent körzet, a torony 6 lépcsőfoka + a szentély a csúcson; a hármas lépcső nyugatra néz
+export const ZG = { x0: 81.5, x1: 300, z0: 116, z1: 227, cx: 205, cz: 170 };
+export const ZGATE = { x0: 78.2, x1: 84, z0: 197.6, z1: 203.4 };
+export const ZIG_TIERS = [[45.5, 20], [38, 12], [31, 6], [25, 6], [20, 6], [15.5, 6]];   // félszélesség, magasság
+export const ZIG_TOPS = [20, 32, 38, 44, 50, 56];
+export const ZIG_FLOOR_Y = [0, 20, 32, 38, 44, 50, 56];   // az emeletek padlója (1. = a torony lába)
+export const ZIG_SH = 11;                                 // a szentély fél-szélessége
+const ZIG_STAIRS = (() => {
+  const { cx, cz } = ZG, x1 = cx - ZIG_TIERS[1][0], x0 = x1 - ZIG_TOPS[1], fx = cx - ZIG_TIERS[0][0], L = [];
+  // főlépcső: alsó szakasz a 20 m-es pihenőig (itt találkozik a két mellékrámpával), pihenő, felső szakasz a 2. szint tetejéig
+  L.push({ x0, x1: fx - 6, z0: cz - 4.5, z1: cz + 4.5, ax: 'x', a0: x0, a1: fx - 6, h0: 0, h1: ZIG_TOPS[0], k: 'main' });
+  L.push({ x0: fx - 6, x1: fx, z0: cz - 4.5, z1: cz + 4.5, ax: 'x', a0: fx - 6, a1: fx, h0: ZIG_TOPS[0], h1: ZIG_TOPS[0], k: 'land' });
+  L.push({ x0: fx, x1, z0: cz - 4.5, z1: cz + 4.5, ax: 'x', a0: fx, a1: x1, h0: ZIG_TOPS[0], h1: ZIG_TOPS[1], k: 'main2' });
+  for (const s of [-1, 1]) { const za = cz + s * (ZIG_TIERS[0][0] - 4), zb = cz + s * 6; L.push({ x0: fx - 6, x1: fx, z0: Math.min(za, zb), z1: Math.max(za, zb), ax: 'z', a0: za, a1: zb, h0: 0, h1: ZIG_TOPS[0], k: 'side' }); L.push({ x0: fx - 6, x1: fx, z0: Math.min(zb, cz + s * 4.5), z1: Math.max(zb, cz + s * 4.5), ax: 'z', a0: zb, a1: zb + s, h0: ZIG_TOPS[0], h1: ZIG_TOPS[0], k: 'land' }); }
+  for (let i = 2; i < ZIG_TIERS.length; i++) { const fxi = cx - ZIG_TIERS[i][0], run = Math.min(ZIG_TIERS[i][1], ZIG_TIERS[i - 1][0] - ZIG_TIERS[i][0] - .6); L.push({ x0: fxi - run, x1: fxi, z0: cz - 2.4, z1: cz + 2.4, ax: 'x', a0: fxi - run, a1: fxi, h0: ZIG_TOPS[i - 1], h1: ZIG_TOPS[i], k: 'up' + i }); }
+  return L;
+})();
+export { ZIG_STAIRS };
+function zigHeight(x, z) {
+  for (const s of ZIG_STAIRS) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) { const a = s.ax === 'z' ? z : x; return s.h0 + (s.h1 - s.h0) * Math.min(1, Math.max(0, (a - s.a0) / (s.a1 - s.a0))); }
+  const dx = Math.abs(x - ZG.cx), dz = Math.abs(z - ZG.cz);
+  for (let i = ZIG_TIERS.length - 1; i >= 0; i--) { const h = ZIG_TIERS[i][0] + .6; if (dx <= h && dz <= h) return ZIG_TOPS[i]; }
+  return 0;
+}
 // öt terasz: magasság és fél-szélesség (a gyűrűk 9 m szélesek)
 export const LV = [{ h: 5, r: 46 }, { h: 10, r: 37 }, { h: 15, r: 28 }, { h: 20, r: 19 }, { h: 25, r: 10 }];
 export const WALL_H = 7;
@@ -58,6 +83,7 @@ export const bridgeH = x => { const t = Math.min(1, Math.max(0, (x - BRIDGE.x0) 
 
 export function heightAt(x, z) {
   for (const s of STAIRS) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) { const a = s.ax === 'z' ? z : x; return s.h0 + (s.h1 - s.h0) * (a - s.a0) / (s.a1 - s.a0); }
+  if (x > 84 && z > ZG.z0 && z < ZG.z1) return zigHeight(x, z);
   if (x < -81.6) { for (const s of PAL_STAIRS) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) { const a = s.ax === 'z' ? z : x; return s.h0 + (s.h1 - s.h0) * (a - s.a0) / (s.a1 - s.a0); } for (const L of [PAL.l2, PAL.l1]) if (x >= L.x0 && x <= L.x1 && z >= L.z0 && z <= L.z1) return L.h; }
   const m = Math.max(Math.abs(x), Math.abs(z));
   if (m <= 6) return LV[4].h + .4;                                       // templom padlója
@@ -79,7 +105,8 @@ export function blocked(x, z, rad = .35) {
   const inHarb = x > HARB.x0 + 1 && x < HARB.x1 - 1 && z > HARB.z0 + .9 && z < HARB.z1 - 1, onFPier = x > FPIER.x0 && x < FPIER.x1 && z > FPIER.z0 && z <= HARB.z0 + 1;
   const inR = (R, m = .9) => x > R.x0 + m && x < R.x1 - m && z > R.z0 + m && z < R.z1 - m;
   const inPal = x < -78 && (inR(PAL.gate, 0) || inR(PAL.fore, .5) || inR(PAL.st1, .3) || inR(PAL.l1) || inR(PAL.st2, .3) || inR(PAL.l2) || (x > PAL.st1.x0 - 1 && x < PAL.st1.x0 + 1 && z > PAL.st1.z0 + .3 && z < PAL.st1.z1 - .3) || (z > PAL.st2.z0 - 1 && z < PAL.st2.z0 + 1 && x > PAL.st2.x0 + .3 && x < PAL.st2.x1 - .3) || (z > PAL.st2.z1 - 1 && z < PAL.st2.z1 + 1 && x > PAL.st2.x0 + .3 && x < PAL.st2.x1 - .3));
-  if (!inGarden && !inGate && !inCity && !onPier && !inHarb && !onFPier && !inPal) return true;
+  const inZig = x > 78 && (inR(ZGATE, 0) || (x > ZG.x0 + .9 && x < ZG.x1 - .9 && z > ZG.z0 + .9 && z < ZG.z1 - .9));
+  if (!inGarden && !inGate && !inCity && !onPier && !inHarb && !onFPier && !inPal && !inZig) return true;
   if (inLake(x, z) && !onIsland(x, z) && !onBridge(x, z)) return true;
   if (x > BASIN.x0 && x < BASIN.x1 && z > BASIN.z0 && z < BASIN.z1) return true;
   for (const [a, b, c, d] of CANALS) if (x > a - .3 && x < b + .3 && z > c - .3 && z < d + .3) return true;

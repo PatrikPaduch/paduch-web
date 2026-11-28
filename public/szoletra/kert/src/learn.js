@@ -5,7 +5,16 @@ import { TABLETS as TABLETS0, TASKS } from './tablets.js';
 import { CONVOS, CITY_TABLETS } from './citydata.js';
 import { HARBOUR_CONVOS, HARBOUR_TABLETS, HARBOUR_WORDS, RIDE_TALK } from './harbourdata.js';
 import { PALACE_CONVOS } from './palacedata.js';
-Object.assign(CONVOS, HARBOUR_CONVOS, PALACE_CONVOS);
+import { TOWER_CONVOS, TOWER_WAIT, TRIALS, BRICK_POOL, GAP_ITEMS, ORDER_ITEMS, FLOORS } from './zikkdata.js';
+Object.assign(CONVOS, HARBOUR_CONVOS, PALACE_CONVOS, TOWER_CONVOS, { tmerchant: [] });
+// Bábel tornya: melyik tanító hányadik emelet próbáját adja; a mázas téglák színe emeletenként
+const TOWER_NPC = { tbrick: 1, tforeman: 2, tworkers: 3 };
+const GLAZE = ['fehér', 'fekete', 'bíbor', 'kék', 'narancs', 'ezüst', 'arany'];
+const TOWER_HELLO = {
+  1: ['Welcome, stranger! Every tower begins with a single brick. Do you want to try?', 'Üdv, idegen! Minden torony egyetlen téglával kezdődik. Kipróbálod?'],
+  2: ['So you made it up here! I need someone who can tell me what happened yesterday.', 'Szóval feljutottál! Kell valaki, aki el tudja mondani, mi történt tegnap.'],
+  3: ['Please help us! We work side by side, but our words get all mixed up.', 'Kérlek, segíts! Egymás mellett dolgozunk, de összekeverednek a szavaink.'],
+};
 // a kihallgatás lépései: melyik beszélgetés hányadik lépést teljesíti
 const PAL_FLOW = { pguard: 1, pscribe: 2, chamberlain: 3, herald: 4, king: 5 };
 const PAL_WAIT = {
@@ -160,6 +169,12 @@ export function createLearn(ctx) {
       if (ok && !RQ.q.paid) { RQ.q.paid = true; ctx.addPts(5, 'Hallás utáni értés a csónakban', '+5 pont'); }
       RQ.q.done = true; rideQ = null; return;
     }
+    if (b.dataset.k === 'trial') { startTrial(TOWER_NPC[towerN.id]); return; }
+    if (b.dataset.k === 'tchat') { startConv(towerN.id, towerN, true); return; }
+    if (b.dataset.k === 'tnext') { if (trial) nextItem(); return; }
+    if (b.dataset.k === 'tclear' && trial) { trial.built = []; renderItem(); return; }
+    if (b.dataset.tr !== undefined && trial && !trial.answered) { answerTrial(b.dataset.tr, b); return; }
+    if (b.dataset.chip !== undefined && trial && !trial.answered) { trial.built.push(+b.dataset.chip); if (trial.built.length === trial.cur.toks.length) answerTrial(trial.built.map(k => trial.cur.toks[k]).join(' ').toLowerCase(), null); else renderItem(); return; }
     if (b.dataset.k === 'cnext') { conv.si++; if (conv.si < conv.c.steps.length) showStep(); else endConv(); return; }
     if (b.dataset.rep !== undefined && conv) { replyConv(b); return; }
     if (b.dataset.k === 'hu') talkEl.querySelector('.hu').hidden = !talkEl.querySelector('.hu').hidden;
@@ -225,8 +240,81 @@ export function createLearn(ctx) {
     talk(`My fare is one English word. How do you say "${w[1].split(',')[0]}" in English?`, `A viteldíjam egy angol szó. Hogy mondod angolul: „${w[1].split(',')[0]}”?`,
       `</div>${note ? `<p class="why" style="color:#ff9aa6;font-size:13.5px;margin:6px 0 0">${esc(note)}</p>` : ''}<div class="cnv"><small>⛵ Viteldíj · válaszd ki az angol szót:</small>${opts.map(o => `<button data-fare="${o}">${esc(HARBOUR_WORDS[o][0])}</button>`).join('')}`);
   }
+  /* ---------- Bábel tornya: emeletek próbái ---------- */
+  let towerN = null, trial = null;
+  const TW = () => (CD._torony ||= { done: 0, day: {} });
+  function towerMenu(n) {
+    towerN = n; who = { name: n.name, person: n.person, x: n.x, z: n.z };
+    const f = TOWER_NPC[n.id], T = TRIALS[f - 1], done = TW().done >= f, h = TOWER_HELLO[f];
+    talk(h[0], h[1], `<button data-k="trial" class="pri">🧱 ${done ? 'Újra: ' : 'Próba: '}${esc(T.title)}</button><button data-k="tchat">💬 Beszélgessünk</button></div>${done ? `<p class="why" style="color:#7fe0a0;font-size:13.5px;margin:6px 0 0">✓ Ezt az emeletet már teljesítetted, a ${GLAZE[f - 1]} mázas tégla a tiéd. Gyakorolni bármikor lehet.</p>` : `<p class="why" style="color:#8fa3c8;font-size:13.5px;margin:6px 0 0">${T.need} tégla kell. Minden jó válasz lerak egyet, minden hiba leejt egyet.</p>`}<div>`);
+  }
+  function startTrial(f) {
+    const T = TRIALS[f - 1];
+    const items = T.kind === 'pick' ? shuffle(BRICK_POOL.filter(id => GARDEN_WORDS[id])) : T.kind === 'gap' ? shuffle(GAP_ITEMS) : shuffle(ORDER_ITEMS);
+    trial = { f, T, items, i: 0, bricks: 0, fell: -1, built: [], cur: null, answered: false, miss: 0 };
+    talk(T.intro[0], T.intro[1], `<button data-k="tnext" class="pri">Kezdjük ⏎</button>`);
+  }
+  function nextItem() {
+    const t = trial, it = t.items[t.i++ % t.items.length]; t.answered = false; t.built = []; t.fell = -1;
+    if (t.T.kind === 'pick') { const wrong = shuffle(BRICK_POOL.filter(x => x !== it && GARDEN_WORDS[x])).slice(0, 3); t.cur = { id: it, opts: shuffle([it, ...wrong]) }; }
+    if (t.T.kind === 'gap') t.cur = { g: it, opts: shuffle(it[1].map((o, k) => k)) };
+    if (t.T.kind === 'order') { const toks = it[0].split(' ').map(w => w === 'I' ? w : w.toLowerCase()); let ord; do ord = shuffle(toks.map((_, k) => k)); while (toks.length > 2 && ord.every((v, k) => v === k)); t.cur = { s: it, toks, ord }; }
+    renderItem(true);
+  }
+  const bricksHtml = () => `<div class="brk">${Array.from({ length: trial.T.need }, (_, k) => `<i class="${k < trial.bricks ? 'on' : ''}${k === trial.fell ? ' fall' : ''}"></i>`).join('')}<small>${trial.bricks} / ${trial.T.need}</small></div>`;
+  function renderItem(speak) {
+    const t = trial, c = t.cur, head = `</div>${bricksHtml()}<div class="cnv">`;
+    if (t.T.kind === 'pick') {
+      const hu = huShort(c.id);
+      (speak ? talk : quietTalk)(pickLine(), 'Melyik tégla kell?', `${head}<small>🧱 Hogy mondod angolul: <b style="color:#fff">„${esc(hu)}”</b>?</small>${c.opts.map(o => `<button data-tr="${o}">${esc(GARDEN_WORDS[o][0])}</button>`).join('')}<div class="react"></div>`);
+    }
+    if (t.T.kind === 'gap') {
+      const g = c.g;
+      (speak ? talk : quietTalk)(g[0].replace('___', '…'), g[3], `${head}<small>🧱 Melyik szó illik a helyére?</small>${c.opts.map(k => `<button data-tr="${k}">${esc(g[1][k])}</button>`).join('')}<div class="react"></div>`);
+    }
+    if (t.T.kind === 'order') {
+      const used = new Set(t.built), line = t.built.map(k => c.toks[k]).join(' ');
+      (speak ? talk : quietTalk)(c.ord.map(k => c.toks[k]).join(' · '), c.s[1], `${head}<small>🧱 Zakir összekeverte a szavakat. Rakd őket sorba, hogy Ubar megértse:</small><div class="built">${line ? esc(line.charAt(0).toUpperCase() + line.slice(1)) : '<span style="color:#5a6a8a">koppints a szavakra sorban…</span>'}</div><div class="chips">${c.ord.map(k => `<button data-chip="${k}" ${used.has(k) ? 'disabled' : ''}>${esc(c.toks[k])}</button>`).join('')}</div><div class="row2"><button data-k="tclear">↺ Újrakezdem</button></div><div class="react"></div>`);
+    }
+  }
+  const PICK_LINES = ['Next brick, please!', 'Bring me another one!', 'Good. And this one?', 'Careful with this one!', 'The wall is growing!'];
+  const pickLine = () => PICK_LINES[Math.floor(Math.random() * PICK_LINES.length)];
+  // ugyanaz, mint a talk, de nem olvassa fel újra (a mondatrendezésnél minden koppintás újrarajzol)
+  function quietTalk(en, hu, buttons) { const s0 = ctx.say; ctx.say = () => { }; try { talk(en, hu, buttons); } finally { ctx.say = s0; } }
+  function answerTrial(v, b) {
+    const t = trial, c = t.cur; let ok, right, why;
+    if (t.T.kind === 'pick') { ok = v === c.id; right = GARDEN_WORDS[c.id][0]; why = `„${huShort(c.id)}” angolul: ${right}.`; }
+    if (t.T.kind === 'gap') { ok = +v === c.g[2]; right = c.g[0].replace('___', c.g[1][c.g[2]]); why = c.g[4]; }
+    if (t.T.kind === 'order') { right = c.s[0]; ok = v === c.toks.join(' ').toLowerCase(); why = 'A helyes sorrend: ' + right; }
+    t.answered = true;
+    if (ok) t.bricks++; else { t.miss++; if (t.bricks > 0) { t.bricks--; t.fell = t.bricks; } }
+    if (t.T.kind === 'order') renderItem(); else talkEl.querySelector('.brk').outerHTML = bricksHtml();
+    talkEl.querySelectorAll('[data-tr]').forEach(x => { x.disabled = true; const good = t.T.kind === 'pick' ? x.dataset.tr === c.id : +x.dataset.tr === c.g[2]; if (good) x.classList.add('ok'); else if (x === b) x.classList.add('bad'); });
+    const re = talkEl.querySelector('.react');
+    if (ok) {
+      ctx.say(t.T.kind === 'pick' ? GARDEN_WORDS[c.id][0] : right, .9); (who.person || gard).talk(2);
+      if (t.bricks >= t.T.need) { setTimeout(() => finishTrial(), 900); re.innerHTML = `<p class="en" style="color:#7fe0a0">✓ Kész a fal!</p>`; return; }
+      re.innerHTML = `<p class="en" style="color:#7fe0a0">✓ ${t.T.kind === 'order' ? esc(right) : 'Jó!'}</p>`;
+      const id = t; setTimeout(() => { if (trial === id && t.answered) nextItem(); }, t.T.kind === 'order' ? 1500 : 900);
+    } else {
+      ctx.say(t.T.kind === 'gap' || t.T.kind === 'order' ? right : 'No, no! That brick broke.', .9); (who.person || gard).talk(3);
+      re.innerHTML = `<p class="why">✗ ${t.fell >= 0 ? 'Egy tégla leesett és összetört. ' : ''}${esc(why)}</p><div class="row2"><button data-k="tnext" class="pri">Tovább ⏎</button></div>`;
+    }
+  }
+  function finishTrial() {
+    const t = trial, f = t.f, st = TW(), first = st.done < f, day = dstr(0); trial = null;
+    const next = FLOORS[f], col = GLAZE[f - 1];
+    talk(first ? `Well done! Here is your ${['white', 'black', 'purple', 'blue', 'orange', 'silver', 'golden'][f - 1]} glazed brick. Look at the tower!` : 'Well done! Your wall is as strong as ever.', first ? `Szép munka! Itt a ${col} mázas téglád. Nézz fel a toronyra!` : 'Szép munka! A falad ugyanolyan erős, mint eddig.');
+    if (first) {
+      st.done = f; st.day[f] = day; sv('kert-beszelgetes', CD);
+      setTimeout(() => { ctx.addPts(30, `🧱 ${f}. emelet teljesítve`, `+30 pont · a ${col} sáv kigyúlt a tornyon`); ctx.onFloor && ctx.onFloor(f); }, 700);
+      if (next) setTimeout(() => ctx.toast(`🏛 Következő: ${next[0]}`, `${next[2]}, ${next[1]}`), 3600);
+    } else if (st.day[f] !== day) { st.day[f] = day; sv('kert-beszelgetes', CD); ctx.addPts(5, 'Gyakorlás a toronyban', `+5 pont · ${t.miss ? t.miss + ' hibával' : 'hiba nélkül'}`); }
+  }
   function startConv(id, n, chat) {
     if (id === 'boatman' && !chat && n) { boatMenu(n); return; }
+    if (TOWER_NPC[id] && !chat && n) { towerMenu(n); return; }
+    if (TOWER_WAIT[id]) { if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z }; talk(TOWER_WAIT[id][0], TOWER_WAIT[id][1]); return; }
     const list = CONVOS[id]; if (!list) return;
     if (PAL_FLOW[id]) { const P = CD._palota || { step: 0 }; if (P.step < PAL_FLOW[id] - 1) { if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z }; const w = PAL_WAIT[id]; talk(w[0], w[1]); return; } }
     if (n) who = { name: n.name, person: n.person, x: n.x, z: n.z };
@@ -272,7 +360,7 @@ export function createLearn(ctx) {
   /* ---------- interakció (E gomb) ---------- */
   function target() {
     if (Math.hypot(GP.x - me.x, GP.z - me.z) < 2.8 && me.y < 1) return { kind: 'gard', text: 'E: beszélgetés Nabuval, a kertésszel' };
-    const np = CITY_NPC.find(n => n.id && CONVOS[n.id] && !n.hidden && Math.hypot(n.talkX - me.x, n.talkZ - me.z) < 2.4);
+    const np = CITY_NPC.find(n => n.id && CONVOS[n.id] && !n.hidden && Math.hypot(n.talkX - me.x, n.talkZ - me.z) < 2.4 && (n.y === undefined || Math.abs(n.y - me.y) < 2));
     if (np && np.away) return { kind: 'closed', text: `${np.name.split(',')[0]} standja zárva · ${np.opens || '7'} órakor nyit` };
     if (np) return { kind: 'npc', n: np, text: `E: beszélgetés · ${np.name}` };
     const tb = tabs.find(t => Math.hypot(t.x - me.x, t.z - me.z) < 2.4 && Math.abs(t.y - me.y) < 1.5);
@@ -312,7 +400,7 @@ export function createLearn(ctx) {
       else if (!MS) renderMission();
       const t = taskOf();
       if (t && t.visit && !KS.visited && TRIG.some(tr => tr.w === t.visit && near(tr))) { KS.visited = true; saveKS(); renderTask(); ctx.toast('Megnézted!', 'menj vissza Nabuhoz, és válaszolj'); }
-      if (talkEl.classList.contains('on') && !who.ride && Math.hypot(who.x - me.x, who.z - me.z) > 6) { talkEl.classList.remove('on'); conv = null; }
+      if (talkEl.classList.contains('on') && !who.ride && Math.hypot(who.x - me.x, who.z - me.z) > 6) { talkEl.classList.remove('on'); conv = null; trial = null; }
       if (tabEl.classList.contains('on')) { const t = tabs[+tabEl.dataset.i]; if (Math.hypot(t.x - me.x, t.z - me.z) > 5) tabEl.classList.remove('on'); }
     },
     update(dt, t) {
@@ -320,7 +408,8 @@ export function createLearn(ctx) {
       if (talkEl.classList.contains('on') && !who.person) { const a = Math.atan2(me.x - GP.x, me.z - GP.z); gard.object.rotation.y += (a - gard.object.rotation.y) * Math.min(1, dt * 4); }
       for (const tb of tabs) if (tb.glow.visible) tb.glow.material.opacity = .6 + .4 * Math.sin(t * 2.5 + tb.i);
     },
-    closeAll() { talkEl.classList.remove('on'); tabEl.classList.remove('on'); },
+    closeAll() { talkEl.classList.remove('on'); tabEl.classList.remove('on'); trial = null; },
+    towerDone: () => (CD._torony || { done: 0 }).done,
     rideTick(dt) {
       if (!ride) return; ride.t += dt; const L = RIDE_TALK[ride.dir];
       const say = (en, hu, extra) => { who = { name: ride.n.name, person: { talk() { } }, ride: true }; talk(en, hu, extra); };

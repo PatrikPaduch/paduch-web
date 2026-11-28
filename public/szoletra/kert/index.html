@@ -83,6 +83,9 @@
   .cnv button{background:#16233f;border:1px solid #2d3f6b;color:#eef3ff;border-radius:9px;padding:8px 10px;cursor:pointer;font:inherit;font-size:14px;text-align:left}
   .cnv button:hover:not(:disabled){border-color:#3fa0ff}.cnv button.ok{background:#0f2a1c;border-color:#2f9a5a}.cnv button.bad{background:#2c1118;border-color:#9a2f43;opacity:.75}
   .cnv .why{color:#ff9aa6;font-size:13.5px;margin:2px 0}.cnv .react .en{color:#ffd54a}
+  .brk{display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin:8px 0 2px}.brk i{width:24px;height:12px;border-radius:2px;background:#1a2440;border:1px solid #33456e}.brk i.on{background:linear-gradient(#c98a55,#9a5f34);border-color:#e3a46e}.brk i.fall{animation:brkfall .7s ease-in forwards;background:#9a5f34}.brk small{color:#8fa3c8;margin-left:6px;font-variant-numeric:tabular-nums}
+  @keyframes brkfall{0%{transform:none;opacity:1}100%{transform:translateY(26px) rotate(40deg);opacity:0}}
+  .cnv .chips{display:flex;flex-wrap:wrap;gap:6px}.cnv .chips button{padding:6px 11px}.cnv .chips button:disabled{opacity:.3}.cnv .built{min-height:26px;font-size:17px;color:#ffd54a;padding:4px 2px}
   #pause{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:#050a16b0;backdrop-filter:blur(3px)}
   #pause.on{display:flex}
   #pause .pbox{background:#0a1222f2;border:1px solid #2a3a5c;border-radius:16px;padding:22px 24px;width:min(380px,92vw);box-shadow:0 12px 40px #000a;text-align:center}
@@ -95,6 +98,12 @@
   #pause small{opacity:.7;font-size:11px;border:1px solid #fff5;border-radius:5px;padding:1px 5px}
   #pause .ps{color:#7fe0a0;font-size:13px;margin:12px 0 4px;min-height:1em}
   #pause .pn{color:#8fa3c8;font-size:12px;margin:0}
+  #pause .pbox{max-height:92vh;overflow:auto}
+  #pause .pt{margin:16px 0 8px;font-size:14px;color:#ffd54a;letter-spacing:.4px}
+  #pause .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #pause .tgrid button{background:#121c33;border:1px solid #2a3a5c;color:#dfe8fb;border-radius:9px;padding:8px 8px;cursor:pointer;font:inherit;font-size:13px;text-align:left;display:grid;gap:2px}
+  #pause .tgrid button:hover:not(:disabled){border-color:#3fa0ff}#pause .tgrid button:disabled{opacity:.5;cursor:default}
+  #pause .tgrid small{border:0;padding:0;font-size:11px;color:#8fa3c8}
   .linkb{background:none;border:0;color:#ffd54a;cursor:pointer;font:inherit;font-size:inherit;padding:0}
   #load{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#16284a,#05080f);z-index:9;transition:opacity .6s}
   #load.off{opacity:0;pointer-events:none}
@@ -121,8 +130,9 @@
     <button data-p="go" class="pri">▶ Folytatás <small>Esc</small></button>
     <button data-p="save">💾 Mentés</button>
     <button data-p="quit">💾 Mentés és kilépés a Szólétrába</button>
-    <button data-p="home">⛩ Vissza a kert bejáratához</button>
   </div>
+  <h3 class="pt">🧭 Gyors utazás</h3>
+  <div class="tgrid" id="tgrid"></div>
   <p class="ps" id="psave"></p>
   <p class="pn">A helyed magától is mentődik félpercenként és bezáráskor, és a paduch.hu-n a másik gépeden is innen folytatod.</p>
 </div></div>
@@ -132,6 +142,7 @@
   <div class="body">
     <div class="row"><span>Grafika</span><div class="seg" id="qual"><button data-q="low">Gyenge gép</button><button data-q="high">Erős gép</button></div></div>
     <div class="row"><span>Séta</span><div class="seg" id="auto"><button data-a="1">Magától</button><button data-a="0">Én irányítok</button></div></div>
+    <div class="row"><span>Tempó</span><div class="seg" id="pace"><button data-v="slow">Lassú</button><button data-v="norm">Közepes</button><button data-v="fast">Gyors</button></div></div>
     <div class="row"><span>Napszak</span><select class="sel" id="tod"><option value="real">Valós idő</option><option value="dawn">Hajnal</option><option value="day">Délután</option><option value="dusk">Naplemente</option><option value="eve">Este (zárás)</option><option value="night">Éjszaka (éjjeli piac)</option><option value="late">Késő éjjel</option></select></div>
     <div class="row"><span>Hang</span><div class="seg" id="snd"><button data-s="1">Be</button><button data-s="0">Ki</button></div></div>
     <div class="row"><span>Szavak</span><span class="wcount" id="wcount" style="width:auto">0 / 0 · lista</span></div>

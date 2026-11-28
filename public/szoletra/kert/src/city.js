@@ -93,7 +93,8 @@ export function buildCity(M, q) {
   /* ---------- városfalak ---------- */
   for (const s of [-1, 1]) {
     // a nyugati falon nyílik a palotakapu (z 146.6..152.4)
-    for (const [za, zb] of s < 0 ? [[CITY.z0, 146.6], [152.4, CITY.z1]] : [[CITY.z0, CITY.z1]]) { box('brick', s * CITY.x1, 0, za, s * (CITY.x1 + 1.5), 7, zb); box('glaze', s * (CITY.x1 - .02), 4.8, za, s * (CITY.x1 - .1), 5.6, zb); }
+    // a keleti falon a Bábel tornya kapuja (z 197.6..203.4)
+    for (const [za, zb] of s < 0 ? [[CITY.z0, 146.6], [152.4, CITY.z1]] : [[CITY.z0, 197.6], [203.4, CITY.z1]]) { box('brick', s * CITY.x1, 0, za, s * (CITY.x1 + 1.5), 7, zb); box('glaze', s * (CITY.x1 - .02), 4.8, za, s * (CITY.x1 - .1), 5.6, zb); }
     box('brick', s * (CITY.x1 - 3), 0, CITY.z1 - 3, s * (CITY.x1 + 3.5), 11, CITY.z1 + 3);
   }
 
